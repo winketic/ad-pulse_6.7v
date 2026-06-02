@@ -1,0 +1,777 @@
+"use client";
+
+import {
+  useState,
+  useTransition,
+  useMemo,
+  useCallback,
+  useEffect,
+} from "react";
+import { useRouter } from "next/navigation";
+import {
+  createMaterial,
+  updateMaterial,
+  deleteMaterial,
+} from "@/app/(dashboard)/materials/actions";
+
+// ─── Types ────────────────────────────────────────────────
+
+export type Material = {
+  id: string;
+  name: string;
+  unit: string;
+  gost_norm: number | null;
+  created_at: string;
+};
+
+type FormState = {
+  name: string;
+  unit: string;
+  gost_norm: string;
+};
+
+const UNITS = ["кг", "тонна", "шт", "м3", "литр", "м2"] as const;
+const EMPTY_FORM: FormState = { name: "", unit: "кг", gost_norm: "" };
+
+function toFormState(m?: Material | null): FormState {
+  if (!m) return EMPTY_FORM;
+  return {
+    name: m.name,
+    unit: m.unit,
+    gost_norm: m.gost_norm != null ? String(m.gost_norm) : "",
+  };
+}
+
+// ─── Helpers ──────────────────────────────────────────────
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+function formatGost(n: number | null) {
+  return n != null ? n.toFixed(4) : "—";
+}
+
+function pluralMaterials(n: number) {
+  if (n % 10 === 1 && n % 100 !== 11) return "позиция";
+  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100))
+    return "позиции";
+  return "позиций";
+}
+
+// ─── Modal ────────────────────────────────────────────────
+
+function Modal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md z-10 max-h-[92dvh] sm:max-h-[90vh] flex flex-col">
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
+          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="px-6 pb-6 overflow-y-auto">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Material Form ────────────────────────────────────────
+
+function MaterialForm({
+  initialValues,
+  onSubmit,
+  onCancel,
+  isPending,
+  error,
+  submitLabel,
+}: {
+  initialValues: FormState;
+  onSubmit: (form: FormState) => void;
+  onCancel: () => void;
+  isPending: boolean;
+  error: string;
+  submitLabel: string;
+}) {
+  const [form, setForm] = useState<FormState>(initialValues);
+
+  const set =
+    (field: keyof FormState) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(form);
+      }}
+      className="space-y-4"
+    >
+      {/* Name */}
+      <div>
+        <label
+          htmlFor="mat-name"
+          className="block text-sm font-medium text-gray-700 mb-1.5"
+        >
+          Название{" "}
+          <span className="text-red-500" aria-hidden>
+            *
+          </span>
+        </label>
+        <input
+          id="mat-name"
+          type="text"
+          value={form.name}
+          onChange={set("name")}
+          placeholder="Например: Сталь листовая"
+          required
+          maxLength={200}
+          autoFocus
+          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a472a]/40 focus:border-[#1a472a] transition-colors"
+        />
+      </div>
+
+      {/* Unit */}
+      <div>
+        <label
+          htmlFor="mat-unit"
+          className="block text-sm font-medium text-gray-700 mb-1.5"
+        >
+          Единица измерения{" "}
+          <span className="text-red-500" aria-hidden>
+            *
+          </span>
+        </label>
+        <select
+          id="mat-unit"
+          value={form.unit}
+          onChange={set("unit")}
+          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a472a]/40 focus:border-[#1a472a] transition-colors"
+        >
+          {UNITS.map((u) => (
+            <option key={u} value={u}>
+              {u}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* GOST norm */}
+      <div>
+        <label
+          htmlFor="mat-gost"
+          className="block text-sm font-medium text-gray-700 mb-1.5"
+        >
+          Норма расхода по ГОСТ
+          <span className="ml-1.5 text-xs font-normal text-gray-400">
+            (необязательно)
+          </span>
+        </label>
+        <input
+          id="mat-gost"
+          type="number"
+          value={form.gost_norm}
+          onChange={set("gost_norm")}
+          placeholder="0.0000"
+          min="0"
+          step="0.0001"
+          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1a472a]/40 focus:border-[#1a472a] transition-colors"
+        />
+        <p className="mt-1.5 text-xs text-gray-400">
+          Нормативный расход согласно технической документации ГОСТа
+        </p>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-red-50 border border-red-200">
+          <svg
+            className="w-4 h-4 text-red-500 shrink-0 mt-0.5"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <span className="text-sm text-red-700">{error}</span>
+        </div>
+      )}
+
+      {/* Buttons */}
+      <div className="flex gap-3 pt-1">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isPending}
+          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          Отмена
+        </button>
+        <button
+          type="submit"
+          disabled={isPending || !form.name.trim()}
+          className="flex-1 py-2.5 px-4 rounded-lg bg-[#1a472a] hover:bg-[#163d24] text-sm font-semibold text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {isPending && (
+            <svg
+              className="animate-spin h-4 w-4 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
+            </svg>
+          )}
+          {isPending ? "Сохранение..." : submitLabel}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ─── Empty State ──────────────────────────────────────────
+
+function EmptyState({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-[#1a472a]/8 flex items-center justify-center mb-4">
+        <svg
+          className="w-8 h-8 text-[#1a472a]/40"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.4}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+          />
+        </svg>
+      </div>
+      <h3 className="text-base font-semibold text-gray-900 mb-1">
+        Справочник пуст
+      </h3>
+      <p className="text-sm text-gray-500 mb-6 max-w-xs">
+        Добавьте первый материал, чтобы начать вести учёт прихода и расхода
+      </p>
+      <button
+        onClick={onAdd}
+        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1a472a] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
+      >
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+        Добавить материал
+      </button>
+    </div>
+  );
+}
+
+// ─── Action buttons (inline delete confirm) ───────────────
+
+function RowActions({
+  material,
+  onEdit,
+  onDelete,
+  isPending,
+}: {
+  material: Material;
+  onEdit: () => void;
+  onDelete: () => void;
+  isPending: boolean;
+}) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <div className="flex items-center justify-end gap-2">
+        <span className="text-xs text-gray-500 hidden sm:inline">Удалить?</span>
+        <button
+          onClick={onDelete}
+          disabled={isPending}
+          className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50"
+        >
+          {isPending ? "..." : "Да"}
+        </button>
+        <button
+          onClick={() => setConfirming(false)}
+          disabled={isPending}
+          className="px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-300 hover:bg-gray-50 text-gray-700 transition-colors"
+        >
+          Нет
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <button
+        onClick={onEdit}
+        className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-[#1a472a] transition-colors"
+        title="Редактировать"
+      >
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+          />
+        </svg>
+      </button>
+      <button
+        onClick={() => setConfirming(true)}
+        className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+        title="Удалить"
+      >
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+          />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+// ─── Mobile card ──────────────────────────────────────────
+
+function MobileCard({
+  material,
+  onEdit,
+  onDelete,
+  isPending,
+}: {
+  material: Material;
+  onEdit: () => void;
+  onDelete: () => void;
+  isPending: boolean;
+}) {
+  const [confirming, setConfirming] = useState(false);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-900 text-sm leading-tight">
+            {material.name}
+          </h3>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#1a472a]/10 text-[#1a472a]">
+              {material.unit}
+            </span>
+            {material.gost_norm != null && (
+              <span className="text-xs text-gray-500 tabular-nums">
+                ГОСТ: {formatGost(material.gost_norm)}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-400 mt-1.5">
+            {formatDate(material.created_at)}
+          </p>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={onEdit}
+            className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-[#1a472a] transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setConfirming(true)}
+            className="p-2 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {confirming && (
+        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-3">
+          <p className="text-sm text-gray-700">Удалить «{material.name}»?</p>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => setConfirming(false)}
+              className="px-3 py-1.5 rounded-lg text-sm border border-gray-300 hover:bg-gray-50 text-gray-700 transition-colors"
+            >
+              Нет
+            </button>
+            <button
+              onClick={onDelete}
+              disabled={isPending}
+              className="px-3 py-1.5 rounded-lg text-sm bg-red-600 hover:bg-red-700 text-white font-medium transition-colors disabled:opacity-50"
+            >
+              {isPending ? "..." : "Удалить"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────
+
+export default function MaterialsClient({
+  materials,
+}: {
+  materials: Material[];
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const [search, setSearch] = useState("");
+  const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+  const [formError, setFormError] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q
+      ? materials.filter((m) => m.name.toLowerCase().includes(q))
+      : materials;
+  }, [materials, search]);
+
+  const openCreate = useCallback(() => {
+    setEditingMaterial(null);
+    setFormError("");
+    setModalMode("create");
+  }, []);
+
+  const openEdit = useCallback((m: Material) => {
+    setEditingMaterial(m);
+    setFormError("");
+    setModalMode("edit");
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setModalMode(null);
+    setEditingMaterial(null);
+    setFormError("");
+  }, []);
+
+  const handleCreate = useCallback(
+    (form: FormState) => {
+      setFormError("");
+      startTransition(async () => {
+        try {
+          await createMaterial({
+            name: form.name,
+            unit: form.unit,
+            gost_norm: form.gost_norm ? parseFloat(form.gost_norm) : null,
+          });
+          router.refresh();
+          closeModal();
+        } catch (e) {
+          setFormError(e instanceof Error ? e.message : "Ошибка создания");
+        }
+      });
+    },
+    [router, closeModal]
+  );
+
+  const handleUpdate = useCallback(
+    (form: FormState) => {
+      if (!editingMaterial) return;
+      setFormError("");
+      startTransition(async () => {
+        try {
+          await updateMaterial(editingMaterial.id, {
+            name: form.name,
+            unit: form.unit,
+            gost_norm: form.gost_norm ? parseFloat(form.gost_norm) : null,
+          });
+          router.refresh();
+          closeModal();
+        } catch (e) {
+          setFormError(e instanceof Error ? e.message : "Ошибка обновления");
+        }
+      });
+    },
+    [editingMaterial, router, closeModal]
+  );
+
+  const handleDelete = useCallback(
+    (id: string) => {
+      startTransition(async () => {
+        try {
+          await deleteMaterial(id);
+          router.refresh();
+        } catch (e) {
+          console.error("Delete failed:", e);
+        }
+      });
+    },
+    [router]
+  );
+
+  return (
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      {/* ── Page Header ─────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Материалы</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {materials.length === 0
+              ? "Справочник пуст"
+              : `${materials.length} ${pluralMaterials(materials.length)}`}
+          </p>
+        </div>
+        <button
+          onClick={openCreate}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1a472a] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm self-start sm:self-auto"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          Добавить материал
+        </button>
+      </div>
+
+      {/* ── Search ──────────────────────────────────── */}
+      {materials.length > 0 && (
+        <div className="relative mb-5">
+          <svg
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Поиск по названию..."
+            className="w-full sm:max-w-sm pl-10 pr-9 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a472a]/40 focus:border-[#1a472a] transition-colors"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Empty state ─────────────────────────────── */}
+      {materials.length === 0 && <EmptyState onAdd={openCreate} />}
+
+      {/* ── No search results ────────────────────────── */}
+      {materials.length > 0 && filtered.length === 0 && (
+        <div className="text-center py-16">
+          <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <p className="text-sm text-gray-700 font-medium">
+            Ничего не найдено
+          </p>
+          <p className="text-sm text-gray-500 mt-0.5 mb-3">
+            По запросу «{search}» результатов нет
+          </p>
+          <button
+            onClick={() => setSearch("")}
+            className="text-sm text-[#1a472a] hover:underline font-medium"
+          >
+            Сбросить поиск
+          </button>
+        </div>
+      )}
+
+      {/* ── Desktop table ────────────────────────────── */}
+      {filtered.length > 0 && (
+        <>
+          <div
+            className={`hidden sm:block bg-white rounded-xl border border-gray-200 overflow-hidden transition-opacity ${
+              isPending ? "opacity-60 pointer-events-none" : ""
+            }`}
+          >
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Название
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">
+                    Ед. изм.
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-36">
+                    Норма ГОСТ
+                  </th>
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-36">
+                    Добавлен
+                  </th>
+                  <th className="px-5 py-3.5 w-28" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((m) => (
+                  <tr
+                    key={m.id}
+                    className="hover:bg-gray-50/70 transition-colors group"
+                  >
+                    <td className="px-5 py-3.5 font-medium text-gray-900">
+                      {m.name}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#1a472a]/10 text-[#1a472a]">
+                        {m.unit}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-600 tabular-nums font-mono text-xs">
+                      {formatGost(m.gost_norm)}
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-500">
+                      {formatDate(m.created_at)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <RowActions
+                        material={m}
+                        onEdit={() => openEdit(m)}
+                        onDelete={() => handleDelete(m.id)}
+                        isPending={isPending}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ── Mobile cards ─────────────────────────── */}
+          <div
+            className={`sm:hidden space-y-3 transition-opacity ${
+              isPending ? "opacity-60 pointer-events-none" : ""
+            }`}
+          >
+            {filtered.map((m) => (
+              <MobileCard
+                key={m.id}
+                material={m}
+                onEdit={() => openEdit(m)}
+                onDelete={() => handleDelete(m.id)}
+                isPending={isPending}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ── Add / Edit Modal ─────────────────────────── */}
+      {modalMode !== null && (
+        <Modal
+          title={
+            modalMode === "create" ? "Добавить материал" : "Редактировать материал"
+          }
+          onClose={closeModal}
+        >
+          <MaterialForm
+            initialValues={toFormState(editingMaterial)}
+            onSubmit={modalMode === "create" ? handleCreate : handleUpdate}
+            onCancel={closeModal}
+            isPending={isPending}
+            error={formError}
+            submitLabel={modalMode === "create" ? "Добавить" : "Сохранить"}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
