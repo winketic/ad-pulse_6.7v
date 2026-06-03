@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
+import NoCompanyState from "@/components/ui/NoCompanyState";
 
 // ─── Type helpers ─────────────────────────────────────────
 
@@ -106,7 +107,7 @@ export default async function DashboardPage() {
     .single();
 
   const company_id = profile?.company_id as string | undefined;
-  if (!company_id) return null;
+  if (!company_id) return <NoCompanyState />;
 
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
@@ -306,66 +307,75 @@ export default async function DashboardPage() {
               </Link>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                      Материал
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                      Приход
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                      Расход
-                    </th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                      Остаток
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {materials.map((mat) => {
-                    const b = balMap.get(mat.id) ?? {
-                      income: 0,
-                      expense: 0,
-                      balance: 0,
-                    };
-                    return (
-                      <tr key={mat.id} className="hover:bg-gray-50/50">
-                        <td className="px-5 py-3 font-medium text-gray-900 text-sm">
-                          <span className="truncate block max-w-[180px]">
-                            {mat.name}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {mat.unit}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-sm text-green-700 font-mono">
-                          {fmtQty(b.income)}
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-sm text-red-600 font-mono">
-                          {fmtQty(b.expense)}
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <span
-                            className={`tabular-nums text-sm font-bold font-mono ${
-                              b.balance > 0
-                                ? "text-[#1a472a]"
-                                : b.balance < 0
-                                ? "text-red-600"
-                                : "text-gray-400"
-                            }`}
-                          >
-                            {fmtQty(b.balance)}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <>
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                        Материал
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                        Приход
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                        Расход
+                      </th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                        Остаток
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {materials.map((mat) => {
+                      const b = balMap.get(mat.id) ?? { income: 0, expense: 0, balance: 0 };
+                      return (
+                        <tr key={mat.id} className="hover:bg-gray-50/50">
+                          <td className="px-5 py-3 font-medium text-gray-900 text-sm">
+                            <span className="truncate block max-w-[180px]">{mat.name}</span>
+                            <span className="text-xs text-gray-400">{mat.unit}</span>
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums text-sm text-green-700 font-mono">
+                            {fmtQty(b.income)}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums text-sm text-red-600 font-mono">
+                            {fmtQty(b.expense)}
+                          </td>
+                          <td className="px-5 py-3 text-right">
+                            <span className={`tabular-nums text-sm font-bold font-mono ${b.balance > 0 ? "text-[#1a472a]" : b.balance < 0 ? "text-red-600" : "text-gray-400"}`}>
+                              {fmtQty(b.balance)}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="sm:hidden divide-y divide-gray-50">
+                {materials.map((mat) => {
+                  const b = balMap.get(mat.id) ?? { income: 0, expense: 0, balance: 0 };
+                  return (
+                    <div key={mat.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{mat.name}</p>
+                        <p className="text-xs text-gray-400">{mat.unit}</p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 text-xs tabular-nums font-mono">
+                        <span className="text-green-700">+{fmtQty(b.income)}</span>
+                        <span className="text-red-600">−{fmtQty(b.expense)}</span>
+                        <span className={`font-bold text-sm ${b.balance > 0 ? "text-[#1a472a]" : b.balance < 0 ? "text-red-600" : "text-gray-400"}`}>
+                          {fmtQty(b.balance)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
 

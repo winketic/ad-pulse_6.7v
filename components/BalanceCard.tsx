@@ -9,31 +9,6 @@ export type BalanceData = {
   totalOut: number;
 };
 
-function BalanceChip({
-  balance,
-  unit,
-}: {
-  balance: number;
-  unit: string;
-}) {
-  const isPositive = balance > 0;
-  const isZero = balance === 0;
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-        isZero
-          ? "bg-gray-100 text-gray-500"
-          : isPositive
-          ? "bg-green-100 text-green-700"
-          : "bg-red-100 text-red-700"
-      }`}
-    >
-      {isPositive ? "↑" : isZero ? "—" : "↓"}
-      {Math.abs(balance).toFixed(2)} {unit}
-    </span>
-  );
-}
 
 export default function BalanceCard({ balances }: { balances: BalanceData[] }) {
   if (balances.length === 0) return null;

@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   updatePlanStatus,
   type PlanStatus,
-} from "@/app/(dashboard)/plans/actions";
+} from "@/app/(dashboard)/dashboard/plans/actions";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -66,9 +66,6 @@ function fmtDate(s: string) {
   return `${d}.${m}.${y}`;
 }
 
-function fmtNum(n: number, unit: string) {
-  return `${n.toFixed(4)} ${unit}`;
-}
 
 // ─── Status Badge ─────────────────────────────────────────
 

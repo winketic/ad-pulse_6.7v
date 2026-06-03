@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import TransactionsClient from "@/components/transactions/TransactionsClient";
 import type { Transaction, Material } from "@/components/transactions/TransactionsClient";
 import type { TxType } from "./actions";
+import NoCompanyState from "@/components/ui/NoCompanyState";
 
 export default async function TransactionsPage() {
   const cookieStore = await cookies();
@@ -20,7 +21,7 @@ export default async function TransactionsPage() {
     .single();
 
   const company_id = profile?.company_id as string | undefined;
-  if (!company_id) return null;
+  if (!company_id) return <NoCompanyState />;
 
   const [txResult, matResult, profilesResult] = await Promise.all([
     supabase

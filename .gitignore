@@ -34,3 +34,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright & test artifacts
+playwright/
+_ss*.png
+_pw_*.js
+_audit.js
+_sess.json
+_auth_session*.json
+_magic_link.txt
+
+# build/deploy logs
+*.log
+vercel-deploy*.log
+dev.log
+dev-stdout.log
+dev-stderr.log
+build.log

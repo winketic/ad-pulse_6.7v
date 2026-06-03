@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import PlansClient from "@/components/plans/PlansClient";
 import type { Plan, PlanMaterial } from "@/components/plans/PlansClient";
 import type { PlanStatus } from "./actions";
+import NoCompanyState from "@/components/ui/NoCompanyState";
 
 export default async function PlansPage() {
   const cookieStore = await cookies();
@@ -20,7 +21,7 @@ export default async function PlansPage() {
     .single();
 
   const company_id = profile?.company_id as string | undefined;
-  if (!company_id) return null;
+  if (!company_id) return <NoCompanyState />;
 
   const [plansResult, matsResult] = await Promise.all([
     supabase

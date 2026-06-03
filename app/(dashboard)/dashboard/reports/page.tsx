@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import ReportsClient from "@/components/reports/ReportsClient";
 import type { SummaryRow, DefectRow } from "@/components/reports/ReportsClient";
+import NoCompanyState from "@/components/ui/NoCompanyState";
 
 export default async function ReportsPage({
   searchParams,
@@ -23,7 +24,7 @@ export default async function ReportsPage({
     .single();
 
   const company_id = profile?.company_id as string | undefined;
-  if (!company_id) return null;
+  if (!company_id) return <NoCompanyState />;
 
   // ── Default: last 30 days ────────────────────────────────
   const todayDate = new Date();

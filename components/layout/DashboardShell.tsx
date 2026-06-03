@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
+
+// ─── Nav items ────────────────────────────────────────────
 
 const NAV_ITEMS = [
   {
@@ -52,6 +53,15 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: "/dashboard/whatsapp",
+    label: "WhatsApp",
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      </svg>
+    ),
+  },
+  {
     href: "/dashboard/settings",
     label: "Настройки",
     icon: (
@@ -66,10 +76,14 @@ const NAV_ITEMS = [
 interface DashboardShellProps {
   children: React.ReactNode;
   userName: string;
+  whatsappBadge?: number;
 }
 
-export default function DashboardShell({ children, userName }: DashboardShellProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+export default function DashboardShell({
+  children,
+  userName,
+  whatsappBadge = 0,
+}: DashboardShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -83,6 +97,7 @@ export default function DashboardShell({ children, userName }: DashboardShellPro
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === href : pathname.startsWith(href);
 
+  // ── Desktop sidebar content ───────────────────────────
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -102,82 +117,84 @@ export default function DashboardShell({ children, userName }: DashboardShellPro
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.href);
+          const badge =
+            item.href === "/dashboard/whatsapp" && whatsappBadge > 0
+              ? whatsappBadge
+              : 0;
           return (
             <Link
               key={item.href}
               href={item.href}
-              onClick={() => setSidebarOpen(false)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 active
                   ? "bg-white/15 text-white"
                   : "text-white/65 hover:bg-white/8 hover:text-white"
               }`}
             >
-              <span className={active ? "text-white" : "text-white/65"}>{item.icon}</span>
-              {item.label}
+              <span className={active ? "text-white" : "text-white/65"}>
+                {item.icon}
+              </span>
+              <span className="flex-1">{item.label}</span>
+              {badge > 0 && (
+                <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-yellow-400 text-[#1a472a] text-xs font-bold leading-none">
+                  {badge > 99 ? "99+" : badge}
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
 
-      {/* User section */}
-      <div className="px-3 py-4 border-t border-white/10">
-        <div className="flex items-center gap-3 px-3 py-2.5">
+      {/* User + logout */}
+      <div className="px-3 py-4 border-t border-white/10 space-y-1">
+        <div className="flex items-center gap-3 px-3 py-2">
           <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
             <span className="text-white text-xs font-semibold uppercase">
               {userName.charAt(0)}
             </span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-medium truncate">{userName}</p>
-          </div>
+          <p className="text-white text-sm font-medium truncate flex-1">
+            {userName}
+          </p>
         </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white/65 hover:bg-white/8 hover:text-white transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Выйти
+        </button>
       </div>
     </div>
   );
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Desktop sidebar */}
+      {/* ── Desktop sidebar ───────────────────────────── */}
       <aside className="hidden lg:flex lg:flex-col w-60 shrink-0 bg-[#1a472a]">
         <SidebarContent />
       </aside>
 
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setSidebarOpen(false)}
-          />
-          {/* Drawer */}
-          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-[#1a472a] shadow-2xl">
-            <SidebarContent />
-          </aside>
-        </div>
-      )}
-
-      {/* Main area */}
+      {/* ── Main area ─────────────────────────────────── */}
       <div className="flex flex-col flex-1 min-w-0">
-        {/* Top bar */}
+        {/* Top bar (desktop only header, mobile shows brand) */}
         <header className="h-14 shrink-0 bg-white border-b border-gray-200 flex items-center px-4 gap-3">
-          {/* Hamburger (mobile only) */}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-            aria-label="Открыть меню"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
+          {/* Brand (mobile only) */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-[#1a472a]">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+            <span className="font-bold text-gray-900 text-sm">AD Pulse</span>
+          </div>
 
-          {/* Page title placeholder / breadcrumb area */}
           <div className="flex-1" />
 
           {/* User + logout */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="hidden sm:flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-[#1a472a]/15 flex items-center justify-center">
                 <span className="text-[#1a472a] text-xs font-bold uppercase">
@@ -186,7 +203,6 @@ export default function DashboardShell({ children, userName }: DashboardShellPro
               </div>
               <span className="text-sm font-medium text-gray-700">{userName}</span>
             </div>
-
             <button
               onClick={handleLogout}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors border border-gray-200"
@@ -199,11 +215,59 @@ export default function DashboardShell({ children, userName }: DashboardShellPro
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto">
+        {/* Page content — extra bottom padding on mobile for bottom nav */}
+        <main className="flex-1 overflow-auto pb-16 lg:pb-0">
           {children}
         </main>
       </div>
+
+      {/* ── Mobile bottom navigation ──────────────────── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-[#1a472a] border-t border-white/10 safe-area-inset-bottom">
+        <div className="flex items-stretch">
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            const badge =
+              item.href === "/dashboard/whatsapp" && whatsappBadge > 0
+                ? whatsappBadge
+                : 0;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] transition-colors relative ${
+                  active ? "text-white" : "text-white/55"
+                }`}
+              >
+                {/* Active indicator */}
+                {active && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-white" />
+                )}
+
+                {/* Icon with badge */}
+                <span className="relative">
+                  <span className={`block ${active ? "scale-110" : ""} transition-transform`}>
+                    {item.icon}
+                  </span>
+                  {badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-yellow-400 text-[#1a472a] text-[9px] font-bold">
+                      {badge > 9 ? "9+" : badge}
+                    </span>
+                  )}
+                </span>
+
+                {/* Label */}
+                <span
+                  className={`text-[9px] leading-none font-medium ${
+                    active ? "opacity-100" : "opacity-0"
+                  } transition-opacity`}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

@@ -1,36 +1,173 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AD Pulse — Учёт материалов
 
-## Getting Started
+Система учёта складских материалов с поддержкой WhatsApp-уведомлений через Wazzup.
 
-First, run the development server:
+**Стек:** Next.js 14 · Supabase (Postgres + Auth + RLS) · Tailwind CSS · TypeScript
+
+---
+
+## Быстрый старт
+
+### Клонирование
+
+```bash
+git clone <repo-url>
+cd ad-pulse_6.7v
+npm install
+```
+
+### Переменные окружения
+
+Скопируйте пример и заполните значения:
+
+```bash
+cp .env.local.example .env.local
+```
+
+| Переменная | Где взять | Обязательная |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard → Project Settings → API → Project URL | ✅ |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase Dashboard → Project Settings → API → Project API keys → `publishable` | ✅ |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Project Settings → API → Project API keys → `service_role` | ✅ |
+| `NEXT_PUBLIC_APP_URL` | URL вашего приложения (локально: `http://localhost:3000`, на Vercel: `https://your-app.vercel.app`) | ✅ |
+| `WAZZUP_CLIENT_ID` | Партнёрский кабинет Wazzup → OAuth Apps | WhatsApp only |
+| `WAZZUP_PARTNER_EMAIL` | Email партнёрского аккаунта Wazzup | WhatsApp only |
+| `WAZZUP_PARTNER_PASSWORD` | Пароль партнёрского аккаунта Wazzup | WhatsApp only |
+
+> ⚠️ `SUPABASE_SERVICE_ROLE_KEY` — секретный ключ. Никогда не добавляйте его в клиентский код и не публикуйте в репозитории.
+
+### База данных
+
+Выполните миграции в Supabase SQL Editor (в порядке нумерации):
+
+```
+supabase/migrations/001_initial.sql
+supabase/migrations/002_add_transaction_date.sql
+supabase/migrations/003_wazzup.sql
+supabase/migrations/004_whatsapp.sql
+```
+
+### Локальный запуск
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# → http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Деплой на Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Установите Vercel CLI
 
-## Learn More
+```bash
+npm install -g vercel
+vercel login
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Настройте переменные окружения в Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Через Dashboard: **vercel.com → Project → Settings → Environment Variables**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Добавьте все переменные из таблицы выше. Для `NEXT_PUBLIC_APP_URL` используйте URL вашего Vercel-деплоя, например `https://ad-pulse.vercel.app`.
 
-## Deploy on Vercel
+Или через CLI (каждую переменную отдельно):
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+vercel env add NEXT_PUBLIC_SUPABASE_URL
+vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+vercel env add SUPABASE_SERVICE_ROLE_KEY
+vercel env add NEXT_PUBLIC_APP_URL
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 3. Деплой
+
+```bash
+vercel --prod
+```
+
+После деплоя обновите `NEXT_PUBLIC_APP_URL` на полученный URL и задеплойте повторно:
+
+```bash
+vercel env add NEXT_PUBLIC_APP_URL  # введите https://your-app.vercel.app
+vercel --prod
+```
+
+### 4. Настройте Supabase Auth Redirect
+
+В Supabase Dashboard → **Authentication → URL Configuration** добавьте в **Redirect URLs**:
+
+```
+https://your-app.vercel.app/**
+```
+
+---
+
+## Создание первого пользователя
+
+### Через Supabase Dashboard
+
+1. Откройте **Supabase Dashboard → Authentication → Users**
+2. Нажмите **Add user → Create new user**
+3. Введите email и пароль
+4. Откройте **Table Editor → profiles** — там появится строка с новым пользователем
+5. Установите роль `admin` в поле `role`
+6. Войдите в приложение по адресу `/login`
+
+### Через SQL (массовое создание)
+
+```sql
+-- Создать компанию
+INSERT INTO companies (name) VALUES ('Моя компания') RETURNING id;
+
+-- Привязать существующего пользователя к компании (замените UUIDs)
+UPDATE profiles
+SET company_id = '<company-uuid>', role = 'admin'
+WHERE id = '<user-uuid>';
+```
+
+---
+
+## Структура ролей
+
+| Роль | Описание |
+|---|---|
+| `admin` | Полный доступ, управление пользователями |
+| `manager` | Редактирование компании, транзакции, планы |
+| `warehouse` | Только движение материалов |
+| `workshop` | Просмотр планов |
+
+---
+
+## Страницы приложения
+
+| URL | Описание |
+|---|---|
+| `/dashboard` | Главная: остатки, последние транзакции, активные планы |
+| `/dashboard/materials` | Справочник материалов |
+| `/dashboard/transactions` | Движение: приход, расход, возврат, брак |
+| `/dashboard/plans` | Производственные планы |
+| `/dashboard/reports` | Отчёты с экспортом в Excel |
+| `/dashboard/whatsapp` | Входящие WhatsApp-сообщения и авто-транзакции |
+| `/dashboard/settings` | Профиль, компания, пользователи, Wazzup |
+
+---
+
+## Технические детали
+
+- **Auth:** Supabase Auth (email/password)
+- **База данных:** Supabase Postgres с Row Level Security (RLS)
+- **Файлы:** хранятся в Supabase Storage (если подключено)
+- **WhatsApp:** интеграция через Wazzup webhooks (`/api/wazzup/webhook`)
+- **Регион Vercel:** `fra1` (Frankfurt) — ближайший к СНГ
+
+---
+
+## Команды
+
+```bash
+npm run dev      # разработка
+npm run build    # production сборка
+npm run start    # запуск production сборки локально
+npm run lint     # линтер
+```

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { exchangeCodeForTokens } from "@/lib/wazzup/auth";
+import { subscribeToWebhooks } from "@/lib/wazzup/subscribe";
 
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -74,6 +75,14 @@ export async function GET(request: NextRequest) {
       );
 
     if (upsertErr) throw new Error(upsertErr.message);
+
+    // ── Subscribe to webhooks + fetch channel IDs ────────
+    await subscribeToWebhooks(
+      stateRecord.company_id,
+      tokens.access_token
+    ).catch((err) =>
+      console.error("[wazzup/callback] subscribeToWebhooks error:", err)
+    );
 
     // ── Cleanup state record ─────────────────────────────
     await service.from("oauth_state").delete().eq("state", state);

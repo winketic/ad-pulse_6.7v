@@ -21,11 +21,31 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name")
+    .select("full_name, company_id")
     .eq("id", user.id)
     .single();
 
   const displayName = profile?.full_name || user.email || "Пользователь";
 
-  return <DashboardShell userName={displayName}>{children}</DashboardShell>;
+  // Count WhatsApp messages awaiting manual confirmation
+  let whatsappBadge = 0;
+  if (profile?.company_id) {
+    try {
+      const { count } = await supabase
+        .from("wazzup_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("company_id", profile.company_id)
+        .eq("parsed", true)
+        .eq("needs_review", true);
+      whatsappBadge = count ?? 0;
+    } catch {
+      whatsappBadge = 0;
+    }
+  }
+
+  return (
+    <DashboardShell userName={displayName} whatsappBadge={whatsappBadge}>
+      {children}
+    </DashboardShell>
+  );
 }

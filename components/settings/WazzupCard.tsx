@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { disconnectWazzup } from "@/app/(dashboard)/settings/actions";
+import { disconnectWazzup } from "@/app/(dashboard)/dashboard/settings/actions";
 
 interface WazzupCardProps {
   isConnected: boolean;
