@@ -2,6 +2,10 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import NoCompanyState from "@/components/ui/NoCompanyState";
+import { formatQuantity, formatCompact } from "@/lib/utils/format";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 // ─── Type helpers ─────────────────────────────────────────
 
@@ -26,40 +30,45 @@ function fmtDate(s: string) {
   return `${d}.${m}.${y}`;
 }
 
-function fmtQty(n: number) {
-  return n % 1 === 0 ? n.toFixed(0) : n.toFixed(2);
-}
-
 // ─── Sub-components ───────────────────────────────────────
 
 function StatCard({
   label,
+  mobileLabel,
   value,
   sub,
+  valueColor = "text-gray-900",
   iconBg,
   iconColor,
   icon,
 }: {
   label: string;
+  mobileLabel?: string;
   value: string | number;
   sub: string;
+  valueColor?: string;
   iconBg: string;
   iconColor: string;
   icon: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-start gap-4">
-      <div
-        className={`flex items-center justify-center w-11 h-11 rounded-xl shrink-0 ${iconBg} ${iconColor}`}
-      >
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm text-gray-500 leading-tight truncate">{label}</p>
-        <p className="text-2xl font-bold text-gray-900 mt-0.5 tabular-nums">
-          {value}
-        </p>
+    <div className="bg-white rounded-xl border border-gray-200">
+      {/* Mobile: compact, no icon */}
+      <div className="sm:hidden p-4">
+        <p className="text-xs text-gray-500 mb-1">{mobileLabel ?? label}</p>
+        <p className={`text-2xl font-bold tabular-nums ${valueColor}`}>{value}</p>
         <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+      </div>
+      {/* Desktop: icon + text */}
+      <div className="hidden sm:flex p-5 items-start gap-4">
+        <div className={`flex items-center justify-center w-11 h-11 rounded-xl shrink-0 ${iconBg} ${iconColor}`}>
+          {icon}
+        </div>
+        <div className="min-w-0 overflow-hidden">
+          <p className="text-sm text-gray-500 leading-tight truncate">{label}</p>
+          <p className={`text-2xl font-bold mt-0.5 tabular-nums ${valueColor}`}>{value}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+        </div>
       </div>
     </div>
   );
@@ -111,13 +120,14 @@ export default async function DashboardPage() {
 
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-  // ── Parallel data fetching ──────────────────────────────
+  // ── All 6 queries in parallel — no waterfall ───────────
   const [
     matsResult,
     todayTxResult,
     allTxResult,
     recentTxResult,
     activePlansResult,
+    profilesResult,
   ] = await Promise.all([
     supabase
       .from("materials")
@@ -129,10 +139,13 @@ export default async function DashboardPage() {
       .select("type, quantity")
       .eq("company_id", company_id)
       .eq("transaction_date", today),
+    // Limit to last 100 for balance calculation (dashboard overview)
     supabase
       .from("material_transactions")
       .select("material_id, type, quantity")
-      .eq("company_id", company_id),
+      .eq("company_id", company_id)
+      .order("created_at", { ascending: false })
+      .limit(100),
     supabase
       .from("material_transactions")
       .select("id, type, quantity, note, transaction_date, material_id, created_by")
@@ -146,24 +159,16 @@ export default async function DashboardPage() {
       .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(5),
+    supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("company_id", company_id),
   ]);
 
-  // ── Resolve names for recent transactions ───────────────
+  // ── Reuse matsResult + profilesResult — no second round-trip
   const recentRaw = recentTxResult.data ?? [];
-  const txMatIds = Array.from(new Set(recentRaw.map((t) => t.material_id)));
-  const txProfileIds = Array.from(new Set(recentRaw.map((t) => t.created_by)));
-
-  const [{ data: txMats }, { data: txProfiles }] = await Promise.all([
-    txMatIds.length
-      ? supabase.from("materials").select("id, name, unit").in("id", txMatIds)
-      : Promise.resolve({ data: [] as { id: string; name: string; unit: string }[] }),
-    txProfileIds.length
-      ? supabase.from("profiles").select("id, full_name").in("id", txProfileIds)
-      : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
-  ]);
-
-  const txMatMap = new Map((txMats ?? []).map((m) => [m.id, m]));
-  const txProfileMap = new Map((txProfiles ?? []).map((p) => [p.id, p]));
+  const txMatMap = new Map((matsResult.data ?? []).map((m) => [m.id, m]));
+  const txProfileMap = new Map((profilesResult.data ?? []).map((p) => [p.id, p]));
 
   const recentTxs = recentRaw.map((tx) => ({
     ...tx,
@@ -237,7 +242,8 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
         <StatCard
           label="Материалов в справочнике"
-          value={materialsCount}
+          mobileLabel="Материалы"
+          value={formatCompact(materialsCount)}
           sub={materialsCount === 1 ? "позиция" : "позиций"}
           iconBg="bg-[#1a472a]/10"
           iconColor="text-[#1a472a]"
@@ -249,8 +255,10 @@ export default async function DashboardPage() {
         />
         <StatCard
           label="Приход сегодня"
-          value={`+${fmtQty(todayInQty)}`}
+          mobileLabel="Приход"
+          value={`+${formatCompact(todayInQty)}`}
           sub={`${todayInCount} ${todayInCount === 1 ? "запись" : "записей"}`}
+          valueColor="text-green-600"
           iconBg="bg-green-50"
           iconColor="text-green-600"
           icon={
@@ -261,8 +269,10 @@ export default async function DashboardPage() {
         />
         <StatCard
           label="Расход сегодня"
-          value={`-${fmtQty(todayOutQty)}`}
+          mobileLabel="Расход"
+          value={`-${formatCompact(todayOutQty)}`}
           sub={`${todayOutCount} ${todayOutCount === 1 ? "запись" : "записей"}`}
+          valueColor="text-red-600"
           iconBg="bg-red-50"
           iconColor="text-red-600"
           icon={
@@ -273,7 +283,8 @@ export default async function DashboardPage() {
         />
         <StatCard
           label="Активных планов"
-          value={activePlansCount}
+          mobileLabel="Планы"
+          value={formatCompact(activePlansCount)}
           sub={activePlansCount === 1 ? "в работе" : "в работе"}
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
@@ -333,18 +344,18 @@ export default async function DashboardPage() {
                       return (
                         <tr key={mat.id} className="hover:bg-gray-50/50">
                           <td className="px-5 py-3 font-medium text-gray-900 text-sm">
-                            <span className="truncate block max-w-[180px]">{mat.name}</span>
+                            <span className="block break-words">{mat.name}</span>
                             <span className="text-xs text-gray-400">{mat.unit}</span>
                           </td>
                           <td className="px-4 py-3 text-right tabular-nums text-sm text-green-700 font-mono">
-                            {fmtQty(b.income)}
+                            {formatCompact(b.income)}
                           </td>
                           <td className="px-4 py-3 text-right tabular-nums text-sm text-red-600 font-mono">
-                            {fmtQty(b.expense)}
+                            {formatCompact(b.expense)}
                           </td>
                           <td className="px-5 py-3 text-right">
                             <span className={`tabular-nums text-sm font-bold font-mono ${b.balance > 0 ? "text-[#1a472a]" : b.balance < 0 ? "text-red-600" : "text-gray-400"}`}>
-                              {fmtQty(b.balance)}
+                              {formatCompact(b.balance)}
                             </span>
                           </td>
                         </tr>
@@ -359,16 +370,16 @@ export default async function DashboardPage() {
                 {materials.map((mat) => {
                   const b = balMap.get(mat.id) ?? { income: 0, expense: 0, balance: 0 };
                   return (
-                    <div key={mat.id} className="px-4 py-3 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{mat.name}</p>
+                    <div key={mat.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 break-words">{mat.name}</p>
                         <p className="text-xs text-gray-400">{mat.unit}</p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0 text-xs tabular-nums font-mono">
-                        <span className="text-green-700">+{fmtQty(b.income)}</span>
-                        <span className="text-red-600">−{fmtQty(b.expense)}</span>
+                        <span className="text-green-700">+{formatCompact(b.income)}</span>
+                        <span className="text-red-600">−{formatCompact(b.expense)}</span>
                         <span className={`font-bold text-sm ${b.balance > 0 ? "text-[#1a472a]" : b.balance < 0 ? "text-red-600" : "text-gray-400"}`}>
-                          {fmtQty(b.balance)}
+                          {formatCompact(b.balance)}
                         </span>
                       </div>
                     </div>
@@ -421,7 +432,7 @@ export default async function DashboardPage() {
                       }`}
                     >
                       {sign}
-                      {fmtQty(Number(tx.quantity))}
+                      {formatQuantity(Number(tx.quantity))}
                       <span className="text-xs font-normal text-gray-400 ml-0.5">
                         {tx.material_unit}
                       </span>
@@ -499,8 +510,8 @@ export default async function DashboardPage() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5 tabular-nums">
-                      {fmtQty(Number(plan.actual_quantity))} /{" "}
-                      {fmtQty(Number(plan.planned_quantity))}
+                      {formatQuantity(Number(plan.actual_quantity))} /{" "}
+                      {formatQuantity(Number(plan.planned_quantity))}
                     </p>
                   </div>
 

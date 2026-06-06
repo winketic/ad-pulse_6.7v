@@ -1,27 +1,21 @@
 import crypto from "crypto";
-
-const CLIENT_ID = process.env.WAZZUP_CLIENT_ID!;
-const PARTNER_EMAIL = process.env.WAZZUP_PARTNER_EMAIL!;
-const PARTNER_PASSWORD = process.env.WAZZUP_PARTNER_PASSWORD!;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
+import { createServiceClient } from "@/lib/supabase/service";
 
 const WAZZUP_BASE = "https://tech.wazzup24.com/v2/oauth";
 
-export const REDIRECT_URI = () => `${APP_URL}/api/wazzup/callback`;
+export function getRedirectUri(requestUrl: string): string {
+  const { origin } = new URL(requestUrl);
+  return `${origin}/api/wazzup/callback`;
+}
 
 // ─── PKCE ─────────────────────────────────────────────────
+// codeVerifier: base64url of 48 random bytes → 64 chars, alphabet [A-Za-z0-9\-_]
+// satisfies PKCE spec (length 43-128, chars [A-Za-z0-9\-._~])
 
-/**
- * Generates a PKCE code_verifier + code_challenge pair.
- *
- * code_verifier : 64 random base64url chars [A-Za-z0-9-_] (subset of [A-Za-z0-9-._~])
- * code_challenge: BASE64URL(SHA-256(code_verifier))
- */
 export function generatePKCE(): {
   codeVerifier: string;
   codeChallenge: string;
 } {
-  // 48 bytes → 64 base64url chars (no padding since 48 % 3 === 0)
   const codeVerifier = crypto
     .randomBytes(48)
     .toString("base64")
@@ -42,11 +36,16 @@ export function generatePKCE(): {
 
 // ─── Auth URL ─────────────────────────────────────────────
 
-export function getAuthUrl(codeChallenge: string, state: string): string {
+export function getAuthUrl(
+  codeChallenge: string,
+  state: string,
+  redirectUri: string,
+  clientId: string
+): string {
   const params = new URLSearchParams({
     response_type: "code",
-    client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI(),
+    client_id: clientId,
+    redirect_uri: redirectUri,
     scope: "transport,crm",
     state,
     code_challenge: codeChallenge,
@@ -55,25 +54,54 @@ export function getAuthUrl(codeChallenge: string, state: string): string {
   return `${WAZZUP_BASE}/authorize?${params.toString()}`;
 }
 
+// ─── Partner credentials from DB ──────────────────────────
+
+export async function getPartnerCredentials(
+  companyId: string
+): Promise<{ email: string; password: string; clientId: string }> {
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from("wazzup_config")
+    .select("partner_email, partner_password, client_id")
+    .eq("company_id", companyId)
+    .single();
+
+  if (error || !data?.partner_email || !data?.partner_password) {
+    throw new Error(
+      "Партнёрские данные Wazzup не настроены. Укажите их в Настройках."
+    );
+  }
+
+  if (!data.client_id) {
+    throw new Error(
+      "Client ID Wazzup не настроен. Укажите его в Настройках."
+    );
+  }
+
+  const clean = (s: string) => s.replace(/\uFEFF/g, "").trim();
+  return {
+    email: clean(data.partner_email),
+    password: clean(data.partner_password),
+    clientId: clean(data.client_id),
+  };
+}
+
 // ─── Token Exchange ───────────────────────────────────────
 
 export type WazzupTokens = {
   access_token: string;
   refresh_token: string;
-  expires_in: number; // seconds
+  expires_in: number;
 };
 
 export async function exchangeCodeForTokens(
   code: string,
-  codeVerifier: string
+  codeVerifier: string,
+  companyId: string,
+  redirectUri: string
 ): Promise<WazzupTokens> {
-  if (!PARTNER_EMAIL || !PARTNER_PASSWORD) {
-    throw new Error("WAZZUP_PARTNER_EMAIL / WAZZUP_PARTNER_PASSWORD not set");
-  }
-
-  const credentials = Buffer.from(
-    `${PARTNER_EMAIL}:${PARTNER_PASSWORD}`
-  ).toString("base64");
+  const { email, password, clientId } = await getPartnerCredentials(companyId);
+  const credentials = Buffer.from(`${email}:${password}`, "utf-8").toString("base64");
 
   const res = await fetch(`${WAZZUP_BASE}/token`, {
     method: "POST",
@@ -85,12 +113,11 @@ export async function exchangeCodeForTokens(
       grant_type: "authorization_code",
       authorize_code_data: {
         code,
-        redirect_uri: REDIRECT_URI(),
-        client_id: CLIENT_ID,
+        redirect_uri: redirectUri,
+        client_id: clientId,
         code_verifier: codeVerifier,
       },
     }),
-    // Don't cache this request
     cache: "no-store",
   });
 
@@ -99,6 +126,5 @@ export async function exchangeCodeForTokens(
     throw new Error(`Wazzup token exchange failed [${res.status}]: ${body}`);
   }
 
-  const data = await res.json();
-  return data as WazzupTokens;
+  return (await res.json()) as WazzupTokens;
 }

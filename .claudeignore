@@ -1,0 +1,15 @@
+node_modules/
+.next/
+.git/
+dist/
+build/
+*.log
+package-lock.json
+yarn.lock
+.vercel/
+coverage/
+public/
+*.png
+*.jpg
+*.svg
+*.ico

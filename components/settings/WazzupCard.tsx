@@ -2,12 +2,16 @@
 
 import { useState, useEffect, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { disconnectWazzup } from "@/app/(dashboard)/dashboard/settings/actions";
+import { disconnectWazzup, saveWazzupConfig } from "@/app/(dashboard)/dashboard/settings/actions";
 
 interface WazzupCardProps {
   isConnected: boolean;
   expiresAt: string | null;
   flash: string | null;
+  hasConfig: boolean;
+  configEmail: string | null;
+  configClientId: string | null;
+  isAdmin: boolean;
 }
 
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -23,10 +27,138 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
+// ── Partner credentials form (desktop-only) ────────────────
+
+function CredentialsForm({
+  hasConfig,
+  configEmail,
+  configClientId,
+}: {
+  hasConfig: boolean;
+  configEmail: string | null;
+  configClientId: string | null;
+}) {
+  const [editing, setEditing] = useState(!hasConfig);
+  const [email, setEmail] = useState(configEmail ?? "");
+  const [password, setPassword] = useState("");
+  const [clientId, setClientId] = useState(configClientId ?? "");
+  const [error, setError] = useState("");
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    startTransition(async () => {
+      try {
+        await saveWazzupConfig(email, password, clientId);
+        setEditing(false);
+        setPassword("");
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Ошибка сохранения");
+      }
+    });
+  };
+
+  if (!editing && hasConfig) {
+    return (
+      <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 mb-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium text-gray-500">Партнёрский аккаунт Wazzup</p>
+          <p className="text-sm text-gray-800 font-mono mt-0.5 truncate">{configEmail}</p>
+          {configClientId && (
+            <p className="text-xs text-gray-400 font-mono mt-0.5 truncate">
+              Client ID: {configClientId}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={() => setEditing(true)}
+          className="text-xs text-gray-400 hover:text-[#1a472a] transition-colors ml-3 shrink-0"
+        >
+          Изменить
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mb-4 space-y-3">
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">
+          Client ID партнёра Wazzup
+        </label>
+        <input
+          type="text"
+          value={clientId}
+          onChange={(e) => setClientId(e.target.value)}
+          placeholder="2083-9002"
+          required
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#1a472a]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">
+          Email партнёрского аккаунта Wazzup
+        </label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="partner@example.com"
+          required
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#1a472a]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">
+          Пароль партнёрского аккаунта
+        </label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder={hasConfig ? "Оставьте пустым, чтобы не менять" : "••••••••"}
+          required={!hasConfig}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#1a472a]"
+        />
+      </div>
+      {error && (
+        <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+      )}
+      <div className="flex gap-2">
+        {hasConfig && (
+          <button
+            type="button"
+            onClick={() => { setEditing(false); setPassword(""); setError(""); }}
+            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50"
+          >
+            Отмена
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={pending}
+          className="px-4 py-1.5 rounded-lg bg-[#1a472a] text-white text-xs font-semibold hover:bg-[#1a472a]/90 disabled:opacity-50 transition-colors"
+        >
+          {pending ? "Сохранение…" : "Сохранить"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ── Main card ──────────────────────────────────────────────
+
 export default function WazzupCard({
   isConnected,
   expiresAt,
   flash,
+  hasConfig,
+  configEmail,
+  configClientId,
+  isAdmin,
 }: WazzupCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -34,7 +166,6 @@ export default function WazzupCard({
   const [error, setError] = useState("");
   const [showFlash, setShowFlash] = useState(!!flash);
 
-  // Auto-dismiss flash + clean URL
   useEffect(() => {
     if (!flash) return;
     setShowFlash(true);
@@ -123,7 +254,7 @@ export default function WazzupCard({
             WhatsApp через Wazzup
           </h3>
           <p className="text-xs text-gray-400 mt-0.5">
-            Подключите WhatsApp для отправки уведомлений
+            Подключите WhatsApp для получения сообщений
           </p>
         </div>
       </div>
@@ -164,7 +295,7 @@ export default function WazzupCard({
             {confirmDisconnect ? (
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 rounded-lg bg-red-50 border border-red-200">
                 <p className="text-sm text-red-800 flex-1">
-                  Отключить WhatsApp? Отправка уведомлений прекратится.
+                  Отключить WhatsApp? Получение сообщений прекратится.
                 </p>
                 <div className="flex gap-2 shrink-0">
                   <button
@@ -204,6 +335,31 @@ export default function WazzupCard({
         ) : (
           // ── Disconnected state ──────────────────────────
           <div>
+            {/* Credentials form — desktop only, admin only */}
+            {isAdmin && (
+              <div className="hidden md:block">
+                <p className="text-xs font-medium text-gray-500 mb-3">
+                  Шаг 1 — Укажите данные партнёрского аккаунта Wazzup
+                </p>
+                <CredentialsForm hasConfig={hasConfig} configEmail={configEmail} configClientId={configClientId} />
+                <p className="text-xs font-medium text-gray-500 mb-3">
+                  Шаг 2 — Подключите WhatsApp аккаунт
+                </p>
+              </div>
+            )}
+
+            {/* Mobile notice (non-admin or mobile) */}
+            {isAdmin && (
+              <div className="md:hidden flex items-start gap-2 mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-xs text-amber-700">
+                  Настройка подключения доступна только с компьютера
+                </p>
+              </div>
+            )}
+
             <div className="flex items-center gap-3 mb-4">
               <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 shrink-0">
                 <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -221,12 +377,23 @@ export default function WazzupCard({
             </div>
 
             <a
-              href="/api/wazzup/connect"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1ebe5c] text-white text-sm font-semibold transition-colors shadow-sm"
+              href={hasConfig || !isAdmin ? "/api/wazzup/connect" : "#"}
+              onClick={!hasConfig && isAdmin ? (e) => e.preventDefault() : undefined}
+              className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors shadow-sm ${
+                hasConfig || !isAdmin
+                  ? "bg-[#25D366] hover:bg-[#1ebe5c]"
+                  : "bg-gray-300 cursor-not-allowed"
+              }`}
+              title={!hasConfig && isAdmin ? "Сначала сохраните данные партнёрского аккаунта" : undefined}
             >
               <WhatsAppIcon className="w-4 h-4" />
               Подключить WhatsApp через Wazzup
             </a>
+            {!hasConfig && isAdmin && (
+              <p className="mt-2 text-xs text-gray-400 hidden md:block">
+                Сначала укажите данные партнёрского аккаунта выше
+              </p>
+            )}
           </div>
         )}
 

@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import WhatsAppList, { type WazzupMessage, type WazzupMaterial } from "./WhatsAppList";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function WhatsAppPage() {
   const cookieStore = await cookies();

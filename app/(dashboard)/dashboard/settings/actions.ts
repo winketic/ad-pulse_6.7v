@@ -35,6 +35,40 @@ async function getAdminContext() {
 
 // ─── Wazzup ───────────────────────────────────────────────
 
+export async function saveWazzupConfig(
+  partnerEmail: string,
+  partnerPassword: string,
+  clientId: string
+) {
+  const clean = (s: string) => s.replace(/\uFEFF/g, "").trim();
+  const trimEmail = clean(partnerEmail);
+  const trimPass = clean(partnerPassword);
+  const trimClientId = clean(clientId);
+
+  if (!trimEmail || !trimPass) throw new Error("Email и пароль обязательны");
+  if (!trimClientId) throw new Error("Client ID обязателен");
+
+  const { companyId, role } = await getAdminContext();
+  if (role !== "admin") throw new Error("Только администратор может настраивать интеграцию");
+
+  const service = createServiceClient();
+  const { error } = await service
+    .from("wazzup_config")
+    .upsert(
+      {
+        company_id: companyId,
+        partner_email: trimEmail,
+        partner_password: trimPass,
+        client_id: trimClientId,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "company_id" }
+    );
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard/settings");
+}
+
 export async function disconnectWazzup() {
   const { companyId } = await getAdminContext();
   const service = createServiceClient();
@@ -81,18 +115,22 @@ export async function listCompanyUsers(): Promise<UserRow[]> {
   const { companyId } = await getAdminContext();
   const service = createServiceClient();
 
-  const { data: profiles } = await service
+  const { data: profiles, error: profilesError } = await service
     .from("profiles")
     .select("id, full_name, role")
     .eq("company_id", companyId);
 
+  if (profilesError) throw new Error(profilesError.message);
   if (!profiles?.length) return [];
 
-  // Fetch emails from auth.users via admin API
-  const { data: authUsers } = await service.auth.admin.listUsers();
-  const emailMap = new Map(
-    (authUsers?.users ?? []).map((u) => [u.id, u.email ?? ""])
-  );
+  // Fetch emails from auth.users via service role admin API
+  let emailMap = new Map<string, string>();
+  try {
+    const { data: authUsers } = await service.auth.admin.listUsers({ perPage: 1000 });
+    emailMap = new Map((authUsers?.users ?? []).map((u) => [u.id, u.email ?? ""]));
+  } catch {
+    // Non-critical — show users without emails rather than crashing
+  }
 
   return profiles.map((p) => ({
     id: p.id,
@@ -142,10 +180,14 @@ export async function removeUserFromCompany(userId: string) {
     .single();
   if (!p) throw new Error("Пользователь не найден");
 
+  // Delete profile (company_id is NOT NULL, can't set to null)
+  // Deleting the profile removes the user from this company
+  // without touching their auth.users record
   const { error } = await service
     .from("profiles")
-    .update({ company_id: null })
-    .eq("id", userId);
+    .delete()
+    .eq("id", userId)
+    .eq("company_id", companyId);
 
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/settings");
@@ -156,37 +198,56 @@ export async function inviteUserByEmail(email: string, role: string) {
   if (myRole !== "admin") throw new Error("Только администратор может добавлять пользователей");
 
   const service = createServiceClient();
+  const cleanEmail = email.trim().toLowerCase();
 
-  // Find user in auth by email
-  const { data: authList } = await service.auth.admin.listUsers();
-  const authUser = (authList?.users ?? []).find(
-    (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
-  );
+  let userId: string;
 
-  if (!authUser) {
-    throw new Error(
-      "Пользователь с таким email не зарегистрирован. Сначала попросите его войти в систему."
+  // Try to invite — creates user and sends email link pointing to /invite
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://ad-pulse-eight.vercel.app").replace(/\/$/, "");
+  const { data: inviteData, error: inviteError } = await service.auth.admin.inviteUserByEmail(cleanEmail, {
+    redirectTo: `${appUrl}/invite`,
+  });
+
+  if (inviteError) {
+    // User already registered — find them by email instead
+    const alreadyExists =
+      inviteError.message.toLowerCase().includes("already registered") ||
+      inviteError.message.toLowerCase().includes("already in use") ||
+      inviteError.message.toLowerCase().includes("already exists") ||
+      inviteError.status === 422;
+
+    if (!alreadyExists) {
+      throw new Error(`Ошибка приглашения: ${inviteError.message}`);
+    }
+
+    const { data: authList } = await service.auth.admin.listUsers({ perPage: 1000 });
+    const found = (authList?.users ?? []).find(
+      (u) => u.email?.toLowerCase() === cleanEmail
     );
+    if (!found) throw new Error("Пользователь не найден. Попробуйте ещё раз.");
+    userId = found.id;
+  } else {
+    userId = inviteData.user.id;
   }
 
-  // Check if user already has a company
-  const { data: existing } = await service
+  // Guard: don't steal from another company
+  const { data: existingProfile } = await service
     .from("profiles")
     .select("company_id")
-    .eq("id", authUser.id)
-    .single();
+    .eq("id", userId)
+    .maybeSingle();
 
-  if (existing?.company_id && existing.company_id !== companyId) {
+  if (existingProfile?.company_id && existingProfile.company_id !== companyId) {
     throw new Error("Пользователь уже состоит в другой компании");
   }
 
-  const { error } = await service
+  const { error: profileError } = await service
     .from("profiles")
     .upsert(
-      { id: authUser.id, company_id: companyId, role },
+      { id: userId, company_id: companyId, role, full_name: cleanEmail },
       { onConflict: "id" }
     );
 
-  if (error) throw new Error(error.message);
+  if (profileError) throw new Error(profileError.message);
   revalidatePath("/dashboard/settings");
 }

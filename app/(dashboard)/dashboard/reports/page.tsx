@@ -4,6 +4,9 @@ import ReportsClient from "@/components/reports/ReportsClient";
 import type { SummaryRow, DefectRow } from "@/components/reports/ReportsClient";
 import NoCompanyState from "@/components/ui/NoCompanyState";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function ReportsPage({
   searchParams,
 }: {
@@ -36,8 +39,8 @@ export default async function ReportsPage({
   const from = searchParams.from ?? defaultFrom;
   const to = searchParams.to ?? defaultTo;
 
-  // ── Fetch materials + transactions in period ──────────────
-  const [matsResult, txResult] = await Promise.all([
+  // ── All 3 queries in parallel — no waterfall ─────────────
+  const [matsResult, txResult, profilesResult] = await Promise.all([
     supabase
       .from("materials")
       .select("id, name, unit")
@@ -50,24 +53,21 @@ export default async function ReportsPage({
       .gte("transaction_date", from)
       .lte("transaction_date", to)
       .order("transaction_date", { ascending: false }),
+    // Fetch all company profiles upfront — avoids sequential fetch after defect filter
+    supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("company_id", company_id),
   ]);
 
   const materials = matsResult.data ?? [];
   const txs = txResult.data ?? [];
 
-  // ── Profiles for defect list ─────────────────────────────
+  // ── Build profile map ────────────────────────────────────
   const defectTxs = txs.filter((t) => t.type === "defect");
-  const profileIds = Array.from(new Set(defectTxs.map((t) => t.created_by)));
-
   const profileMap = new Map<string, string>();
-  if (profileIds.length) {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", profileIds);
-    for (const p of profiles ?? []) {
-      profileMap.set(p.id, p.full_name ?? "—");
-    }
+  for (const p of profilesResult.data ?? []) {
+    profileMap.set(p.id, p.full_name ?? "—");
   }
 
   // ── Material lookup map ───────────────────────────────────

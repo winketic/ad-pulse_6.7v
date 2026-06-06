@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { exchangeCodeForTokens } from "@/lib/wazzup/auth";
+import { exchangeCodeForTokens, getRedirectUri } from "@/lib/wazzup/auth";
 import { subscribeToWebhooks } from "@/lib/wazzup/subscribe";
 
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
@@ -51,10 +51,15 @@ export async function GET(request: NextRequest) {
   }
 
   // ── Exchange code for tokens ───────────────────────────
+  // redirect_uri must match exactly what was sent in the authorization request
+  const redirectUri = getRedirectUri(request.url);
+
   try {
     const tokens = await exchangeCodeForTokens(
       code,
-      stateRecord.code_verifier
+      stateRecord.code_verifier,
+      stateRecord.company_id,
+      redirectUri
     );
 
     const expiresAt = new Date(

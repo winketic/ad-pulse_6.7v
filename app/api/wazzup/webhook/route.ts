@@ -2,6 +2,33 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { parseAndSave } from "@/lib/wazzup/parseAndSave";
 
+type ContentType = "text" | "voice" | "image" | "document" | "other";
+
+function resolveContentType(
+  msgType: string,
+  mimetype: string | null
+): ContentType {
+  // Prefer mimetype from attachment if available (more reliable than type field)
+  if (mimetype) {
+    if (mimetype.includes("audio")) return "voice";
+    if (mimetype.includes("image")) return "image";
+    if (mimetype.includes("pdf") || mimetype.includes("document") || mimetype.includes("msword"))
+      return "document";
+  }
+  switch (msgType.toLowerCase()) {
+    case "text":           return "text";
+    case "voice":
+    case "audio":
+    case "ptt":            return "voice";
+    case "image":
+    case "photo":
+    case "sticker":        return "image";
+    case "document":
+    case "file":           return "document";
+    default:               return msgType ? "other" : "text";
+  }
+}
+
 export async function POST(request: NextRequest) {
   let body: unknown;
   try {
@@ -10,7 +37,6 @@ export async function POST(request: NextRequest) {
     body = null;
   }
 
-  // Respond 200 immediately; process in background
   if (body) {
     void processWebhook(body).catch((err) =>
       console.error("[wazzup/webhook] processing error:", err)
@@ -39,12 +65,27 @@ async function processWebhook(body: unknown) {
     const channelId = typeof msg.channel_id === "string" ? msg.channel_id : "";
     if (!messageId || !channelId) continue;
 
-    const text = typeof msg.text === "string" ? msg.text : "";
+    const rawType = typeof msg.type === "string" ? msg.type : "text";
+    const text = typeof msg.text === "string" ? msg.text.trim() : "";
+
+    // Wazzup attachment structure: { url, name, mimetype, size }
+    const attachment =
+      msg.attachment && typeof msg.attachment === "object"
+        ? (msg.attachment as Record<string, unknown>)
+        : null;
+
+    const mediaUrl =
+      typeof attachment?.url === "string" ? attachment.url : null;
+    const mimetype =
+      typeof attachment?.mimetype === "string" ? attachment.mimetype : null;
+
+    const contentType = resolveContentType(rawType, mimetype);
+
     const recipient = msg.recipient as Record<string, unknown> | undefined;
     const senderPhone =
       typeof recipient?.phone === "string" ? recipient.phone : "";
 
-    // Idempotency: skip if already stored
+    // Idempotency
     const { data: existing } = await service
       .from("wazzup_messages")
       .select("id")
@@ -61,9 +102,7 @@ async function processWebhook(body: unknown) {
       .maybeSingle();
 
     if (!token?.company_id) {
-      console.warn(
-        `[wazzup/webhook] no company found for channel_id=${channelId}`
-      );
+      console.warn(`[wazzup/webhook] no company found for channel_id=${channelId}`);
       continue;
     }
 
@@ -76,7 +115,9 @@ async function processWebhook(body: unknown) {
         channel_id: channelId,
         direction: "inbound",
         sender_phone: senderPhone,
-        raw_text: text,
+        raw_text: text || null,
+        content_type: contentType,
+        media_url: mediaUrl,
       })
       .select("id")
       .single();

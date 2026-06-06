@@ -1,8 +1,13 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import WazzupCard from "@/components/settings/WazzupCard";
 import CompanySettings from "@/components/settings/CompanySettings";
 import UserManagement from "@/components/settings/UserManagement";
+import TelegramCard from "@/components/settings/TelegramCard";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import { listCompanyUsers } from "./actions";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -24,51 +29,89 @@ export default async function SettingsPage({
 }: {
   searchParams: { wazzup?: string; reason?: string };
 }) {
+  console.log("[settings] page rendering...");
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
+  console.log("[settings] auth.getUser done:", user?.id ?? "no user", authError?.message ?? "ok");
   if (!user) return null;
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("full_name, role, company_id")
     .eq("id", user.id)
     .single();
+  console.log("[settings] profile query done:", profile?.role, profileError?.message ?? "ok");
 
   const company_id = profile?.company_id as string | undefined;
   const role = profile?.role ?? "warehouse";
   const isAdmin = role === "admin";
   const canEditCompany = role === "admin" || role === "manager";
 
-  // Company name
   let companyName = "—";
-  if (company_id) {
-    const { data: company } = await supabase
-      .from("companies")
-      .select("name")
-      .eq("id", company_id)
-      .single();
-    companyName = company?.name ?? "—";
-  }
-
-  // Wazzup token
   let isConnected = false;
   let tokenExpiresAt: string | null = null;
+  let hasConfig = false;
+  let configEmail: string | null = null;
+  let configClientId: string | null = null;
+  let telegramConnected = false;
+
   if (company_id) {
-    const { data: token } = await supabase
-      .from("wazzup_tokens")
-      .select("id, expires_at")
-      .eq("company_id", company_id)
-      .single();
-    isConnected = !!token;
-    tokenExpiresAt = token?.expires_at ?? null;
+    try {
+      const { data } = await supabase
+        .from("companies")
+        .select("name, telegram_connected")
+        .eq("id", company_id)
+        .single();
+      companyName = data?.name ?? "—";
+      telegramConnected = data?.telegram_connected ?? false;
+      console.log("[settings] companies query done:", companyName);
+    } catch (e) { console.error("[settings] companies query failed:", e); }
+
+    try {
+      const { data } = await supabase
+        .from("wazzup_tokens")
+        .select("id, expires_at")
+        .eq("company_id", company_id)
+        .single();
+      isConnected = !!data;
+      tokenExpiresAt = data?.expires_at ?? null;
+      console.log("[settings] wazzup_tokens query done: isConnected=", isConnected);
+    } catch (e) { console.error("[settings] wazzup_tokens query failed:", e); }
+
+    try {
+      const service = createServiceClient();
+      const { data: cfg } = await service
+        .from("wazzup_config")
+        .select("partner_email, client_id")
+        .eq("company_id", company_id)
+        .maybeSingle();
+      const cleanStr = (s: string | null) => s?.replace(/\uFEFF/g, "").trim() ?? null;
+      const cleanEmail = cleanStr(cfg?.partner_email ?? null);
+      const cleanClientId = cleanStr(cfg?.client_id ?? null);
+      hasConfig = !!(cleanEmail && cleanClientId);
+      configEmail = cleanEmail;
+      configClientId = cleanClientId;
+      console.log("[settings] wazzup_config query done: hasConfig=", hasConfig);
+    } catch (e) { console.error("[settings] wazzup_config query failed:", e); }
   }
 
-  // Users (load only if part of a company)
-  const users = company_id ? await listCompanyUsers().catch(() => []) : [];
+  console.log("[settings] listCompanyUsers starting...");
+  let users: Awaited<ReturnType<typeof listCompanyUsers>> = [];
+  if (company_id) {
+    try {
+      const result = await listCompanyUsers();
+      users = result ?? [];
+    } catch (e) {
+      console.error("[settings] listCompanyUsers error:", e);
+      users = [];
+    }
+  }
+  console.log("[settings] listCompanyUsers done:", users.length, "users");
 
   const roleStyle = ROLE_COLORS[role] ?? ROLE_COLORS.warehouse;
   const initials = (profile?.full_name ?? user.email ?? "U")
@@ -146,7 +189,20 @@ export default async function SettingsPage({
           isConnected={isConnected}
           expiresAt={tokenExpiresAt}
           flash={searchParams.wazzup ?? null}
+          hasConfig={hasConfig}
+          configEmail={configEmail}
+          configClientId={configClientId}
+          isAdmin={isAdmin}
         />
+
+        {/* ── Telegram ─────────────────────────────── */}
+        {company_id && (
+          <TelegramCard
+            companyId={company_id}
+            telegramConnected={telegramConnected}
+            isAdmin={isAdmin}
+          />
+        )}
       </div>
     </div>
   );
