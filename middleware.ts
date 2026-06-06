@@ -1,7 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/middleware";
 
-const PUBLIC_PATHS = ["/login"];
+const ADMIN_EMAIL = "altai.dx@gmail.com";
+
+const PUBLIC_PATHS = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+  "/auth/confirm",
+  "/invite",
+  "/api/telegram/webhook",
+  "/api/telegram/setup",
+];
 
 export async function middleware(request: NextRequest) {
   const { supabase, supabaseResponse } = createClient(request);
@@ -10,19 +22,39 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const { data: { session } } = await supabase.auth.getSession();
+
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
-  if (!user && !isPublic) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // Unauthenticated — redirect to login, preserve destination
+  if (!user && !session && !isPublic) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", pathname + request.nextUrl.search);
+    return NextResponse.redirect(loginUrl);
   }
 
-  if (user && pathname === "/login") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
+  if (user) {
+    // Admin-only routes
+    if (pathname.startsWith("/admin")) {
+      if (user.email !== ADMIN_EMAIL) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
 
-  if (user && pathname === "/") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    // Unverified email
+    if (
+      !user.email_confirmed_at &&
+      !pathname.startsWith("/verify-email") &&
+      !pathname.startsWith("/reset-password") &&
+      !pathname.startsWith("/invite")
+    ) {
+      return NextResponse.redirect(new URL("/verify-email", request.url));
+    }
+
+    if (pathname === "/login" || pathname === "/") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
   }
 
   return supabaseResponse;

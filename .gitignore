@@ -51,3 +51,5 @@ dev.log
 dev-stdout.log
 dev-stderr.log
 build.log
+
+.vercel

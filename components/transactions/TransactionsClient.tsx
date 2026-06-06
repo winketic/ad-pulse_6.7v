@@ -10,6 +10,9 @@ import {
 import { useRouter } from "next/navigation";
 import BalanceCard, { type BalanceData } from "@/components/BalanceCard";
 import { createTransaction, type TxType } from "@/app/(dashboard)/dashboard/transactions/actions";
+import { formatQuantity } from "@/lib/utils/format";
+
+export type { BalanceData };
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -216,6 +219,7 @@ function AddTransactionForm({
     note: "",
     date: todayStr(),
   });
+  const [quantityError, setQuantityError] = useState("");
 
   const set =
     (k: keyof FormState) =>
@@ -223,8 +227,13 @@ function AddTransactionForm({
       e: React.ChangeEvent<
         HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
       >
-    ) =>
+    ) => {
       setForm((p) => ({ ...p, [k]: e.target.value }));
+      if (k === "quantity") {
+        const val = Number(e.target.value);
+        setQuantityError(val > 999999999 ? "Максимальное количество: 999 999 999" : "");
+      }
+    };
 
   const isDefect = form.type === "defect";
   const selectedMaterial = materials.find((m) => m.id === form.material_id);
@@ -232,6 +241,7 @@ function AddTransactionForm({
     !!form.material_id &&
     !!form.quantity &&
     Number(form.quantity) > 0 &&
+    Number(form.quantity) <= 999999999 &&
     !!form.date &&
     (!isDefect || !!form.defect_reason.trim());
 
@@ -328,12 +338,25 @@ function AddTransactionForm({
           type="number"
           value={form.quantity}
           onChange={set("quantity")}
+          onBlur={(e) => {
+            const val = Number(e.target.value);
+            if (val > 999999999) {
+              setForm((p) => ({ ...p, quantity: "999999999" }));
+              setQuantityError("");
+            }
+          }}
           placeholder="0.0000"
           required
           min="0.0001"
+          max="999999999"
           step="0.0001"
-          className={inputCls}
+          className={`${inputCls} ${quantityError ? "border-red-400 focus:ring-red-300 focus:border-red-400" : ""}`}
         />
+        {quantityError ? (
+          <p className="mt-1 text-xs text-red-600">{quantityError}</p>
+        ) : (
+          <p className="mt-1 text-xs text-gray-400">Макс. 999 999 999</p>
+        )}
       </div>
 
       {/* Defect reason — only for 'defect' type */}
@@ -567,14 +590,70 @@ function EmptyState({
   );
 }
 
+// ─── Pagination ───────────────────────────────────────────
+
+function Pagination({
+  page,
+  totalPages,
+  totalCount,
+}: {
+  page: number;
+  totalPages: number;
+  totalCount: number;
+}) {
+  const router = useRouter();
+  if (totalPages <= 1) return null;
+
+  const go = (p: number) => router.push(`?page=${p}`);
+
+  return (
+    <div className="flex items-center justify-between mt-4 px-1">
+      <p className="text-sm text-gray-500">
+        Страница <span className="font-semibold text-gray-800">{page}</span>{" "}
+        из {totalPages} · {totalCount} {pluralRecords(totalCount)} всего
+      </p>
+      <div className="flex gap-2">
+        <button
+          onClick={() => go(page - 1)}
+          disabled={page <= 1}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          Предыдущая
+        </button>
+        <button
+          onClick={() => go(page + 1)}
+          disabled={page >= totalPages}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          Следующая
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────
 
 export default function TransactionsClient({
   transactions,
   materials,
+  initialBalances,
+  page,
+  totalPages,
+  totalCount,
 }: {
   transactions: Transaction[];
   materials: Material[];
+  initialBalances?: BalanceData[];
+  page?: number;
+  totalPages?: number;
+  totalCount?: number;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -582,9 +661,11 @@ export default function TransactionsClient({
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [formError, setFormError] = useState("");
 
+  // Use server-computed balances (full dataset) if provided, otherwise
+  // fall back to client-side computation over current page's transactions.
   const balances = useMemo(
-    () => computeBalances(transactions),
-    [transactions]
+    () => initialBalances ?? computeBalances(transactions),
+    [initialBalances, transactions]
   );
 
   const filtered = useMemo(() => {
@@ -660,9 +741,9 @@ export default function TransactionsClient({
             Движение материалов
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {transactions.length === 0
+            {(totalCount ?? transactions.length) === 0
               ? "Записей нет"
-              : `${transactions.length} ${pluralRecords(transactions.length)} всего`}
+              : `${totalCount ?? transactions.length} ${pluralRecords(totalCount ?? transactions.length)} всего`}
           </p>
         </div>
         <button
@@ -756,7 +837,7 @@ export default function TransactionsClient({
                         className={`px-5 py-3.5 text-right font-bold tabular-nums font-mono text-sm ${cfg.qColor}`}
                       >
                         {cfg.sign}
-                        {tx.quantity.toFixed(4)}{" "}
+                        {formatQuantity(tx.quantity)}{" "}
                         <span className="text-xs font-normal text-gray-400">
                           {tx.material_unit}
                         </span>
@@ -811,7 +892,7 @@ export default function TransactionsClient({
                     className={`text-xl font-bold tabular-nums mt-1 ${cfg.qColor}`}
                   >
                     {cfg.sign}
-                    {tx.quantity.toFixed(4)}{" "}
+                    {formatQuantity(tx.quantity)}{" "}
                     <span className="text-sm font-normal text-gray-400">
                       {tx.material_unit}
                     </span>
@@ -831,6 +912,11 @@ export default function TransactionsClient({
             })}
           </div>
         </>
+      )}
+
+      {/* ── Pagination ──────────────────────────────────── */}
+      {page != null && totalPages != null && totalCount != null && (
+        <Pagination page={page} totalPages={totalPages} totalCount={totalCount} />
       )}
 
       {/* ── Modal ───────────────────────────────────────── */}

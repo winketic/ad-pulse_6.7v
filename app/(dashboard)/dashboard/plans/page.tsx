@@ -3,6 +3,9 @@ import { createClient } from "@/utils/supabase/server";
 import PlansClient from "@/components/plans/PlansClient";
 import type { Plan, PlanMaterial } from "@/components/plans/PlansClient";
 import type { PlanStatus } from "./actions";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import NoCompanyState from "@/components/ui/NoCompanyState";
 
 export default async function PlansPage() {

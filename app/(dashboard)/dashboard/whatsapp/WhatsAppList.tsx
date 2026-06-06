@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { confirmWhatsAppTransaction, type TxType } from "./actions";
+import { confirmWhatsAppTransaction, rejectWhatsAppMessage, type TxType } from "./actions";
 
 type ParseResult = {
   type: TxType | null;
@@ -262,10 +262,23 @@ export default function WhatsAppList({
   materials: WazzupMaterial[];
 }) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectPending, startRejectTransition] = useTransition();
 
   const confirmingMessage = confirmingId
     ? messages.find((m) => m.id === confirmingId) ?? null
     : null;
+
+  const handleReject = (id: string) => {
+    setRejectingId(id);
+    startRejectTransition(async () => {
+      try {
+        await rejectWhatsAppMessage(id);
+      } finally {
+        setRejectingId(null);
+      }
+    });
+  };
 
   return (
     <div className="p-6">
@@ -342,12 +355,23 @@ export default function WhatsAppList({
                       </td>
                       <td className="px-4 py-3 text-right">
                         {status === "yellow" && (
-                          <button
-                            onClick={() => setConfirmingId(msg.id)}
-                            className="px-3 py-1.5 rounded-lg bg-yellow-50 text-yellow-800 text-xs font-medium hover:bg-yellow-100 transition-colors border border-yellow-200"
-                          >
-                            Подтвердить
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => setConfirmingId(msg.id)}
+                              className="px-3 py-1.5 rounded-lg bg-yellow-50 text-yellow-800 text-xs font-medium hover:bg-yellow-100 transition-colors border border-yellow-200"
+                            >
+                              Подтвердить
+                            </button>
+                            <button
+                              onClick={() => handleReject(msg.id)}
+                              disabled={rejectPending && rejectingId === msg.id}
+                              className="px-3 py-1.5 rounded-lg bg-gray-50 text-gray-500 text-xs font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors border border-gray-200 disabled:opacity-50"
+                            >
+                              {rejectPending && rejectingId === msg.id
+                                ? "…"
+                                : "Отклонить"}
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>

@@ -71,3 +71,34 @@ export async function confirmWhatsAppTransaction(input: ConfirmInput) {
   revalidatePath("/dashboard/transactions");
   revalidatePath("/dashboard");
 }
+
+export async function rejectWhatsAppMessage(messageId: string) {
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) throw new Error("Не авторизован");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.company_id) throw new Error("Компания не найдена");
+
+  const service = createServiceClient();
+
+  const { error } = await service
+    .from("wazzup_messages")
+    .update({ needs_review: false })
+    .eq("id", messageId)
+    .eq("company_id", profile.company_id);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/whatsapp");
+}

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
+import { Logo } from "@/components/Logo";
 
 function mapError(msg: string): string {
   if (msg.includes("Invalid login credentials")) return "Неверный email или пароль";
@@ -11,12 +13,13 @@ function mapError(msg: string): string {
   return "Ошибка входа. Попробуйте снова";
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,7 +27,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -35,7 +38,12 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    if (!data.user?.email_confirmed_at) {
+      router.push("/verify-email");
+    } else {
+      const next = searchParams.get("next") ?? "/dashboard";
+      router.push(next);
+    }
     router.refresh();
   };
 
@@ -44,24 +52,24 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#1a472a] mb-4 shadow-lg">
-            <svg
-              className="w-8 h-8 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-              />
-            </svg>
+          <div className="flex justify-center mb-4">
+            <Logo size={64} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">AD Pulse</h1>
-          <p className="text-sm text-gray-500 mt-1">Система учёта материалов</p>
+          <h1 className="text-2xl font-bold text-[#05050a] tracking-tight">AD Pulse</h1>
+          <p className="text-sm text-gray-400 mt-1">Система учёта материалов</p>
         </div>
+
+        {/* Success message from password reset */}
+        {searchParams.get("message") === "password_updated" && (
+          <div className="mb-4 flex items-start gap-2.5 px-4 py-3.5 rounded-xl bg-green-50 border border-green-200">
+            <svg className="w-4 h-4 text-green-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm text-green-700 font-medium">
+              Пароль успешно изменён. Войдите с новым паролем.
+            </span>
+          </div>
+        )}
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
@@ -123,6 +131,15 @@ export default function LoginPage() {
               </div>
             )}
 
+            <div className="flex justify-end">
+              <a
+                href="/forgot-password"
+                className="text-xs text-gray-400 hover:text-[#1a472a] transition-colors"
+              >
+                Забыли пароль?
+              </a>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -156,8 +173,23 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          <p className="text-center text-sm text-gray-400 mt-6">
+            Нет аккаунта?{" "}
+            <Link href="/register" className="font-medium text-[#05050a] hover:underline">
+              Оставить заявку
+            </Link>
+          </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
