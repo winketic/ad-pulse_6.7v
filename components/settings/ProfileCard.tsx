@@ -201,22 +201,24 @@ export default function ProfileCard({
           />
         </div>
 
-        {/* Banner color swatches */}
-        <div className="flex items-center gap-1.5 pb-1">
-          {BANNER_COLORS.map((color) => (
-            <button
-              key={color}
-              onClick={() => handleColorSelect(color)}
-              className="w-5 h-5 rounded-full transition-transform hover:scale-110"
-              style={{
-                background: color,
-                outline: displayBanner === color ? "2px solid #00f5c4" : "2px solid transparent",
-                outlineOffset: "2px",
-              }}
-              title={color}
-            />
-          ))}
-        </div>
+        {/* Banner color swatches — hidden when gradient banner is active */}
+        {!displayBanner.includes("gradient") && (
+          <div className="flex items-center gap-1.5 pb-1">
+            {BANNER_COLORS.map((color) => (
+              <button
+                key={color}
+                onClick={() => handleColorSelect(color)}
+                className="w-5 h-5 rounded-full transition-transform hover:scale-110"
+                style={{
+                  background: color,
+                  outline: displayBanner === color ? "2px solid #00f5c4" : "2px solid transparent",
+                  outlineOffset: "2px",
+                }}
+                title={color}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Card header ────────────────────────────────── */}
