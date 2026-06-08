@@ -63,19 +63,19 @@ function CredentialsForm({
 
   if (!editing && hasConfig) {
     return (
-      <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 mb-4">
+      <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-[#161616] border border-[#1f1f1f] mb-4">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-gray-500">Партнёрский аккаунт Wazzup</p>
-          <p className="text-sm text-gray-800 font-mono mt-0.5 truncate">{configEmail}</p>
+          <p className="text-xs font-medium text-[#888888]">Партнёрский аккаунт Wazzup</p>
+          <p className="text-sm text-[#ededed] font-mono mt-0.5 truncate">{configEmail}</p>
           {configClientId && (
-            <p className="text-xs text-gray-400 font-mono mt-0.5 truncate">
+            <p className="text-xs text-[#888888] font-mono mt-0.5 truncate">
               Client ID: {configClientId}
             </p>
           )}
         </div>
         <button
           onClick={() => setEditing(true)}
-          className="text-xs text-gray-400 hover:text-[#1a472a] transition-colors ml-3 shrink-0"
+          className="text-xs text-[#888888] hover:text-[#00f5c4] transition-colors ml-3 shrink-0"
         >
           Изменить
         </button>
@@ -86,7 +86,7 @@ function CredentialsForm({
   return (
     <form onSubmit={handleSubmit} className="mb-4 space-y-3">
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">
+        <label className="block text-xs font-medium text-[#888888] mb-1">
           Client ID партнёра Wazzup
         </label>
         <input
@@ -95,11 +95,11 @@ function CredentialsForm({
           onChange={(e) => setClientId(e.target.value)}
           placeholder="2083-9002"
           required
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#1a472a]"
+          className="w-full px-3 py-2 bg-[#161616] border border-[#1f1f1f] rounded-lg text-sm font-mono text-[#ededed] placeholder-[#888888] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">
+        <label className="block text-xs font-medium text-[#888888] mb-1">
           Email партнёрского аккаунта Wazzup
         </label>
         <input
@@ -108,11 +108,11 @@ function CredentialsForm({
           onChange={(e) => setEmail(e.target.value)}
           placeholder="partner@example.com"
           required
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#1a472a]"
+          className="w-full px-3 py-2 bg-[#161616] border border-[#1f1f1f] rounded-lg text-sm text-[#ededed] placeholder-[#888888] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">
+        <label className="block text-xs font-medium text-[#888888] mb-1">
           Пароль партнёрского аккаунта
         </label>
         <input
@@ -121,7 +121,7 @@ function CredentialsForm({
           onChange={(e) => setPassword(e.target.value)}
           placeholder={hasConfig ? "Оставьте пустым, чтобы не менять" : "••••••••"}
           required={!hasConfig}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#1a472a]"
+          className="w-full px-3 py-2 bg-[#161616] border border-[#1f1f1f] rounded-lg text-sm text-[#ededed] placeholder-[#888888] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
         />
       </div>
       {error && (
@@ -132,7 +132,7 @@ function CredentialsForm({
           <button
             type="button"
             onClick={() => { setEditing(false); setPassword(""); setError(""); }}
-            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            className="px-3 py-1.5 rounded-lg border border-[#1f1f1f] text-xs font-medium text-[#888888] hover:bg-[#161616]"
           >
             Отмена
           </button>
@@ -193,7 +193,7 @@ export default function WazzupCard({
   const isError = flash === "error";
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] overflow-hidden">
       {/* Flash message */}
       {showFlash && (isSuccess || isError) && (
         <div
@@ -235,7 +235,7 @@ export default function WazzupCard({
           </span>
           <button
             onClick={() => setShowFlash(false)}
-            className="ml-auto p-0.5 rounded text-gray-400 hover:text-gray-600"
+            className="ml-auto p-0.5 rounded text-[#888888] hover:text-[#888888]"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -245,15 +245,15 @@ export default function WazzupCard({
       )}
 
       {/* Card header */}
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+      <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-[#25D366]/10 flex items-center justify-center">
           <WhatsAppIcon className="w-5 h-5 text-[#25D366]" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">
+          <h3 className="text-sm font-semibold text-[#ededed]">
             WhatsApp через Wazzup
           </h3>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-[#888888] mt-0.5">
             Подключите WhatsApp для получения сообщений
           </p>
         </div>
@@ -271,13 +271,13 @@ export default function WazzupCard({
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">
+                <p className="text-sm font-semibold text-[#ededed]">
                   WhatsApp подключён
                 </p>
                 {expiresAt && (
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-[#888888] mt-0.5">
                     Токен действителен до:{" "}
-                    <span className="text-gray-600">
+                    <span className="text-[#888888]">
                       {new Date(expiresAt).toLocaleDateString("ru-RU", {
                         day: "2-digit",
                         month: "long",
@@ -323,7 +323,7 @@ export default function WazzupCard({
             ) : (
               <button
                 onClick={() => setConfirmDisconnect(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-red-300 hover:text-red-600 transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-[#888888] hover:bg-[#161616] hover:border-red-300 hover:text-red-600 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -338,11 +338,11 @@ export default function WazzupCard({
             {/* Credentials form — desktop only, admin only */}
             {isAdmin && (
               <div className="hidden md:block">
-                <p className="text-xs font-medium text-gray-500 mb-3">
+                <p className="text-xs font-medium text-[#888888] mb-3">
                   Шаг 1 — Укажите данные партнёрского аккаунта Wazzup
                 </p>
                 <CredentialsForm hasConfig={hasConfig} configEmail={configEmail} configClientId={configClientId} />
-                <p className="text-xs font-medium text-gray-500 mb-3">
+                <p className="text-xs font-medium text-[#888888] mb-3">
                   Шаг 2 — Подключите WhatsApp аккаунт
                 </p>
               </div>
@@ -361,16 +361,16 @@ export default function WazzupCard({
             )}
 
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 shrink-0">
-                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#1f1f1f] shrink-0">
+                <svg className="w-4 h-4 text-[#888888]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-700">
+                <p className="text-sm font-semibold text-[#888888]">
                   WhatsApp не подключён
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-[#888888] mt-0.5">
                   Авторизуйтесь через партнёрский кабинет Wazzup
                 </p>
               </div>
@@ -390,7 +390,7 @@ export default function WazzupCard({
               Подключить WhatsApp через Wazzup
             </a>
             {!hasConfig && isAdmin && (
-              <p className="mt-2 text-xs text-gray-400 hidden md:block">
+              <p className="mt-2 text-xs text-[#888888] hidden md:block">
                 Сначала укажите данные партнёрского аккаунта выше
               </p>
             )}
