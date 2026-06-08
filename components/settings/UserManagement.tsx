@@ -127,6 +127,8 @@ export default function UserManagement({
         <div>
           <h2 className="text-sm font-semibold text-[#ededed]">Пользователи</h2>
           <p className="text-xs text-[#888888] mt-0.5">{users.length} участников</p>
+          {/* DEBUG — убрать после диагностики */}
+          <pre className="text-xs text-gray-500 mt-1 whitespace-pre-wrap break-all">{JSON.stringify(users.map(u => ({ id: u.id, avatar: u.avatar_url, banner: u.banner_color })), null, 2)}</pre>
         </div>
         {isAdmin && (
           <button
