@@ -5,8 +5,6 @@ import { useRef, useEffect } from "react";
 interface Particle {
   x: number;
   y: number;
-  w: number;
-  h: number;
   vx: number;
   vy: number;
   life: number;
@@ -14,7 +12,7 @@ interface Particle {
   color: string;
 }
 
-const COLORS = ["#ff006e", "#ff3399", "#ff66cc", "#cc00ff"];
+const COLORS = ["#ff69b4", "#ff1493", "#ff007f", "#ff99cc"];
 
 export default function FireBanner() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -31,11 +29,9 @@ export default function FireBanner() {
     let particles: Particle[] = [];
 
     const spawn = (): Particle => ({
-      x: W * 0.3 + Math.random() * W * 0.7,
-      y: H + 12,
-      w: 2 + Math.random() * 2,
-      h: 6 + Math.random() * 6,
-      vx: -(0.1 + Math.random() * 0.35),
+      x: W * 0.25 + Math.random() * W * 0.75,
+      y: H + 8,
+      vx: -(0.1 + Math.random() * 0.3),
       vy: 0.7 + Math.random() * 1.4,
       life: 1,
       decay: 0.008 + Math.random() * 0.012,
@@ -45,7 +41,7 @@ export default function FireBanner() {
     const init = () => {
       const parent = canvas.parentElement;
       W = parent?.offsetWidth ?? 300;
-      H = parent?.offsetHeight ?? 70;
+      H = parent?.offsetHeight ?? 80;
       canvas.width = W;
       canvas.height = H;
       particles = Array.from({ length: 150 }, () => {
@@ -58,6 +54,8 @@ export default function FireBanner() {
 
     const draw = () => {
       ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = "#1a0010";
+      ctx.fillRect(0, 0, W, H);
 
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
@@ -65,16 +63,21 @@ export default function FireBanner() {
 
         ctx.save();
         ctx.globalAlpha = Math.max(0, alpha);
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "#ff1493";
         ctx.fillStyle = p.color;
         ctx.translate(p.x, p.y);
-        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        // rx=2, ry=8 elongated upward flame shape
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 2, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
 
         p.x += p.vx;
         p.y -= p.vy;
         p.life -= p.decay;
 
-        if (p.life <= 0 || p.y < -p.h) {
+        if (p.life <= 0 || p.y < -8) {
           particles[i] = spawn();
         }
       }
