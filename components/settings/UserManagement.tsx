@@ -253,6 +253,11 @@ export default function UserManagement({
 
         return (
           <div className="p-4 space-y-4">
+            {/* DEBUG */}
+            <div className="text-xs text-gray-500 p-2 bg-gray-900 rounded">
+              cardUsers count: {cardUsers.length} | rowUsers count: {rowUsers.length}
+              {" | "}data: {JSON.stringify(sorted.map(u => ({ av: u.avatar_url?.slice(0,20) ?? null, bn: u.banner_color })))}
+            </div>
             {/* ── Discord-style cards grid ─────────────── */}
             {cardUsers.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
