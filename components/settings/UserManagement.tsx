@@ -259,16 +259,19 @@ export default function UserManagement({
                 {cardUsers.map((user) => {
                   const isMe = user.id === currentUserId;
                   const isRemoving = removingId === user.id;
-                  const banner = user.banner_color ?? "#1f1f1f";
+                  const banner = user.banner_color ?? "#1a1a2e";
                   const initials = (user.full_name ?? user.email).charAt(0).toUpperCase();
 
                   return (
-                    <div key={user.id} className="bg-[#161616] rounded-xl border border-[#1f1f1f] overflow-hidden group">
-                      {/* Banner */}
-                      <div className="h-[60px] relative pointer-events-none" style={{ background: banner }}>
+                    <div key={user.id} className="group">
+                      {/* Main card */}
+                      <div className="relative rounded-xl overflow-hidden" style={{ background: banner }}>
+                        {/* Dark overlay */}
+                        <div className="absolute inset-0 bg-black/45 pointer-events-none" />
+
                         {/* Action buttons */}
                         {isAdmin && !isMe && !isRemoving && (
-                          <div className="pointer-events-auto absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                             <button onClick={() => setEditingRoleId(editingRoleId === user.id ? null : user.id)}
                               className="p-1.5 rounded-lg bg-black/50 text-white hover:bg-black/70 transition-colors"
                               title="Изменить роль">
@@ -285,36 +288,36 @@ export default function UserManagement({
                             </button>
                           </div>
                         )}
-                      </div>
 
-                      {/* Content */}
-                      <div className="px-4 pb-4">
-                        {/* Avatar overlapping banner */}
-                        <div className="relative z-10 -mt-6 mb-2">
+                        {/* Content row */}
+                        <div className="relative z-10 flex items-center gap-3 p-4 min-h-[90px]">
+                          {/* Avatar */}
                           {user.avatar_url ? (
                             <img src={user.avatar_url} alt={user.full_name ?? ""}
-                              className="w-12 h-12 rounded-full object-cover ring-2 ring-[#161616]" />
+                              className="w-12 h-12 rounded-full object-cover ring-2 ring-white/20 shrink-0" />
                           ) : (
-                            <div className="w-12 h-12 rounded-full ring-2 ring-[#161616] flex items-center justify-center text-white font-bold text-lg"
-                              style={{ background: banner }}>
+                            <div className="w-12 h-12 rounded-full ring-2 ring-white/20 flex items-center justify-center text-white font-bold text-lg shrink-0 bg-white/20">
                               {initials}
                             </div>
                           )}
+
+                          {/* Info */}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-white truncate">
+                              {user.full_name ?? user.email}
+                              {isMe && <span className="ml-1 text-xs font-normal text-white/60">(вы)</span>}
+                            </p>
+                            <p className="text-xs text-white/60 truncate">{user.email}</p>
+                            {user.position && <p className="text-xs text-white/50 truncate">{user.position}</p>}
+                            <div className="mt-1.5">
+                              <RoleEdit user={user} />
+                            </div>
+                          </div>
                         </div>
-
-                        <p className="text-sm font-bold text-[#ededed] truncate">
-                          {user.full_name ?? user.email}
-                          {isMe && <span className="ml-1 text-xs font-normal text-[#888888]">(вы)</span>}
-                        </p>
-                        <p className="text-xs text-[#888888] truncate mt-0.5">{user.email}</p>
-                        {user.position && <p className="text-xs text-[#888888] mt-0.5">{user.position}</p>}
-
-                        <div className="mt-2">
-                          <RoleEdit user={user} />
-                        </div>
-
-                        {isRemoving && <RemoveConfirm user={user} />}
                       </div>
+
+                      {/* Remove confirm (outside card to avoid overflow-hidden clip) */}
+                      {isRemoving && <RemoveConfirm user={user} />}
                     </div>
                   );
                 })}
