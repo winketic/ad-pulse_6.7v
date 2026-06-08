@@ -7,6 +7,7 @@ import {
   inviteUserByEmail,
   type UserRow,
 } from "@/app/(dashboard)/dashboard/settings/actions";
+import StarfieldBanner from "./StarfieldBanner";
 
 const ROLES = [
   { value: "admin", label: "Администратор" },
@@ -262,10 +263,21 @@ export default function UserManagement({
                   const banner = user.banner_color ?? "#1a1a2e";
                   const initials = (user.full_name ?? user.email).charAt(0).toUpperCase();
 
+                  const isStarfield = isMe &&
+                    (banner.includes("gradient") || banner.toLowerCase().startsWith("linear"));
+
                   return (
                     <div key={user.id} className="group">
                       {/* Main card */}
-                      <div className="relative rounded-xl overflow-hidden" style={{ background: banner }}>
+                      <div
+                        className="relative rounded-xl overflow-hidden"
+                        style={isStarfield ? undefined : { background: banner }}
+                      >
+                        {isStarfield && (
+                          <div className="absolute inset-0">
+                            <StarfieldBanner />
+                          </div>
+                        )}
                         {/* Dark overlay */}
                         <div className="absolute inset-0 bg-black/45 pointer-events-none" />
 
