@@ -47,6 +47,8 @@ export async function POST(request: NextRequest) {
 }
 
 async function processWebhook(body: unknown) {
+  console.log("[wazzup/webhook] payload:", JSON.stringify(body));
+
   if (!body || typeof body !== "object") return;
   const payload = body as Record<string, unknown>;
 
@@ -59,7 +61,10 @@ async function processWebhook(body: unknown) {
     if (!item || typeof item !== "object") continue;
     const msg = item as Record<string, unknown>;
 
-    if (msg.direction !== "inbound") continue;
+    // Wazzup sends direction: "in" for incoming; also accept "inbound"/"incoming"
+    const dir = typeof msg.direction === "string" ? msg.direction.toLowerCase() : "";
+    console.log(`[wazzup/webhook] msg direction="${dir}" message_id=${msg.message_id}`);
+    if (dir !== "in" && dir !== "inbound" && dir !== "incoming") continue;
 
     const messageId = typeof msg.message_id === "string" ? msg.message_id : "";
     const channelId = typeof msg.channel_id === "string" ? msg.channel_id : "";
@@ -81,9 +86,15 @@ async function processWebhook(body: unknown) {
 
     const contentType = resolveContentType(rawType, mimetype);
 
-    const recipient = msg.recipient as Record<string, unknown> | undefined;
+    // For incoming messages the sender phone is in chatId ("79001234567@c.us"),
+    // or in contact.phone / sender.phone — try all variants
+    const contact = msg.contact as Record<string, unknown> | undefined;
+    const sender  = msg.sender  as Record<string, unknown> | undefined;
+    const chatId  = typeof msg.chatId === "string" ? msg.chatId.replace(/@.*$/, "") : "";
     const senderPhone =
-      typeof recipient?.phone === "string" ? recipient.phone : "";
+      (typeof contact?.phone === "string" && contact.phone) ||
+      (typeof sender?.phone  === "string" && sender.phone)  ||
+      chatId || "";
 
     // Idempotency
     const { data: existing } = await service
