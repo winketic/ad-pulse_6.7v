@@ -47,47 +47,69 @@ export async function POST(request: NextRequest) {
 }
 
 async function processWebhook(body: unknown) {
-  console.log("[wazzup/webhook] payload:", JSON.stringify(body));
+  // ── FULL RAW BODY ──────────────────────────────────────
+  console.log("[wazzup/webhook] RAW BODY:", JSON.stringify(body));
 
-  if (!body || typeof body !== "object") return;
+  if (!body || typeof body !== "object") {
+    console.log("[wazzup/webhook] SKIP: body is null or not object");
+    return;
+  }
   const payload = body as Record<string, unknown>;
 
-  if (payload.event !== "message.add") return;
+  console.log(`[wazzup/webhook] event="${payload.event}" data_count=${Array.isArray(payload.data) ? (payload.data as unknown[]).length : "not array"}`);
+
+  if (payload.event !== "message.add") {
+    console.log(`[wazzup/webhook] SKIP: event="${payload.event}" is not message.add`);
+    return;
+  }
 
   const data = Array.isArray(payload.data) ? payload.data : [];
+  if (data.length === 0) {
+    console.log("[wazzup/webhook] SKIP: data array is empty");
+    return;
+  }
+
   const service = createServiceClient();
 
   for (const item of data) {
-    if (!item || typeof item !== "object") continue;
+    if (!item || typeof item !== "object") {
+      console.log("[wazzup/webhook] SKIP item: null or not object");
+      continue;
+    }
     const msg = item as Record<string, unknown>;
 
-    // Wazzup sends direction: "in" for incoming; also accept "inbound"/"incoming"
+    // ── DIRECTION FILTER ───────────────────────────────
     const dir = typeof msg.direction === "string" ? msg.direction.toLowerCase() : "";
-    console.log(`[wazzup/webhook] msg direction="${dir}" message_id=${msg.message_id}`);
-    if (dir !== "in" && dir !== "inbound" && dir !== "incoming") continue;
+    const messageId = typeof msg.message_id === "string" ? msg.message_id : String(msg.id ?? "");
+    const channelId = typeof msg.channel_id === "string" ? msg.channel_id : String(msg.channelId ?? "");
 
-    const messageId = typeof msg.message_id === "string" ? msg.message_id : "";
-    const channelId = typeof msg.channel_id === "string" ? msg.channel_id : "";
-    if (!messageId || !channelId) continue;
+    console.log(`[wazzup/webhook] item: message_id="${messageId}" channel_id="${channelId}" direction="${dir}" type="${msg.type}" text="${String(msg.text ?? "").slice(0, 80)}"`);
+
+    if (dir !== "in" && dir !== "inbound" && dir !== "incoming") {
+      console.log(`[wazzup/webhook] SKIP: direction="${dir}" is not incoming`);
+      continue;
+    }
+
+    if (!messageId) {
+      console.log("[wazzup/webhook] SKIP: empty message_id");
+      continue;
+    }
+    if (!channelId) {
+      console.log("[wazzup/webhook] SKIP: empty channel_id. Full msg keys:", Object.keys(msg).join(","));
+      continue;
+    }
 
     const rawType = typeof msg.type === "string" ? msg.type : "text";
     const text = typeof msg.text === "string" ? msg.text.trim() : "";
 
-    // Wazzup attachment structure: { url, name, mimetype, size }
     const attachment =
       msg.attachment && typeof msg.attachment === "object"
         ? (msg.attachment as Record<string, unknown>)
         : null;
-
-    const mediaUrl =
-      typeof attachment?.url === "string" ? attachment.url : null;
-    const mimetype =
-      typeof attachment?.mimetype === "string" ? attachment.mimetype : null;
-
+    const mediaUrl  = typeof attachment?.url      === "string" ? attachment.url      : null;
+    const mimetype  = typeof attachment?.mimetype === "string" ? attachment.mimetype : null;
     const contentType = resolveContentType(rawType, mimetype);
 
-    // For incoming messages the sender phone is in chatId ("79001234567@c.us"),
-    // or in contact.phone / sender.phone — try all variants
     const contact = msg.contact as Record<string, unknown> | undefined;
     const sender  = msg.sender  as Record<string, unknown> | undefined;
     const chatId  = typeof msg.chatId === "string" ? msg.chatId.replace(/@.*$/, "") : "";
@@ -96,47 +118,57 @@ async function processWebhook(body: unknown) {
       (typeof sender?.phone  === "string" && sender.phone)  ||
       chatId || "";
 
-    // Idempotency
+    // ── IDEMPOTENCY ────────────────────────────────────
     const { data: existing } = await service
       .from("wazzup_messages")
       .select("id")
       .eq("message_id", messageId)
       .maybeSingle();
 
-    if (existing) continue;
+    if (existing) {
+      console.log(`[wazzup/webhook] SKIP: message_id="${messageId}" already exists`);
+      continue;
+    }
 
-    // Resolve company by channel_id
-    const { data: token } = await service
+    // ── COMPANY LOOKUP ─────────────────────────────────
+    const { data: token, error: tokenErr } = await service
       .from("wazzup_tokens")
       .select("company_id")
       .contains("channel_ids", [channelId])
       .maybeSingle();
 
+    console.log(`[wazzup/webhook] company lookup for channel_id="${channelId}": company_id=${token?.company_id ?? "NOT FOUND"} err=${tokenErr?.message ?? "none"}`);
+
     if (!token?.company_id) {
-      console.warn(`[wazzup/webhook] no company found for channel_id=${channelId}`);
+      console.warn(`[wazzup/webhook] SKIP: no company found for channel_id="${channelId}"`);
       continue;
     }
 
-    // Persist raw message
+    // ── INSERT ─────────────────────────────────────────
+    const insertPayload = {
+      company_id:   token.company_id,
+      message_id:   messageId,
+      channel_id:   channelId,
+      direction:    "inbound",
+      sender_phone: senderPhone,
+      raw_text:     text || null,
+      content_type: contentType,
+      media_url:    mediaUrl,
+    };
+    console.log("[wazzup/webhook] INSERT payload:", JSON.stringify(insertPayload));
+
     const { data: saved, error: insertErr } = await service
       .from("wazzup_messages")
-      .insert({
-        company_id: token.company_id,
-        message_id: messageId,
-        channel_id: channelId,
-        direction: "inbound",
-        sender_phone: senderPhone,
-        raw_text: text || null,
-        content_type: contentType,
-        media_url: mediaUrl,
-      })
+      .insert(insertPayload)
       .select("id")
       .single();
 
     if (insertErr) {
-      console.error("[wazzup/webhook] insert error:", insertErr.message);
+      console.error(`[wazzup/webhook] INSERT ERROR: ${insertErr.message} | code=${insertErr.code}`);
       continue;
     }
+
+    console.log(`[wazzup/webhook] SAVED message id=${saved?.id}`);
 
     if (saved?.id) {
       await parseAndSave(saved.id);
