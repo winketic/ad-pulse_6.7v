@@ -106,6 +106,73 @@ function findMaterial(
   return null;
 }
 
+// ─── GPT fallback ─────────────────────────────────────────
+
+interface GptParsed {
+  type: TxType | null;
+  material_name: string | null;
+  quantity: number | null;
+  unit: string | null;
+}
+
+async function callGptParser(
+  text: string,
+  materials: { id: string; name: string; unit: string }[]
+): Promise<GptParsed | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const materialsList = materials.map((m) => `- ${m.name} (${m.unit})`).join("\n");
+
+  const systemPrompt = `Ты парсер складских сообщений. Анализируй сообщения на русском, казахском, сленге, с опечатками — пойми суть.
+
+Список материалов компании:
+${materialsList}
+
+Определи из сообщения:
+1. Тип операции: "income" (приход/завезли/поступило/получили), "expense" (расход/ушло/использовали/потратили), "defect" (брак/дефект/испорчено), "return" (возврат/вернули)
+2. Название материала — выбери ТОЧНО из списка выше (не придумывай новые)
+3. Количество (число)
+4. Единица измерения
+
+Ответь СТРОГО JSON без markdown:
+{"type":"income|expense|defect|return|null","material_name":"название из списка или null","quantity":число_или_null,"unit":"единица или null"}`;
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        max_tokens: 150,
+        temperature: 0,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: text },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      console.error("[parser] GPT API error:", res.status, await res.text().catch(() => ""));
+      return null;
+    }
+
+    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const raw = data.choices?.[0]?.message?.content?.trim() ?? "";
+    console.log("[parser] GPT raw response:", raw);
+
+    const parsed = JSON.parse(raw) as GptParsed;
+    return parsed;
+  } catch (e) {
+    console.error("[parser] GPT parse error:", e);
+    return null;
+  }
+}
+
 // ─── Main parser ──────────────────────────────────────────
 
 export async function parseMessage(
@@ -120,19 +187,69 @@ export async function parseMessage(
     .select("id, name, unit")
     .eq("company_id", companyId);
 
+  const matList = materials ?? [];
+
+  // ── Step 1: keyword-based fast parse ──
   const type = detectType(text);
   const qtyResult = extractQuantity(text);
-  const material = findMaterial(text, materials ?? []);
-
+  const material = findMaterial(text, matList);
   const allFound = !!type && !!qtyResult && !!material;
 
+  if (allFound) {
+    return {
+      type,
+      quantity: qtyResult!.quantity,
+      unit: qtyResult!.unit,
+      material_id: material!.id,
+      material_name: material!.name,
+      confidence: "high",
+      transaction_created: false,
+    };
+  }
+
+  // ── Step 2: GPT fallback for fuzzy/slang/Kazakh input ──
+  console.log(`[parser] keyword parse incomplete (type=${type}, qty=${qtyResult?.quantity}, mat=${material?.name}), trying GPT`);
+  const gpt = await callGptParser(text, matList);
+
+  if (gpt) {
+    // Map GPT's material_name back to a real material id (case-insensitive)
+    const matchedMat = gpt.material_name
+      ? matList.find((m) =>
+          m.name.toLowerCase() === gpt.material_name!.toLowerCase() ||
+          m.name.toLowerCase().includes(gpt.material_name!.toLowerCase()) ||
+          gpt.material_name!.toLowerCase().includes(m.name.toLowerCase())
+        ) ?? null
+      : null;
+
+    const resolvedType   = gpt.type ?? type;
+    const resolvedQty    = gpt.quantity ?? qtyResult?.quantity ?? null;
+    const resolvedUnit   = gpt.unit ?? qtyResult?.unit ?? null;
+    const resolvedMatId  = matchedMat?.id ?? material?.id ?? null;
+    const resolvedMatName = matchedMat?.name ?? material?.name ?? gpt.material_name ?? null;
+
+    const gptAllFound = !!(resolvedType && resolvedQty != null && resolvedMatId);
+
+    console.log(`[parser] GPT result: type=${resolvedType} mat=${resolvedMatName} qty=${resolvedQty} conf=${gptAllFound ? "high" : "low"}`);
+
+    return {
+      type: resolvedType,
+      quantity: resolvedQty,
+      unit: resolvedUnit,
+      material_id: resolvedMatId,
+      material_name: resolvedMatName,
+      confidence: gptAllFound ? "high" : "low",
+      transaction_created: false,
+    };
+  }
+
+  // ── Step 3: return best-effort keyword result ──
   return {
     type,
     quantity: qtyResult?.quantity ?? null,
     unit: qtyResult?.unit ?? null,
     material_id: material?.id ?? null,
     material_name: material?.name ?? null,
-    confidence: allFound ? "high" : "low",
+    confidence: "low",
     transaction_created: false,
   };
 }
