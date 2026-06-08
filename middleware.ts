@@ -13,6 +13,8 @@ const PUBLIC_PATHS = [
   "/invite",
   "/api/telegram/webhook",
   "/api/telegram/setup",
+  "/api/wazzup/webhook",
+  "/api/wazzup/callback",
 ];
 
 export async function middleware(request: NextRequest) {
@@ -47,7 +49,8 @@ export async function middleware(request: NextRequest) {
       !user.email_confirmed_at &&
       !pathname.startsWith("/verify-email") &&
       !pathname.startsWith("/reset-password") &&
-      !pathname.startsWith("/invite")
+      !pathname.startsWith("/invite") &&
+      !pathname.startsWith("/onboarding")
     ) {
       return NextResponse.redirect(new URL("/verify-email", request.url));
     }
