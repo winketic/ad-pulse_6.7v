@@ -259,22 +259,80 @@ export default function UserManagement({
         return (
           <div className="p-4 flex flex-col gap-3">
 
-            {/* ── Current user — Discord card ── */}
+            {/* ── Current user card ── */}
             {meUser && (() => {
               const initials = (meUser.full_name ?? meUser.email).charAt(0).toUpperCase();
+              const isAdminUser = meUser.role === "admin";
+
+              if (isAdminUser) {
+                // Discord-style admin card
+                return (
+                  <div className="rounded-xl overflow-hidden shadow-lg" style={{ background: "#1e1f22" }}>
+                    {/* Banner: purple gradient + SVG noise texture */}
+                    <div className="relative h-[60px] overflow-hidden" style={{
+                      background: "linear-gradient(135deg, #4752c4 0%, #7b5ea7 55%, #9b59b6 100%)",
+                    }}>
+                      <svg className="absolute inset-0 w-full h-full opacity-20" xmlns="http://www.w3.org/2000/svg">
+                        <filter id="adm-noise">
+                          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+                          <feColorMatrix type="saturate" values="0" />
+                        </filter>
+                        <rect width="100%" height="100%" filter="url(#adm-noise)" />
+                      </svg>
+                    </div>
+
+                    {/* Content */}
+                    <div className="relative px-4 pb-4">
+                      {/* Avatar with online dot */}
+                      <div className="absolute -top-6 left-4">
+                        <div className="relative">
+                          {meUser.avatar_url ? (
+                            <img src={meUser.avatar_url} alt={meUser.full_name ?? ""}
+                              className="w-12 h-12 rounded-full object-cover ring-4 ring-[#1e1f22]" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full ring-4 ring-[#1e1f22] flex items-center justify-center text-white font-bold text-lg"
+                              style={{ background: "linear-gradient(135deg, #4752c4, #9b59b6)" }}>
+                              {initials}
+                            </div>
+                          )}
+                          {/* Online indicator */}
+                          <span className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-[#23a55a] ring-2 ring-[#1e1f22]" />
+                        </div>
+                      </div>
+
+                      {/* Name + badges */}
+                      <div className="pt-9 flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-white truncate">
+                            {meUser.full_name ?? meUser.email}
+                          </p>
+                          {meUser.position
+                            ? <p className="text-xs text-[#b5bac1] mt-0.5 truncate">{meUser.position}</p>
+                            : <p className="text-xs text-[#b5bac1] mt-0.5">В сети</p>
+                          }
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-[#4752c4]/30 border border-[#4752c4]/50 text-[#c9cdfb]">
+                            Администратор
+                          </span>
+                          <span className="text-base leading-none select-none" title="AD Pulse">🎮</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Non-admin current user — FireBanner style
               return (
                 <div className="relative rounded-xl overflow-hidden min-h-[70px]" style={{ background: "#1a0a2e" }}>
-                  {/* FireBanner — right 60% of card */}
                   <div className="absolute right-0 top-0 bottom-0 w-[60%]">
                     <FireBanner />
                   </div>
-                  {/* Gradient mask + subtle overlay */}
                   <div className="absolute inset-0 bg-black/20 pointer-events-none" />
-                  <div
-                    className="absolute inset-0 pointer-events-none"
+                  <div className="absolute inset-0 pointer-events-none"
                     style={{ background: "linear-gradient(to right, #1a0a2e 40%, transparent 100%)" }}
                   />
-                  {/* Content */}
                   <div className="relative z-10 flex items-center gap-3 px-4 py-3">
                     {meUser.avatar_url ? (
                       <img src={meUser.avatar_url} alt={meUser.full_name ?? ""}
@@ -289,14 +347,11 @@ export default function UserManagement({
                         <p className="text-sm font-bold text-white truncate">
                           {meUser.full_name ?? meUser.email}
                         </p>
-                        {/* AD Pulse logo */}
                         <Image src="/logo.svg" width={18} height={18} alt="AD Pulse" className="shrink-0" />
                       </div>
                       {meUser.position && <p className="text-xs text-white/60 truncate mt-0.5">{meUser.position}</p>}
                     </div>
-                    <div className="shrink-0">
-                      <RoleBadge role={meUser.role} />
-                    </div>
+                    <div className="shrink-0"><RoleBadge role={meUser.role} /></div>
                   </div>
                 </div>
               );
