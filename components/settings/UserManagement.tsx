@@ -265,57 +265,50 @@ export default function UserManagement({
               const isAdminUser = meUser.role === "admin";
 
               if (isAdminUser) {
-                // Discord-style admin card
+                // Discord-style admin card with FireBanner
                 return (
-                  <div className="rounded-xl overflow-hidden shadow-lg" style={{ background: "#1e1f22" }}>
-                    {/* Banner: purple gradient + SVG noise texture */}
-                    <div className="relative h-[60px] overflow-hidden" style={{
-                      background: "linear-gradient(135deg, #4752c4 0%, #7b5ea7 55%, #9b59b6 100%)",
-                    }}>
-                      <svg className="absolute inset-0 w-full h-full opacity-20" xmlns="http://www.w3.org/2000/svg">
-                        <filter id="adm-noise">
-                          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-                          <feColorMatrix type="saturate" values="0" />
-                        </filter>
-                        <rect width="100%" height="100%" filter="url(#adm-noise)" />
-                      </svg>
+                  <div className="rounded-xl shadow-lg overflow-visible" style={{ background: "#1e1f22" }}>
+                    {/* FireBanner — 80px, clipped */}
+                    <div className="relative h-[80px] rounded-t-xl overflow-hidden">
+                      <FireBanner />
                     </div>
 
-                    {/* Content */}
-                    <div className="relative px-4 pb-4">
-                      {/* Avatar with online dot */}
-                      <div className="absolute -top-6 left-4">
+                    {/* Content — avatar overlaps banner via absolute */}
+                    <div className="relative px-4 pb-4 pt-0">
+                      {/* Avatar: bottom: -20px from banner = absolute -top-5, left-4 */}
+                      <div className="absolute -top-5 left-4">
                         <div className="relative">
                           {meUser.avatar_url ? (
                             <img src={meUser.avatar_url} alt={meUser.full_name ?? ""}
-                              className="w-12 h-12 rounded-full object-cover ring-4 ring-[#1e1f22]" />
+                              className="w-14 h-14 rounded-full object-cover ring-[3px] ring-[#1e1f22]" />
                           ) : (
-                            <div className="w-12 h-12 rounded-full ring-4 ring-[#1e1f22] flex items-center justify-center text-white font-bold text-lg"
+                            <div className="w-14 h-14 rounded-full ring-[3px] ring-[#1e1f22] flex items-center justify-center text-white font-bold text-xl"
                               style={{ background: "linear-gradient(135deg, #4752c4, #9b59b6)" }}>
                               {initials}
                             </div>
                           )}
-                          {/* Online indicator */}
-                          <span className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-[#23a55a] ring-2 ring-[#1e1f22]" />
+                          {/* Online dot — bottom-right, white border */}
+                          <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-[#23a55a]"
+                            style={{ boxShadow: "0 0 0 2px #1e1f22" }} />
                         </div>
                       </div>
 
-                      {/* Name + badges */}
-                      <div className="pt-9 flex items-start justify-between gap-2">
+                      {/* Text + badges — padded to clear the avatar */}
+                      <div className="pt-11 flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-white truncate">
+                          <p className="text-sm font-bold text-white truncate leading-tight">
                             {meUser.full_name ?? meUser.email}
                           </p>
-                          {meUser.position
-                            ? <p className="text-xs text-[#b5bac1] mt-0.5 truncate">{meUser.position}</p>
-                            : <p className="text-xs text-[#b5bac1] mt-0.5">В сети</p>
-                          }
+                          <p className="text-xs mt-0.5 truncate" style={{ color: "#a0a0a0" }}>
+                            {meUser.position ?? "В сети"}
+                          </p>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-[#4752c4]/30 border border-[#4752c4]/50 text-[#c9cdfb]">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                            style={{ background: "#7b5ea730", border: "1px solid #7b5ea760", color: "#c9b8f0" }}>
                             Администратор
                           </span>
-                          <span className="text-base leading-none select-none" title="AD Pulse">🎮</span>
+                          <span className="text-base leading-none select-none">🎮</span>
                         </div>
                       </div>
                     </div>
