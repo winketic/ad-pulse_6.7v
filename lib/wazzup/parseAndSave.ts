@@ -65,6 +65,9 @@ export async function parseAndSave(messageId: string): Promise<void> {
 
   const allFound = !!(result.type && result.quantity != null && result.material_id);
   const autoCreate = result.confidence === "high" && allFound;
+  // Only flag for review if SOMETHING was found but incomplete — not for irrelevant messages
+  const hasAnyField = !!(result.type || result.material_id || result.quantity != null);
+  const needsReview = !autoCreate && hasAnyField;
 
   let transactionCreated = false;
 
@@ -96,7 +99,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
     .from("wazzup_messages")
     .update({
       parsed: true,
-      needs_review: !autoCreate,
+      needs_review: needsReview,
       parse_result: { ...result, transaction_created: transactionCreated },
     })
     .eq("id", messageId);
