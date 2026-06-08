@@ -96,15 +96,6 @@ export default async function SettingsPage({
 
   const users = Array.isArray(usersResult) ? usersResult : [];
 
-  // DEBUG — убрать после диагностики
-  console.log('[DEBUG settings]', { isAdmin, company_id, usersCount: users.length });
-  console.log('[DEBUG users]', JSON.stringify(users.map(u => ({
-    id: u.id,
-    name: u.full_name,
-    avatar: u.avatar_url,
-    banner: u.banner_color
-  })), null, 2));
-
   return (
     <SettingsClient
       // Profile
