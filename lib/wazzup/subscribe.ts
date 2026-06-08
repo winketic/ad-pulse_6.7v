@@ -1,4 +1,4 @@
-import { createServiceClient } from "@/lib/supabase/service";
+﻿import { createServiceClient } from "@/lib/supabase/service";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
 const WAZZUP_BASE = "https://tech.wazzup24.com/v2";
@@ -13,7 +13,7 @@ export async function subscribeToWebhooks(
 ): Promise<void> {
   const service = createServiceClient();
 
-  const webhookUrl = `${APP_URL}/api/wazzup/webhook`.replace(/\uFEFF/g, "").trim();
+  const webhookUrl = (process.env.NEXT_PUBLIC_APP_URL + '/api/wazzup/webhook').replace(/\uFEFF/g, '').trim();
   console.log(`[wazzup/subscribe] company=${companyId} webhookUrl=${webhookUrl}`);
 
   // ── 1. Register webhook with Wazzup ───────────────────
