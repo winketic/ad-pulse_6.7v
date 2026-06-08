@@ -5,29 +5,14 @@ import { useRef, useEffect } from "react";
 interface Particle {
   x: number;
   y: number;
-  rx: number;
-  ry: number;
+  vx: number;
   vy: number;
   life: number;
   decay: number;
+  color: string;
 }
 
-function lerpColor(t: number): string {
-  // t: 0 = bottom (#ff006e), 0.5 = mid (#ff4da6), 1 = top (#cc00ff)
-  if (t < 0.5) {
-    const u = t * 2;
-    const r = Math.round(0xff + (0xff - 0xff) * u);
-    const g = Math.round(0x00 + (0x4d - 0x00) * u);
-    const b = Math.round(0x6e + (0xa6 - 0x6e) * u);
-    return `rgb(${r},${g},${b})`;
-  } else {
-    const u = (t - 0.5) * 2;
-    const r = Math.round(0xff + (0xcc - 0xff) * u);
-    const g = Math.round(0x4d + (0x00 - 0x4d) * u);
-    const b = Math.round(0xa6 + (0xff - 0xa6) * u);
-    return `rgb(${r},${g},${b})`;
-  }
-}
+const COLORS = ["#ff006e", "#ff4da6", "#cc00ff", "#7b00ff"];
 
 export default function FireBanner() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -44,13 +29,13 @@ export default function FireBanner() {
     let particles: Particle[] = [];
 
     const spawn = (): Particle => ({
-      x: Math.random() * W,
-      y: H + 4,
-      rx: 1 + Math.random() * 1.5,
-      ry: 2.5 + Math.random() * 3,
-      vy: 0.6 + Math.random() * 1.4,
+      x: W * 0.4 + Math.random() * W * 0.6,
+      y: H + 6,
+      vx: -(0.1 + Math.random() * 0.3),
+      vy: 0.7 + Math.random() * 1.3,
       life: 1,
-      decay: 0.008 + Math.random() * 0.012,
+      decay: 0.01 + Math.random() * 0.015,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
     });
 
     const init = () => {
@@ -59,36 +44,35 @@ export default function FireBanner() {
       H = parent?.offsetHeight ?? 70;
       canvas.width = W;
       canvas.height = H;
+
       particles = Array.from({ length: 80 }, () => {
         const p = spawn();
-        p.y = Math.random() * H; // scatter initial positions
-        p.life = Math.random();
+        p.y = Math.random() * H;
+        p.life = 0.3 + Math.random() * 0.7;
         return p;
       });
     };
 
     const draw = () => {
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = "#1a0a2e";
-      ctx.fillRect(0, 0, W, H);
 
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
-        const t = 1 - p.y / H; // 0 at bottom, 1 at top
-        const alpha = p.life * (p.y / H);
+        const alpha = p.life * Math.min(1, p.y / H);
 
         ctx.save();
         ctx.globalAlpha = Math.max(0, alpha);
-        ctx.fillStyle = lerpColor(Math.max(0, Math.min(1, t)));
-        ctx.beginPath();
-        ctx.ellipse(p.x, p.y, p.rx, p.ry, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillStyle = p.color;
+        ctx.translate(p.x, p.y);
+        // elongated rect 2x6px
+        ctx.fillRect(-1, -3, 2, 6);
         ctx.restore();
 
+        p.x += p.vx;
         p.y -= p.vy;
         p.life -= p.decay;
 
-        if (p.life <= 0 || p.y < -p.ry) {
+        if (p.life <= 0 || p.y < -6) {
           particles[i] = spawn();
         }
       }

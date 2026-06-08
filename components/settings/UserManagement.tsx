@@ -262,15 +262,18 @@ export default function UserManagement({
             {meUser && (() => {
               const initials = (meUser.full_name ?? meUser.email).charAt(0).toUpperCase();
               return (
-                <div className="relative rounded-xl overflow-hidden">
-                  {/* FireBanner fills entire card */}
-                  <div className="absolute inset-0">
+                <div className="relative rounded-xl overflow-hidden min-h-[70px]" style={{ background: "#1a0a2e" }}>
+                  {/* FireBanner — right 60% of card */}
+                  <div className="absolute right-0 top-0 bottom-0 w-[60%]">
                     <FireBanner />
                   </div>
-                  {/* Dark overlay */}
-                  <div className="absolute inset-0 bg-black/50 pointer-events-none" />
+                  {/* Gradient mask: solid bg on left fading into transparent over the fire */}
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ background: "linear-gradient(to right, #1a0a2e 40%, transparent 100%)" }}
+                  />
                   {/* Content */}
-                  <div className="relative z-10 flex items-center gap-3 p-3 min-h-[70px]">
+                  <div className="relative z-10 flex items-center gap-3 px-4 py-3">
                     {meUser.avatar_url ? (
                       <img src={meUser.avatar_url} alt={meUser.full_name ?? ""}
                         className="w-11 h-11 rounded-full object-cover ring-2 ring-white/20 shrink-0" />
@@ -280,11 +283,14 @@ export default function UserManagement({
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-white truncate">
-                        {meUser.full_name ?? meUser.email}
-                        <span className="ml-1 text-xs font-normal text-white/60">(вы)</span>
-                      </p>
-                      {meUser.position && <p className="text-xs text-white/60 truncate">{meUser.position}</p>}
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-bold text-white truncate">
+                          {meUser.full_name ?? meUser.email}
+                        </p>
+                        {/* AD Pulse logo */}
+                        <img src="/logo.svg" alt="" className="w-4 h-4 shrink-0 opacity-80" />
+                      </div>
+                      {meUser.position && <p className="text-xs text-white/60 truncate mt-0.5">{meUser.position}</p>}
                     </div>
                     <div className="shrink-0">
                       <RoleBadge role={meUser.role} />
