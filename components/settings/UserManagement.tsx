@@ -258,41 +258,41 @@ export default function UserManagement({
         return (
           <div className="p-4 flex flex-col gap-3">
 
-            {/* ── Current user — Discord card with fire banner ── */}
-            {meUser && (
-              <div className="rounded-xl bg-[#161616] border border-[#1f1f1f]">
-                {/* Fire banner */}
-                <div className="relative h-[80px] rounded-t-xl overflow-hidden">
-                  <FireBanner />
-                </div>
-
-                {/* Content */}
-                <div className="relative px-4 pb-4">
-                  {/* Avatar overlapping banner */}
-                  <div className="absolute -top-7 left-4">
+            {/* ── Current user — Discord card ── */}
+            {meUser && (() => {
+              const initials = (meUser.full_name ?? meUser.email).charAt(0).toUpperCase();
+              return (
+                <div className="relative rounded-xl overflow-hidden">
+                  {/* FireBanner fills entire card */}
+                  <div className="absolute inset-0">
+                    <FireBanner />
+                  </div>
+                  {/* Dark overlay */}
+                  <div className="absolute inset-0 bg-black/50 pointer-events-none" />
+                  {/* Content */}
+                  <div className="relative z-10 flex items-center gap-3 p-3 min-h-[70px]">
                     {meUser.avatar_url ? (
                       <img src={meUser.avatar_url} alt={meUser.full_name ?? ""}
-                        className="w-14 h-14 rounded-full object-cover ring-4 ring-[#161616]" />
+                        className="w-11 h-11 rounded-full object-cover ring-2 ring-white/20 shrink-0" />
                     ) : (
-                      <div className="w-14 h-14 rounded-full ring-4 ring-[#161616] flex items-center justify-center text-white font-bold text-xl bg-[#2a0a3e]">
-                        {(meUser.full_name ?? meUser.email).charAt(0).toUpperCase()}
+                      <div className="w-11 h-11 rounded-full ring-2 ring-white/20 flex items-center justify-center text-white font-bold bg-white/20 shrink-0">
+                        {initials}
                       </div>
                     )}
-                  </div>
-
-                  {/* Text — padded to clear avatar */}
-                  <div className="pt-10">
-                    <p className="text-sm font-bold text-[#ededed] truncate">
-                      {meUser.full_name ?? meUser.email}
-                      <span className="ml-1.5 text-xs font-normal text-[#888888]">(вы)</span>
-                    </p>
-                    <p className="text-xs text-[#888888] truncate mt-0.5">{meUser.email}</p>
-                    {meUser.position && <p className="text-xs text-[#888888] mt-0.5">{meUser.position}</p>}
-                    <div className="mt-1.5"><RoleBadge role={meUser.role} /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-white truncate">
+                        {meUser.full_name ?? meUser.email}
+                        <span className="ml-1 text-xs font-normal text-white/60">(вы)</span>
+                      </p>
+                      {meUser.position && <p className="text-xs text-white/60 truncate">{meUser.position}</p>}
+                    </div>
+                    <div className="shrink-0">
+                      <RoleBadge role={meUser.role} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* ── Other users with avatar/custom banner ── */}
             {otherCards.map((user) => {
