@@ -34,7 +34,7 @@ export async function subscribeToWebhooks(
 
   let webhookId: string | null = null;
   if (subRes.ok) {
-    const subData = JSON.parse(subBody || "{}");
+    const subData = JSON.parse(subBody || "{}") as { data?: { id?: string }[]; id?: string };
     webhookId = subData?.data?.[0]?.id ?? subData?.id ?? null;
   }
 
