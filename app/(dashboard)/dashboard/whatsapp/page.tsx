@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import WhatsAppList, { type WazzupMessage, type WazzupMaterial } from "./WhatsAppList";
+import AllowedChatsCard from "@/components/settings/AllowedChatsCard";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -18,9 +19,11 @@ export default async function WhatsAppPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("company_id")
+    .select("company_id, role")
     .eq("id", user.id)
     .single();
+
+  const isAdmin = profile?.role === "admin";
 
   // No company yet — show empty state rather than redirecting
   if (!profile?.company_id) {
@@ -56,13 +59,28 @@ export default async function WhatsAppPage() {
   const channelIds: string[] = tokenResult.data?.channel_ids ?? [];
   const webhookId: string | null = tokenResult.data?.webhook_id ?? null;
 
+  // Allowed chats config
+  const { data: wazzupCfg } = await service
+    .from("wazzup_config")
+    .select("allowed_chat_ids")
+    .eq("company_id", companyId)
+    .maybeSingle();
+  const allowedChatIds: string[] = wazzupCfg?.allowed_chat_ids ?? [];
+
   return (
-    <WhatsAppList
+    <div className="space-y-4">
+      {isAdmin && (
+        <div className="px-6 pt-6">
+          <AllowedChatsCard initialChatIds={allowedChatIds} />
+        </div>
+      )}
+      <WhatsAppList
       messages={(messagesResult.data ?? []) as WazzupMessage[]}
       materials={(materialsResult.data ?? []) as WazzupMaterial[]}
       channelIds={channelIds}
       webhookId={webhookId}
       companyId={companyId}
     />
+    </div>
   );
 }
