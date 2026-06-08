@@ -62,6 +62,7 @@ export default async function WhatsAppPage() {
       materials={(materialsResult.data ?? []) as WazzupMaterial[]}
       channelIds={channelIds}
       webhookId={webhookId}
+      companyId={companyId}
     />
   );
 }

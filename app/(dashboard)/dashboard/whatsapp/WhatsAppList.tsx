@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
+import { createClient } from "@/utils/supabase/client";
 import { confirmWhatsAppTransaction, rejectWhatsAppMessage, type TxType } from "./actions";
 
 type ParseResult = {
@@ -255,19 +256,49 @@ function StatusBadge({ status }: { status: "green" | "yellow" | "gray" }) {
 // ── Main component ────────────────────────────────────────
 
 export default function WhatsAppList({
-  messages,
+  messages: initialMessages,
   materials,
   channelIds = [],
   webhookId = null,
+  companyId,
 }: {
   messages: WazzupMessage[];
   materials: WazzupMaterial[];
   channelIds?: string[];
   webhookId?: string | null;
+  companyId?: string;
 }) {
+  const [messages, setMessages] = useState<WazzupMessage[]>(initialMessages);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectPending, startRejectTransition] = useTransition();
+
+  // Realtime subscription — prepend new messages as they arrive
+  useEffect(() => {
+    if (!companyId) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`wazzup_messages:${companyId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "wazzup_messages",
+          filter: `company_id=eq.${companyId}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as WazzupMessage;
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [newMsg, ...prev];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [companyId]);
 
   const confirmingMessage = confirmingId
     ? messages.find((m) => m.id === confirmingId) ?? null
