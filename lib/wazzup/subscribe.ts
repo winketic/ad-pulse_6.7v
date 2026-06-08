@@ -13,7 +13,7 @@ export async function subscribeToWebhooks(
 ): Promise<void> {
   const service = createServiceClient();
 
-  const webhookUrl = `${APP_URL}/api/wazzup/webhook`;
+  const webhookUrl = `${APP_URL}/api/wazzup/webhook`.replace(/﻿/g, "").trim();
   console.log(`[wazzup/subscribe] company=${companyId} webhookUrl=${webhookUrl}`);
 
   // ── 1. Register webhook with Wazzup ───────────────────
@@ -49,10 +49,9 @@ export async function subscribeToWebhooks(
 
   let channelIds: string[] = [];
   if (channelRes.ok) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const channelData = JSON.parse(channelBody || "{}");
-    const channels: { id: string; transport?: string; name?: string }[] =
-      channelData?.data ?? channelData?.channels ?? [];
-    channelIds = channels.map((c) => c.id).filter(Boolean);
+    channelIds = (channelData?.data ?? []).map((ch: any) => ch.channel_id).filter(Boolean);
     console.log(`[wazzup/subscribe] parsed channel_ids:`, channelIds);
   }
 
