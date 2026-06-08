@@ -1,101 +1,52 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useMemo } from "react";
 
-interface Particle {
+interface Flame {
   x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  decay: number;
-  color: string;
+  size: number;
+  height: number;
+  blur: number;
+  duration: number;
+  delay: number;
 }
 
-const COLORS = ["#ff69b4", "#ff1493", "#ff007f", "#ff99cc"];
+function rand(min: number, max: number, seed: number): number {
+  const s = Math.sin(seed * 9301 + 49297) * 233280;
+  return min + (s - Math.floor(s)) * (max - min);
+}
 
 export default function FireBanner() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const flames = useMemo<Flame[]>(() =>
+    Array.from({ length: 25 }, (_, i) => ({
+      x:        rand(0,   95,  i * 7 + 1),
+      size:     rand(20,  60,  i * 7 + 2),
+      height:   rand(40,  100, i * 7 + 3),
+      blur:     rand(8,   20,  i * 7 + 4),
+      duration: rand(0.8, 1.5, i * 7 + 5),
+      delay:    rand(0,   1.5, i * 7 + 6),
+    }))
+  , []);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let animId: number;
-    let W = 0;
-    let H = 0;
-    let particles: Particle[] = [];
-
-    const spawn = (): Particle => ({
-      x: W * 0.25 + Math.random() * W * 0.75,
-      y: H + 8,
-      vx: -(0.1 + Math.random() * 0.3),
-      vy: 0.7 + Math.random() * 1.4,
-      life: 1,
-      decay: 0.008 + Math.random() * 0.012,
-      color: COLORS[Math.floor(Math.random() * COLORS.length)],
-    });
-
-    const init = () => {
-      const parent = canvas.parentElement;
-      W = parent?.offsetWidth ?? 300;
-      H = parent?.offsetHeight ?? 80;
-      canvas.width = W;
-      canvas.height = H;
-      particles = Array.from({ length: 150 }, () => {
-        const p = spawn();
-        p.y = Math.random() * H;
-        p.life = 0.2 + Math.random() * 0.8;
-        return p;
-      });
-    };
-
-    const draw = () => {
-      ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = "#1a0010";
-      ctx.fillRect(0, 0, W, H);
-
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-        const alpha = Math.min(1, p.life * 2);
-
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, alpha);
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "#ff1493";
-        ctx.fillStyle = p.color;
-        ctx.translate(p.x, p.y);
-        // rx=2, ry=8 elongated upward flame shape
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 2, 8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        p.x += p.vx;
-        p.y -= p.vy;
-        p.life -= p.decay;
-
-        if (p.life <= 0 || p.y < -8) {
-          particles[i] = spawn();
-        }
-      }
-
-      animId = requestAnimationFrame(draw);
-    };
-
-    init();
-    draw();
-
-    const ro = new ResizeObserver(init);
-    if (canvas.parentElement) ro.observe(canvas.parentElement);
-
-    return () => {
-      cancelAnimationFrame(animId);
-      ro.disconnect();
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />;
+  return (
+    <div className="relative w-full h-full overflow-hidden" style={{ background: "#0d0010" }}>
+      {flames.map((f, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: `${f.x}%`,
+            width: `${f.size}px`,
+            height: `${f.height}px`,
+            background: "radial-gradient(ellipse at bottom, #ff1493, #ff69b4, transparent)",
+            borderRadius: "50% 50% 20% 20%",
+            filter: `blur(${f.blur}px)`,
+            animation: `flameRise ${f.duration}s ease-in infinite ${f.delay}s`,
+            opacity: 0.8,
+          }}
+        />
+      ))}
+    </div>
+  );
 }
