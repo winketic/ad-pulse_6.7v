@@ -13,7 +13,7 @@ export async function subscribeToWebhooks(
 ): Promise<void> {
   const service = createServiceClient();
 
-  const webhookUrl = `${APP_URL}/api/wazzup/webhook`.replace(/﻿/g, "").trim();
+  const webhookUrl = `${APP_URL}/api/wazzup/webhook`.replace(/\uFEFF/g, "").trim();
   console.log(`[wazzup/subscribe] company=${companyId} webhookUrl=${webhookUrl}`);
 
   // ── 1. Register webhook with Wazzup ───────────────────
