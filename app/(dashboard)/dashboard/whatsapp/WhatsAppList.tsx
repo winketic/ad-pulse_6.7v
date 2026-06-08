@@ -257,9 +257,13 @@ function StatusBadge({ status }: { status: "green" | "yellow" | "gray" }) {
 export default function WhatsAppList({
   messages,
   materials,
+  channelIds = [],
+  webhookId = null,
 }: {
   messages: WazzupMessage[];
   materials: WazzupMaterial[];
+  channelIds?: string[];
+  webhookId?: string | null;
 }) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -283,11 +287,35 @@ export default function WhatsAppList({
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">WhatsApp</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <h1 className="text-xl font-bold text-[#ededed]">WhatsApp</h1>
+        <p className="text-sm text-[#888888] mt-0.5">
           Входящие сообщения и автоматически созданные транзакции
         </p>
       </div>
+
+      {/* ── Connected channels ─────────────────────────── */}
+      {channelIds.length > 0 && (
+        <div className="mb-5 p-4 rounded-xl bg-[#111111] border border-[#1f1f1f]">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full bg-[#25D366] shrink-0" />
+            <p className="text-xs font-semibold text-[#ededed]">
+              Подключённые каналы WhatsApp
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {channelIds.map((id) => (
+              <span key={id} className="px-2 py-1 rounded-lg bg-[#161616] border border-[#1f1f1f] text-xs text-[#888888] font-mono">
+                {id}
+              </span>
+            ))}
+          </div>
+          {webhookId && (
+            <p className="mt-2 text-xs text-[#888888]">
+              Webhook ID: <span className="font-mono text-[#555555]">{webhookId}</span>
+            </p>
+          )}
+        </div>
+      )}
 
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">

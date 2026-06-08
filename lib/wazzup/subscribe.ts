@@ -13,6 +13,9 @@ export async function subscribeToWebhooks(
 ): Promise<void> {
   const service = createServiceClient();
 
+  const webhookUrl = `${APP_URL}/api/wazzup/webhook`;
+  console.log(`[wazzup/subscribe] company=${companyId} webhookUrl=${webhookUrl}`);
+
   // ── 1. Register webhook with Wazzup ───────────────────
   const subRes = await fetch(`${WAZZUP_BASE}/webhooks`, {
     method: "POST",
@@ -21,30 +24,18 @@ export async function subscribeToWebhooks(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      data: [
-        {
-          url: `${APP_URL}/api/wazzup/webhook`,
-          event: "message.add",
-        },
-      ],
+      data: [{ url: webhookUrl, event: "message.add" }],
     }),
     cache: "no-store",
   });
 
+  const subBody = await subRes.text().catch(() => "");
+  console.log(`[wazzup/subscribe] webhook reg [${subRes.status}]: ${subBody}`);
+
   let webhookId: string | null = null;
   if (subRes.ok) {
-    const subData = await subRes.json().catch(() => ({}));
-    // Response may be { data: [{id, url, event}] } or { id: ... }
-    webhookId =
-      subData?.data?.[0]?.id ??
-      subData?.id ??
-      null;
-  } else {
-    const errBody = await subRes.text().catch(() => "");
-    console.error(
-      `[wazzup/subscribe] webhook registration failed [${subRes.status}]: ${errBody}`
-    );
-    // Non-fatal: continue to fetch channels
+    const subData = JSON.parse(subBody || "{}");
+    webhookId = subData?.data?.[0]?.id ?? subData?.id ?? null;
   }
 
   // ── 2. Fetch company's WhatsApp channels ──────────────
@@ -53,24 +44,30 @@ export async function subscribeToWebhooks(
     cache: "no-store",
   });
 
+  const channelBody = await channelRes.text().catch(() => "");
+  console.log(`[wazzup/subscribe] channels [${channelRes.status}]: ${channelBody}`);
+
   let channelIds: string[] = [];
   if (channelRes.ok) {
-    const channelData = await channelRes.json().catch(() => ({}));
-    const channels: { id: string }[] =
+    const channelData = JSON.parse(channelBody || "{}");
+    const channels: { id: string; transport?: string; name?: string }[] =
       channelData?.data ?? channelData?.channels ?? [];
     channelIds = channels.map((c) => c.id).filter(Boolean);
-  } else {
-    console.error(
-      `[wazzup/subscribe] channel fetch failed [${channelRes.status}]`
-    );
+    console.log(`[wazzup/subscribe] parsed channel_ids:`, channelIds);
   }
 
   // ── 3. Persist webhook_id + channel_ids ───────────────
   const update: Record<string, unknown> = { channel_ids: channelIds };
   if (webhookId) update.webhook_id = webhookId;
 
-  await service
+  const { error: updateErr } = await service
     .from("wazzup_tokens")
     .update(update)
     .eq("company_id", companyId);
+
+  if (updateErr) {
+    console.error("[wazzup/subscribe] DB update error:", updateErr);
+  } else {
+    console.log(`[wazzup/subscribe] saved webhook_id=${webhookId} channel_ids=${JSON.stringify(channelIds)}`);
+  }
 }

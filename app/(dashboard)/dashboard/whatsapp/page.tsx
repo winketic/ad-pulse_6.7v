@@ -32,7 +32,7 @@ export default async function WhatsAppPage() {
   const companyId = profile.company_id as string;
   const service = createServiceClient();
 
-  const [messagesResult, materialsResult] = await Promise.all([
+  const [messagesResult, materialsResult, tokenResult] = await Promise.all([
     service
       .from("wazzup_messages")
       .select(
@@ -46,12 +46,22 @@ export default async function WhatsAppPage() {
       .select("id, name, unit")
       .eq("company_id", companyId)
       .order("name"),
+    service
+      .from("wazzup_tokens")
+      .select("channel_ids, webhook_id")
+      .eq("company_id", companyId)
+      .maybeSingle(),
   ]);
+
+  const channelIds: string[] = tokenResult.data?.channel_ids ?? [];
+  const webhookId: string | null = tokenResult.data?.webhook_id ?? null;
 
   return (
     <WhatsAppList
       messages={(messagesResult.data ?? []) as WazzupMessage[]}
       materials={(materialsResult.data ?? []) as WazzupMaterial[]}
+      channelIds={channelIds}
+      webhookId={webhookId}
     />
   );
 }
