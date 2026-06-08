@@ -265,50 +265,65 @@ export default function UserManagement({
               const isAdminUser = meUser.role === "admin";
 
               if (isAdminUser) {
-                // Discord-style admin card with FireBanner
                 return (
-                  <div className="rounded-xl shadow-lg overflow-visible" style={{ background: "#1e1f22" }}>
-                    {/* FireBanner — 80px, clipped */}
-                    <div className="relative h-[80px] rounded-t-xl overflow-hidden">
+                  <div className="rounded-xl overflow-visible" style={{ background: "#1e1f22" }}>
+
+                    {/* Баннер 92px */}
+                    <div className="relative rounded-t-xl overflow-hidden" style={{ height: 92 }}>
                       <FireBanner />
                     </div>
 
-                    {/* Content — avatar overlaps banner via absolute */}
-                    <div className="relative px-4 pb-4 pt-0">
-                      {/* Avatar: bottom: -20px from banner = absolute -top-5, left-4 */}
-                      <div className="absolute -top-5 left-4">
-                        <div className="relative">
+                    {/* Тело */}
+                    <div className="relative" style={{ padding: "0 16px 16px 16px" }}>
+
+                      {/* Аватар 72×72, top=-28px */}
+                      <div style={{ position: "absolute", top: -28, left: 16 }}>
+                        <div style={{ position: "relative", width: 72, height: 72 }}>
                           {meUser.avatar_url ? (
-                            <img src={meUser.avatar_url} alt={meUser.full_name ?? ""}
-                              className="w-14 h-14 rounded-full object-cover ring-[3px] ring-[#1e1f22]" />
+                            <img
+                              src={meUser.avatar_url}
+                              alt={meUser.full_name ?? ""}
+                              style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "4px solid #1e1f22" }}
+                            />
                           ) : (
-                            <div className="w-14 h-14 rounded-full ring-[3px] ring-[#1e1f22] flex items-center justify-center text-white font-bold text-xl"
-                              style={{ background: "linear-gradient(135deg, #4752c4, #9b59b6)" }}>
+                            <div style={{
+                              width: 72, height: 72, borderRadius: "50%",
+                              border: "4px solid #1e1f22",
+                              background: "linear-gradient(135deg, #4752c4, #9b59b6)",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              color: "white", fontWeight: 700, fontSize: 24,
+                            }}>
                               {initials}
                             </div>
                           )}
-                          {/* Online dot — bottom-right, white border */}
-                          <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-[#23a55a]"
-                            style={{ boxShadow: "0 0 0 2px #1e1f22" }} />
+                          {/* Онлайн-точка 14×14 */}
+                          <span style={{
+                            position: "absolute", bottom: 2, right: 2,
+                            width: 14, height: 14, borderRadius: "50%",
+                            background: "#23a55a", border: "2px solid #1e1f22",
+                            display: "block",
+                          }} />
                         </div>
                       </div>
 
-                      {/* Text + badges — padded to clear the avatar */}
-                      <div className="pt-11 flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-white truncate leading-tight">
-                            {meUser.full_name ?? meUser.email}
-                          </p>
-                          <p className="text-xs mt-0.5 truncate" style={{ color: "#a0a0a0" }}>
-                            {meUser.position ?? "В сети"}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                            style={{ background: "#7b5ea730", border: "1px solid #7b5ea760", color: "#c9b8f0" }}>
+                      {/* Контент: margin-top=52px */}
+                      <div style={{ marginTop: 52 }}>
+                        <p style={{ fontSize: 18, fontWeight: 700, color: "white", margin: 0, lineHeight: 1.2 }} className="truncate">
+                          {meUser.full_name ?? meUser.email}
+                        </p>
+                        <p style={{ fontSize: 13, color: "#b5bac1", marginTop: 2, margin: "2px 0 0 0" }} className="truncate">
+                          {meUser.position ?? "В сети"}
+                        </p>
+                        {/* Бейджи */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
+                          <span style={{
+                            background: "#7b5ea7", color: "white",
+                            padding: "3px 10px", borderRadius: 999,
+                            fontSize: 12, fontWeight: 600,
+                          }}>
                             Администратор
                           </span>
-                          <span className="text-base leading-none select-none">🎮</span>
+                          <span style={{ fontSize: 16, lineHeight: 1 }} role="img" aria-label="gaming">🎮</span>
                         </div>
                       </div>
                     </div>
