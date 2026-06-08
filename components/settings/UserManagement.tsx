@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import {
   updateUserRole,
   removeUserFromCompany,
@@ -267,7 +268,8 @@ export default function UserManagement({
                   <div className="absolute right-0 top-0 bottom-0 w-[60%]">
                     <FireBanner />
                   </div>
-                  {/* Gradient mask: solid bg on left fading into transparent over the fire */}
+                  {/* Gradient mask + subtle overlay */}
+                  <div className="absolute inset-0 bg-black/20 pointer-events-none" />
                   <div
                     className="absolute inset-0 pointer-events-none"
                     style={{ background: "linear-gradient(to right, #1a0a2e 40%, transparent 100%)" }}
@@ -288,7 +290,7 @@ export default function UserManagement({
                           {meUser.full_name ?? meUser.email}
                         </p>
                         {/* AD Pulse logo */}
-                        <img src="/logo.svg" alt="" className="w-4 h-4 shrink-0 opacity-80" />
+                        <Image src="/logo.svg" width={18} height={18} alt="AD Pulse" className="shrink-0" />
                       </div>
                       {meUser.position && <p className="text-xs text-white/60 truncate mt-0.5">{meUser.position}</p>}
                     </div>
