@@ -62,9 +62,11 @@ export async function GET(request: NextRequest) {
       redirectUri
     );
 
-    const expiresAt = new Date(
-      Date.now() + tokens.expires_in * 1000
-    ).toISOString();
+    console.log("[callback] tokens:", JSON.stringify(tokens));
+    const expiresIn = typeof tokens.expires_in === "number" && isFinite(tokens.expires_in)
+      ? tokens.expires_in
+      : 3600;
+    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
     // Upsert: update if already connected, insert if new
     const { error: upsertErr } = await service
