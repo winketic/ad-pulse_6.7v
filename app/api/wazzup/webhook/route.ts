@@ -144,6 +144,26 @@ async function processWebhook(body: unknown) {
       continue;
     }
 
+    // ── ALLOWED CHATS FILTER ───────────────────────────
+    const { data: wazzupCfg } = await service
+      .from("wazzup_config")
+      .select("allowed_chat_ids")
+      .eq("company_id", token.company_id)
+      .maybeSingle();
+
+    const allowedChats: string[] = wazzupCfg?.allowed_chat_ids ?? [];
+    if (allowedChats.length > 0) {
+      const incomingId = chatId || senderPhone;
+      const isAllowed = allowedChats.some(
+        (a) => incomingId && (incomingId.includes(a) || a.includes(incomingId))
+      );
+      if (!isAllowed) {
+        console.log(`[wazzup/webhook] SKIP: chat "${incomingId}" not in allowed list ${JSON.stringify(allowedChats)}`);
+        continue;
+      }
+      console.log(`[wazzup/webhook] chat "${incomingId}" allowed`);
+    }
+
     // ── INSERT ─────────────────────────────────────────
     const insertPayload = {
       company_id:   token.company_id,
