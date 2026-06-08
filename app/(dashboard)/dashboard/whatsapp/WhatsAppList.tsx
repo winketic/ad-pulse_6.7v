@@ -309,6 +309,10 @@ export default function WhatsAppList({
     startRejectTransition(async () => {
       try {
         await rejectWhatsAppMessage(id);
+        // Update local state so button disappears without full page reload
+        setMessages((prev) =>
+          prev.map((m) => m.id === id ? { ...m, needs_review: false, parsed: true } : m)
+        );
       } finally {
         setRejectingId(null);
       }
