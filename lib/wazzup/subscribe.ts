@@ -49,9 +49,8 @@ export async function subscribeToWebhooks(
 
   let channelIds: string[] = [];
   if (channelRes.ok) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const channelData = JSON.parse(channelBody || "{}");
-    channelIds = (channelData?.data ?? []).map((ch: any) => ch.channel_id).filter(Boolean);
+    const channelData = JSON.parse(channelBody || "{}") as { data?: { channel_id?: string }[] };
+    channelIds = (channelData?.data ?? []).map((ch) => ch.channel_id ?? "").filter(Boolean);
     console.log(`[wazzup/subscribe] parsed channel_ids:`, channelIds);
   }
 
