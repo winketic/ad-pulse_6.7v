@@ -169,6 +169,7 @@ async function processWebhook(body: unknown) {
       company_id:   token.company_id,
       message_id:   messageId,
       channel_id:   channelId,
+      chat_id:      chatId || null,
       direction:    "inbound",
       sender_phone: senderPhone,
       raw_text:     text || null,
@@ -177,21 +178,30 @@ async function processWebhook(body: unknown) {
     };
     console.log("[wazzup/webhook] INSERT payload:", JSON.stringify(insertPayload));
 
-    const { data: saved, error: insertErr } = await service
-      .from("wazzup_messages")
-      .insert(insertPayload)
-      .select("id")
-      .single();
+    let savedId: string | null = null;
+    try {
+      const { data: saved, error: insertErr } = await service
+        .from("wazzup_messages")
+        .insert(insertPayload)
+        .select("id")
+        .single();
 
-    if (insertErr) {
-      console.error(`[wazzup/webhook] INSERT ERROR: ${insertErr.message} | code=${insertErr.code}`);
+      if (insertErr) {
+        console.error(`[wazzup/webhook] INSERT ERROR: ${insertErr.message} | code=${insertErr.code}`);
+        continue;
+      }
+      savedId = saved?.id ?? null;
+      console.log(`[wazzup/webhook] SAVED message id=${savedId}`);
+    } catch (err) {
+      console.error("[wazzup/webhook] INSERT EXCEPTION:", err);
       continue;
     }
 
-    console.log(`[wazzup/webhook] SAVED message id=${saved?.id}`);
-
-    if (saved?.id) {
-      await parseAndSave(saved.id);
+    // Fire-and-forget: parse after save — never blocks or loses the message
+    if (savedId) {
+      void parseAndSave(savedId).catch((err) =>
+        console.error(`[wazzup/webhook] parseAndSave error for id=${savedId}:`, err)
+      );
     }
   }
 }
