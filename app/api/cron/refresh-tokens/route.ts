@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
   }
 
   const service = createServiceClient();
-  const refreshThresholdMs = 60 * 60 * 1000; // refresh tokens expiring within 1 hour
+  // Hobby plan: daily cron only — refresh tokens expiring within 23h to always stay ahead
+  const refreshThresholdMs = 23 * 60 * 60 * 1000;
 
   const { data: tokens, error } = await service
     .from("wazzup_tokens")
