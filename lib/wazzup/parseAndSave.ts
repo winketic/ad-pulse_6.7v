@@ -3,6 +3,7 @@ import { parseMessage } from "./parser";
 import { transcribeVoice } from "./transcribeVoice";
 import { parseImageTransaction } from "./parseImage";
 import { sendTelegramAlert } from "@/lib/telegram/send";
+import { ensureFreshToken } from "./refreshToken";
 
 export async function parseAndSave(messageId: string): Promise<void> {
   const service = createServiceClient();
@@ -22,13 +23,12 @@ export async function parseAndSave(messageId: string): Promise<void> {
     !!msg.media_url;
 
   if (needsMedia) {
-    const { data: tokenRow } = await service
-      .from("wazzup_tokens")
-      .select("access_token")
-      .eq("company_id", msg.company_id)
-      .single();
-
-    const accessToken = tokenRow?.access_token ?? "";
+    let accessToken = "";
+    try {
+      accessToken = await ensureFreshToken(msg.company_id);
+    } catch (e) {
+      console.error("[parseAndSave] token refresh error:", e);
+    }
 
     if (accessToken) {
       if (msg.content_type === "voice") {
