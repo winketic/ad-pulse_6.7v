@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
-import FireBanner from "./FireBanner";
 import {
   updateMyProfile,
   saveAvatarUrl,
@@ -144,13 +143,7 @@ export default function ProfileCard({
   return (
     <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] overflow-hidden">
       {/* ── Banner ────────────────────────────────────── */}
-      {displayBanner.includes("gradient") ? (
-        <div className="relative h-20 overflow-hidden pointer-events-none">
-          <FireBanner />
-        </div>
-      ) : (
-        <div className="h-20 pointer-events-none" style={{ background: displayBanner }} />
-      )}
+      <div className="h-20 pointer-events-none" style={{ background: displayBanner }} />
 
       {/* ── Avatar + color swatches ────────────────────── */}
       <div className="relative z-10 px-5 flex items-end gap-4 -mt-6">
