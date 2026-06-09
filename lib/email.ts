@@ -19,7 +19,7 @@ export async function sendEmail({
   }
 
   const payload = {
-    from: "onboarding@resend.dev",
+    from: process.env.EMAIL_FROM ?? "noreply@altaidynamics.kz",
     to: [to],
     subject,
     html,
