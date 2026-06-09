@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
+
 import { ensureFreshToken } from "@/lib/wazzup/refreshToken";
 import { subscribeToWebhooks } from "@/lib/wazzup/subscribe";
 

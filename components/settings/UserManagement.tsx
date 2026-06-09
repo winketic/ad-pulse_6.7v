@@ -266,67 +266,56 @@ export default function UserManagement({
 
               if (isAdminUser) {
                 return (
-                  <div className="rounded-xl overflow-visible" style={{ background: "#1e1f22" }}>
+                  <div style={{ background: "#1e1f22", borderRadius: 12, overflow: "visible", position: "relative" }}>
 
-                    {/* Баннер 92px */}
-                    <div className="relative rounded-t-xl overflow-hidden" style={{ height: 92 }}>
+                    {/* БАННЕР */}
+                    <div style={{ height: 92, borderRadius: "12px 12px 0 0", overflow: "hidden" }}>
                       <FireBanner />
                     </div>
 
-                    {/* Тело */}
-                    <div className="relative" style={{ padding: "0 16px 16px 16px" }}>
-
-                      {/* Аватар 72×72, top=-28px */}
-                      <div style={{ position: "absolute", top: -28, left: 16 }}>
-                        <div style={{ position: "relative", width: 72, height: 72 }}>
-                          {meUser.avatar_url ? (
-                            <img
-                              src={meUser.avatar_url}
-                              alt={meUser.full_name ?? ""}
-                              style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "4px solid #1e1f22" }}
-                            />
-                          ) : (
-                            <div style={{
-                              width: 72, height: 72, borderRadius: "50%",
-                              border: "4px solid #1e1f22",
-                              background: "linear-gradient(135deg, #4752c4, #9b59b6)",
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              color: "white", fontWeight: 700, fontSize: 24,
-                            }}>
-                              {initials}
-                            </div>
-                          )}
-                          {/* Онлайн-точка 14×14 */}
-                          <span style={{
-                            position: "absolute", bottom: 2, right: 2,
-                            width: 14, height: 14, borderRadius: "50%",
-                            background: "#23a55a", border: "2px solid #1e1f22",
-                            display: "block",
-                          }} />
+                    {/* АВАТАР — абсолютный, висит наполовину над баннером */}
+                    <div style={{
+                      position: "absolute", top: 48, left: 16,
+                      width: 80, height: 80, borderRadius: "50%",
+                      border: "4px solid #1e1f22", overflow: "hidden",
+                    }}>
+                      {meUser.avatar_url ? (
+                        <img src={meUser.avatar_url} alt={meUser.full_name ?? ""}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <div style={{
+                          width: "100%", height: "100%",
+                          background: "linear-gradient(135deg, #4752c4, #9b59b6)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          color: "white", fontWeight: 700, fontSize: 28,
+                        }}>
+                          {initials}
                         </div>
+                      )}
+                      {/* Онлайн точка */}
+                      <div style={{
+                        position: "absolute", bottom: 4, right: 4,
+                        width: 16, height: 16, borderRadius: "50%",
+                        background: "#23a55a", border: "3px solid #1e1f22",
+                      }} />
+                    </div>
+
+                    {/* ТЕЛО */}
+                    <div style={{ padding: "16px", paddingTop: 52 }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "white", lineHeight: 1.2 }} className="truncate">
+                        {meUser.full_name ?? meUser.email}
                       </div>
-
-                      {/* Контент: margin-top=52px */}
-                      <div style={{ marginTop: 52 }}>
-                        <p style={{ fontSize: 18, fontWeight: 700, color: "white", margin: 0, lineHeight: 1.2 }} className="truncate">
-                          {meUser.full_name ?? meUser.email}
-                        </p>
-                        <p style={{ fontSize: 13, color: "#b5bac1", marginTop: 2, margin: "2px 0 0 0" }} className="truncate">
-                          {meUser.position ?? "В сети"}
-                        </p>
-                        {/* Бейджи */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
-                          <span style={{
-                            background: "#7b5ea7", color: "white",
-                            padding: "3px 10px", borderRadius: 999,
-                            fontSize: 12, fontWeight: 600,
-                          }}>
-                            Администратор
-                          </span>
-                          <span style={{ fontSize: 16, lineHeight: 1 }} role="img" aria-label="gaming">🎮</span>
-                        </div>
+                      <div style={{ fontSize: 13, color: "#b5bac1", marginTop: 2 }} className="truncate">
+                        {meUser.position ?? "В сети"}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
+                        <span style={{ background: "#7b5ea7", color: "white", padding: "3px 12px", borderRadius: 999, fontSize: 12 }}>
+                          Администратор
+                        </span>
+                        <span style={{ fontSize: 18 }}>🎮</span>
                       </div>
                     </div>
+
                   </div>
                 );
               }
