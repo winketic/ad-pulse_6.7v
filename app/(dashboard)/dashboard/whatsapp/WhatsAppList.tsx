@@ -377,6 +377,9 @@ export default function WhatsAppList({
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">
                     Отправитель
                   </th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-36">
+                    Chat ID
+                  </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                     Сообщение
                   </th>
@@ -395,17 +398,20 @@ export default function WhatsAppList({
                       <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                         {formatDate(msg.created_at)}
                       </td>
+                      <td className="px-4 py-3 text-gray-700 text-xs whitespace-nowrap">
+                        {msg.sender_phone || "—"}
+                      </td>
                       <td className="px-4 py-3 text-xs whitespace-nowrap">
-                        <span
-                          className="text-gray-700 cursor-help"
-                          title={msg.chat_id ? `Chat ID: ${msg.chat_id}` : undefined}
-                        >
-                          {msg.sender_phone || msg.chat_id || "—"}
-                        </span>
-                        {msg.chat_id && (
-                          <span className="block text-[10px] text-gray-400 font-mono mt-0.5 truncate max-w-[100px]">
+                        {msg.chat_id ? (
+                          <button
+                            onClick={() => navigator.clipboard.writeText(msg.chat_id!)}
+                            className="font-mono text-gray-600 hover:text-blue-600 hover:bg-blue-50 px-1.5 py-0.5 rounded transition-colors text-left max-w-[130px] truncate block"
+                            title="Нажмите чтобы скопировать"
+                          >
                             {msg.chat_id}
-                          </span>
+                          </button>
+                        ) : (
+                          <span className="text-gray-400">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
