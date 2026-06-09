@@ -16,6 +16,7 @@ type ParseResult = {
 
 export type WazzupMessage = {
   id: string;
+  chat_id: string | null;
   sender_phone: string | null;
   raw_text: string | null;
   parsed: boolean;
@@ -394,8 +395,18 @@ export default function WhatsAppList({
                       <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                         {formatDate(msg.created_at)}
                       </td>
-                      <td className="px-4 py-3 text-gray-700 text-xs whitespace-nowrap">
-                        {msg.sender_phone || "—"}
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">
+                        <span
+                          className="text-gray-700 cursor-help"
+                          title={msg.chat_id ? `Chat ID: ${msg.chat_id}` : undefined}
+                        >
+                          {msg.sender_phone || msg.chat_id || "—"}
+                        </span>
+                        {msg.chat_id && (
+                          <span className="block text-[10px] text-gray-400 font-mono mt-0.5 truncate max-w-[100px]">
+                            {msg.chat_id}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-gray-800">{truncate(msg.raw_text)}</p>

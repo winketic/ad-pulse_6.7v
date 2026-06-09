@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import WhatsAppList, { type WazzupMessage, type WazzupMaterial } from "./WhatsAppList";
 import AllowedChatsCard from "@/components/settings/AllowedChatsCard";
+import ResubscribeButton from "@/components/settings/ResubscribeButton";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -39,7 +40,7 @@ export default async function WhatsAppPage() {
     service
       .from("wazzup_messages")
       .select(
-        "id, sender_phone, raw_text, parsed, needs_review, parse_result, created_at"
+        "id, chat_id, sender_phone, raw_text, parsed, needs_review, parse_result, created_at"
       )
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
@@ -70,8 +71,9 @@ export default async function WhatsAppPage() {
   return (
     <div className="space-y-4">
       {isAdmin && (
-        <div className="px-6 pt-6">
+        <div className="px-6 pt-6 flex flex-col gap-4">
           <AllowedChatsCard initialChatIds={allowedChatIds} />
+          <ResubscribeButton />
         </div>
       )}
       <WhatsAppList
