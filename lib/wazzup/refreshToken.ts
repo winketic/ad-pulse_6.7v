@@ -49,8 +49,13 @@ export async function ensureFreshToken(companyId: string): Promise<string> {
     throw new Error(`Wazzup token refresh failed [${res.status}]: ${body}`);
   }
 
-  const tokens = (await res.json()) as WazzupTokens;
-  const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
+  const json = await res.json();
+  // Wazzup wraps response in { data: {...}, meta: {...} }
+  const tokens = (json?.data ?? json) as WazzupTokens;
+  const expiresIn = typeof tokens.expires_in === "number" && isFinite(tokens.expires_in)
+    ? tokens.expires_in : 3600;
+  const newExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+  console.log(`[refreshToken] company=${companyId} new expires_at=${newExpiresAt}`);
 
   await service
     .from("wazzup_tokens")
