@@ -3,6 +3,9 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import { parseAndSave } from "@/lib/wazzup/parseAndSave";
 
+// Prevent Vercel from silently killing the function mid-query
+export const maxDuration = 30;
+
 type ContentType = "text" | "voice" | "image" | "document" | "other";
 
 // ─── Rate limiting ────────────────────────────────────────
@@ -124,27 +127,49 @@ async function processWebhook(body: unknown) {
     return;
   }
 
-  const service = createServiceClient();
-
   for (const item of data) {
     // Per-item try-catch: one bad message never kills the whole loop
     try {
-      await processItem(item, service);
+      await processItem(item);
     } catch (err) {
       console.error("[wazzup/webhook] ITEM ERROR (unhandled):", err, "| item:", JSON.stringify(item));
     }
   }
 }
 
-async function processItem(
-  item: unknown,
-  service: ReturnType<typeof import("@/lib/supabase/service").createServiceClient>
-) {
+// Helper: wraps a thenable with a timeout — surfaces hung Supabase queries
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`TIMEOUT ${ms}ms: ${label}`)), ms)
+    ),
+  ]);
+}
+
+async function processItem(item: unknown) {
   if (!item || typeof item !== "object") {
     console.log("[wazzup/webhook] SKIP item: null or not object");
     return;
   }
   const msg = item as Record<string, unknown>;
+
+  // ── SERVICE CLIENT INIT ───────────────────────────
+  let service: ReturnType<typeof createServiceClient>;
+  try {
+    service = createServiceClient();
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+    console.log(
+      "[webhook] supabase admin init check: ok" +
+      ` url=${url.slice(0, 30)}...` +
+      ` key_prefix=${key.slice(0, 10)}...` +
+      ` key_len=${key.length}`
+    );
+  } catch (e) {
+    console.error("[webhook] supabase admin init FAILED:", e);
+    return;
+  }
 
   // ── RAW FIELD DUMP (for debugging chat_id type issues) ──
   console.log(
@@ -226,11 +251,11 @@ async function processItem(
   // ── IDEMPOTENCY ────────────────────────────────────
   console.log("[wazzup/webhook] step: before idempotency check");
   try {
-    const { data: existing, error: idempErr } = await service
-      .from("wazzup_messages")
-      .select("id")
-      .eq("message_id", messageId)
-      .maybeSingle();
+    const { data: existing, error: idempErr } = await withTimeout(
+      service.from("wazzup_messages").select("id").eq("message_id", messageId).maybeSingle(),
+      8000,
+      "idempotency SELECT"
+    );
 
     console.log(
       "[wazzup/webhook] idempotency result:",
@@ -246,8 +271,9 @@ async function processItem(
       return;
     }
   } catch (e) {
-    console.error("[wazzup/webhook] IDEMPOTENCY EXCEPTION:", e);
-    // продолжаем — не останавливаемся
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[wazzup/webhook] IDEMPOTENCY EXCEPTION:", msg);
+    // если это таймаут — логируем и продолжаем
   }
   console.log("[wazzup/webhook] step: after idempotency check");
 
