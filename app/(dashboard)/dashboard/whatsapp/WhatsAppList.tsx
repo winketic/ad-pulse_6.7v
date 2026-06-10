@@ -413,21 +413,11 @@ export default function WhatsAppList({
                       <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                         {formatDate(msg.created_at)}
                       </td>
-                      <td className="px-4 py-3 text-xs whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-gray-700">{msg.sender_phone || "—"}</span>
-                          {msg.chat_id && (
-                            <button
-                              onClick={() => navigator.clipboard.writeText(msg.chat_id!)}
-                              title={`Скопировать chat_id: ${msg.chat_id}`}
-                              className="shrink-0 p-0.5 rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
+                      <td
+                        className="px-4 py-3 text-gray-700 text-xs whitespace-nowrap"
+                        title={msg.chat_id ? `Chat ID: ${msg.chat_id}` : undefined}
+                      >
+                        {msg.sender_phone || "—"}
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-gray-800">{truncate(msg.raw_text)}</p>
