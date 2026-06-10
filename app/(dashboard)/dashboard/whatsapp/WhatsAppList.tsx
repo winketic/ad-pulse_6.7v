@@ -273,6 +273,14 @@ export default function WhatsAppList({
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectPending, startRejectTransition] = useTransition();
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  function handleCopyChatId(msgId: string, chatId: string) {
+    navigator.clipboard.writeText(chatId).then(() => {
+      setCopiedId(msgId);
+      setTimeout(() => setCopiedId(null), 1500);
+    });
+  }
 
   // Realtime subscription — INSERT prepends new rows, UPDATE patches existing ones
   useEffect(() => {
@@ -413,11 +421,23 @@ export default function WhatsAppList({
                       <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                         {formatDate(msg.created_at)}
                       </td>
-                      <td
-                        className="px-4 py-3 text-gray-700 text-xs whitespace-nowrap"
-                        title={msg.chat_id ? `Chat ID: ${msg.chat_id}` : undefined}
-                      >
-                        {msg.sender_phone || "—"}
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">
+                        {msg.chat_id ? (
+                          <button
+                            onClick={() => handleCopyChatId(msg.id, msg.chat_id!)}
+                            title="Нажмите чтобы скопировать Chat ID"
+                            className="relative text-left text-gray-700 hover:text-blue-600 cursor-pointer transition-colors"
+                          >
+                            {msg.sender_phone || "—"}
+                            {copiedId === msg.id && (
+                              <span className="absolute -top-6 left-0 px-2 py-0.5 rounded bg-gray-800 text-white text-[10px] whitespace-nowrap pointer-events-none">
+                                Скопировано!
+                              </span>
+                            )}
+                          </button>
+                        ) : (
+                          <span className="text-gray-700">{msg.sender_phone || "—"}</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <p className="text-gray-800">{truncate(msg.raw_text)}</p>
