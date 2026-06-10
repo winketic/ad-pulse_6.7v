@@ -157,15 +157,32 @@ async function processItem(item: unknown) {
   // ── SERVICE CLIENT INIT ───────────────────────────
   let service: ReturnType<typeof createServiceClient>;
   try {
-    service = createServiceClient();
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+    // Log cleaned values (same as createServiceClient uses internally)
+    const cleanVal = (s: string) => s.replace(/﻿/g, "").trim();
+    const url = cleanVal(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+    const key = cleanVal(process.env.SUPABASE_SERVICE_ROLE_KEY ?? "");
+
+    const keyOk = key.startsWith("eyJhbGci") && key.length > 100;
+    const urlOk = url.startsWith("https://") && url.includes("supabase");
+
     console.log(
-      "[webhook] supabase admin init check: ok" +
-      ` url=${url.slice(0, 30)}...` +
-      ` key_prefix=${key.slice(0, 10)}...` +
-      ` key_len=${key.length}`
+      "[webhook] supabase admin init check:" +
+      ` url_ok=${urlOk} url=${url.slice(0, 35)}...` +
+      ` key_ok=${keyOk} key_prefix=${key.slice(0, 14)} key_len=${key.length}`
     );
+
+    if (!keyOk) {
+      console.error(
+        "[webhook] WRONG SERVICE ROLE KEY — must start with 'eyJhbGci' and be ~217 chars." +
+        ` Got prefix='${key.slice(0, 20)}' len=${key.length}.` +
+        " Fix: Supabase Dashboard → Settings → API → service_role (secret) → copy to Vercel env."
+      );
+    }
+    if (!urlOk) {
+      console.error(`[webhook] WRONG SUPABASE URL — got '${url.slice(0, 40)}'`);
+    }
+
+    service = createServiceClient();
   } catch (e) {
     console.error("[webhook] supabase admin init FAILED:", e);
     return;
