@@ -3,8 +3,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import WhatsAppList, { type WazzupMessage, type WazzupMaterial } from "./WhatsAppList";
-import AllowedChatsCard from "@/components/settings/AllowedChatsCard";
-import ResubscribeButton from "@/components/settings/ResubscribeButton";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -69,20 +67,14 @@ export default async function WhatsAppPage() {
   const allowedChatIds: string[] = wazzupCfg?.allowed_chat_ids ?? [];
 
   return (
-    <div className="space-y-4">
-      {isAdmin && (
-        <div className="px-6 pt-6 flex flex-col gap-4">
-          <AllowedChatsCard initialChatIds={allowedChatIds} />
-          <ResubscribeButton />
-        </div>
-      )}
-      <WhatsAppList
+    <WhatsAppList
       messages={(messagesResult.data ?? []) as WazzupMessage[]}
       materials={(materialsResult.data ?? []) as WazzupMaterial[]}
       channelIds={channelIds}
       webhookId={webhookId}
       companyId={companyId}
+      allowedChatIds={allowedChatIds}
+      isAdmin={isAdmin}
     />
-    </div>
   );
 }

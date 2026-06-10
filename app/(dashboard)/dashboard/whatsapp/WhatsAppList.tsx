@@ -3,6 +3,8 @@
 import { useState, useEffect, useTransition } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { confirmWhatsAppTransaction, rejectWhatsAppMessage, type TxType } from "./actions";
+import AllowedChatsCard from "@/components/settings/AllowedChatsCard";
+import ResubscribeButton from "@/components/settings/ResubscribeButton";
 
 type ParseResult = {
   type: TxType | null;
@@ -262,18 +264,23 @@ export default function WhatsAppList({
   channelIds = [],
   webhookId = null,
   companyId,
+  allowedChatIds = [],
+  isAdmin = false,
 }: {
   messages: WazzupMessage[];
   materials: WazzupMaterial[];
   channelIds?: string[];
   webhookId?: string | null;
   companyId?: string;
+  allowedChatIds?: string[];
+  isAdmin?: boolean;
 }) {
   const [messages, setMessages] = useState<WazzupMessage[]>(initialMessages);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectPending, startRejectTransition] = useTransition();
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   function handleCopyChatId(msgId: string, chatId: string) {
     navigator.clipboard.writeText(chatId).then(() => {
@@ -348,36 +355,95 @@ export default function WhatsAppList({
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-[#ededed]">WhatsApp</h1>
-        <p className="text-sm text-[#888888] mt-0.5">
-          Входящие сообщения и автоматически созданные транзакции
-        </p>
+      {/* ── Header ───────────────────────────────────────── */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold text-[#ededed]">WhatsApp</h1>
+          <p className="text-sm text-[#888888] mt-0.5">
+            Входящие сообщения и автоматически созданные транзакции
+          </p>
+        </div>
+        <button
+          onClick={() => setDrawerOpen(true)}
+          title="Настройки подключения"
+          className="p-2 rounded-lg transition-colors text-[#888888] hover:text-[#ededed] hover:bg-[#1f1f2e]"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
       </div>
 
-      {/* ── Connected channels ─────────────────────────── */}
-      {channelIds.length > 0 && (
-        <div className="mb-5 p-4 rounded-xl bg-[#111111] border border-[#1f1f1f]">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-2 h-2 rounded-full bg-[#25D366] shrink-0" />
-            <p className="text-xs font-semibold text-[#ededed]">
-              Подключённые каналы WhatsApp
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {channelIds.map((id) => (
-              <span key={id} className="px-2 py-1 rounded-lg bg-[#161616] border border-[#1f1f1f] text-xs text-[#888888] font-mono">
-                {id}
+      {/* ── Right drawer ─────────────────────────────────── */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+      <div
+        className={`fixed right-0 top-0 h-full z-50 flex flex-col transition-transform duration-300 ease-in-out ${
+          drawerOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{ width: 380, background: "#0d0d14", borderLeft: "1px solid #1f1f2e" }}
+      >
+        {/* Drawer header */}
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid #1f1f2e" }}>
+          <span className="text-sm font-semibold" style={{ color: "#ededed" }}>Настройки WhatsApp</span>
+          <button
+            onClick={() => setDrawerOpen(false)}
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: "#888888" }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Drawer body (scrollable) */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+          {/* Connection status */}
+          <div className="rounded-xl p-4" style={{ background: "#111111", border: "1px solid #1f1f2e" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${channelIds.length > 0 ? "bg-[#25D366]" : "bg-gray-500"}`} />
+              <span className="text-sm font-medium" style={{ color: "#ededed" }}>
+                {channelIds.length > 0 ? "Подключено" : "Не подключено"}
               </span>
-            ))}
+            </div>
+
+            {channelIds.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium" style={{ color: "#888888" }}>Channel ID</p>
+                {channelIds.map((id) => (
+                  <span key={id} className="block px-2 py-1 rounded-lg text-xs font-mono truncate"
+                    style={{ background: "#161616", border: "1px solid #1f1f2e", color: "#9ca3af" }}>
+                    {id}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {webhookId && (
+              <div className="mt-3">
+                <p className="text-xs font-medium mb-1" style={{ color: "#888888" }}>Webhook ID</p>
+                <span className="block px-2 py-1 rounded-lg text-xs font-mono truncate"
+                  style={{ background: "#161616", border: "1px solid #1f1f2e", color: "#555555" }}>
+                  {webhookId}
+                </span>
+              </div>
+            )}
           </div>
-          {webhookId && (
-            <p className="mt-2 text-xs text-[#888888]">
-              Webhook ID: <span className="font-mono text-[#555555]">{webhookId}</span>
-            </p>
+
+          {/* Allowed chats + resubscribe — admin only */}
+          {isAdmin && (
+            <>
+              <AllowedChatsCard initialChatIds={allowedChatIds} />
+              <ResubscribeButton />
+            </>
           )}
         </div>
-      )}
+      </div>
 
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
