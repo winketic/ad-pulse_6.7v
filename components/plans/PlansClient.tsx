@@ -10,6 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createPlan, type PlanStatus } from "@/app/(dashboard)/dashboard/plans/actions";
+import { formatCompact } from "@/lib/utils/format";
 // Minimal material shape needed for the plans form
 export type PlanMaterial = {
   id: string;
@@ -50,20 +51,20 @@ const STATUS_CFG: Record<
 > = {
   active: {
     label: "Активный",
-    bg: "bg-green-100",
-    text: "text-green-700",
-    dot: "bg-green-500",
+    bg: "bg-green-500/15 border border-green-500/20",
+    text: "text-green-400",
+    dot: "bg-green-400",
   },
   completed: {
     label: "Завершён",
-    bg: "bg-blue-100",
-    text: "text-blue-700",
-    dot: "bg-blue-500",
+    bg: "bg-blue-500/15 border border-blue-500/20",
+    text: "text-blue-400",
+    dot: "bg-blue-400",
   },
   cancelled: {
     label: "Отменён",
-    bg: "bg-gray-100",
-    text: "text-gray-500",
+    bg: "bg-[#1f1f1f]",
+    text: "text-[#888888]",
     dot: "bg-gray-400",
   },
 };
@@ -108,17 +109,17 @@ function ProgressBar({ pct }: { pct: number }) {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+      <div className="flex-1 h-1.5 rounded-full bg-[#1f1f1f] overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${
-            over ? "bg-red-500" : pct >= 75 ? "bg-[#1a472a]" : "bg-[#2d6a4f]"
+            over ? "bg-red-500" : pct >= 75 ? "bg-[#00f5c4]" : "bg-[#00f5c4]"
           }`}
           style={{ width: `${clamped}%` }}
         />
       </div>
       <span
         className={`text-xs tabular-nums font-medium w-10 text-right ${
-          over ? "text-red-600" : "text-gray-600"
+          over ? "text-red-600" : "text-[#888888]"
         }`}
       >
         {pct.toFixed(0)}%
@@ -150,12 +151,12 @@ function Modal({
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl z-10 max-h-[94dvh] flex flex-col">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+      <div className="relative bg-[#111111] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl z-10 max-h-[94dvh] flex flex-col">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0 border-b border-[#1f1f1f]">
+          <h2 className="text-lg font-semibold text-[#ededed]">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#1f1f1f] text-[#888888] hover:text-[#888888] transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -248,7 +249,7 @@ function CreatePlanForm({
   };
 
   const inputCls =
-    "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a472a]/40 focus:border-[#1a472a] transition-colors";
+    "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[#ededed] bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
 
   if (materials.length === 0) {
     return (
@@ -258,10 +259,10 @@ function CreatePlanForm({
             <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
           </svg>
         </div>
-        <p className="text-sm font-medium text-gray-800">Нет материалов в справочнике</p>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm font-medium text-[#ededed]">Нет материалов в справочнике</p>
+        <p className="text-sm text-[#888888] mt-1">
           Сначала добавьте материалы в{" "}
-          <a href="/dashboard/materials" className="text-[#1a472a] underline">
+          <a href="/dashboard/materials" className="text-[#00f5c4] underline">
             справочник
           </a>
         </p>
@@ -273,7 +274,7 @@ function CreatePlanForm({
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Name */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+        <label className="block text-sm font-medium text-[#888888] mb-1.5">
           Название плана <span className="text-red-500">*</span>
         </label>
         <input
@@ -291,7 +292,7 @@ function CreatePlanForm({
       {/* Dates */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-[#888888] mb-1.5">
             Дата начала <span className="text-red-500">*</span>
           </label>
           <input
@@ -303,7 +304,7 @@ function CreatePlanForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-[#888888] mb-1.5">
             Дата окончания <span className="text-red-500">*</span>
           </label>
           <input
@@ -320,7 +321,7 @@ function CreatePlanForm({
       {/* Materials */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-gray-700">
+          <label className="text-sm font-medium text-[#888888]">
             Материалы плана <span className="text-red-500">*</span>
           </label>
           {hasDuplicates && (
@@ -336,11 +337,11 @@ function CreatePlanForm({
               <div
                 key={row.uid}
                 className={`flex items-center gap-2 p-2.5 rounded-lg border ${
-                  isDuplicate ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50"
+                  isDuplicate ? "border-red-300 bg-red-50" : "border-[#1f1f1f] bg-[#161616]"
                 }`}
               >
                 {/* Row number */}
-                <span className="text-xs font-medium text-gray-400 w-5 text-center shrink-0">
+                <span className="text-xs font-medium text-[#888888] w-5 text-center shrink-0">
                   {idx + 1}
                 </span>
 
@@ -348,7 +349,7 @@ function CreatePlanForm({
                 <select
                   value={row.material_id}
                   onChange={(e) => updateRow(row.uid, "material_id", e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a472a]/40 focus:border-[#1a472a] transition-colors min-w-0"
+                  className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-[#ededed] bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors min-w-0"
                 >
                   {materials.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -366,9 +367,9 @@ function CreatePlanForm({
                     placeholder="0.00"
                     min="0.0001"
                     step="0.0001"
-                    className="w-28 px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-900 text-right focus:outline-none focus:ring-2 focus:ring-[#1a472a]/40 focus:border-[#1a472a] transition-colors"
+                    className="w-28 px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-[#ededed] text-right focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors"
                   />
-                  <span className="text-xs text-gray-400 w-10 truncate">
+                  <span className="text-xs text-[#888888] w-10 truncate">
                     {materials.find((m) => m.id === row.material_id)?.unit ?? ""}
                   </span>
                 </div>
@@ -378,7 +379,7 @@ function CreatePlanForm({
                   type="button"
                   onClick={() => removeRow(row.uid)}
                   disabled={rows.length === 1}
-                  className="p-1 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                  className="p-1 rounded-lg text-[#888888] hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                   title="Удалить строку"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -394,7 +395,7 @@ function CreatePlanForm({
           type="button"
           onClick={addRow}
           disabled={rows.length >= materials.length}
-          className="mt-2.5 flex items-center gap-1.5 text-sm text-[#1a472a] hover:text-[#163d24] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="mt-2.5 flex items-center gap-1.5 text-sm text-[#00f5c4] hover:text-[#163d24] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -419,14 +420,14 @@ function CreatePlanForm({
           type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[#888888] hover:bg-[#161616] transition-colors disabled:opacity-50"
         >
           Отмена
         </button>
         <button
           type="submit"
           disabled={isPending || !canSubmit}
-          className="flex-1 py-2.5 px-4 rounded-lg bg-[#1a472a] hover:bg-[#163d24] text-sm font-semibold text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-2 min-h-[44px]"
+          className="flex-1 py-2.5 px-4 rounded-lg bg-[#00f5c4] hover:bg-[#163d24] text-sm font-semibold text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-2 min-h-[44px]"
         >
           {isPending && (
             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -453,26 +454,26 @@ function EmptyState({
   if (isFiltered)
     return (
       <div className="text-center py-16">
-        <p className="text-sm text-gray-500">Нет планов с этим статусом</p>
+        <p className="text-sm text-[#888888]">Нет планов с этим статусом</p>
       </div>
     );
 
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-[#1a472a]/8 flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-[#1a472a]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
+      <div className="w-16 h-16 rounded-2xl bg-[#00f5c4]/8 flex items-center justify-center mb-4">
+        <svg className="w-8 h-8 text-[#00f5c4]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
       </div>
-      <h3 className="text-base font-semibold text-gray-900 mb-1">
+      <h3 className="text-base font-semibold text-[#ededed] mb-1">
         Планов пока нет
       </h3>
-      <p className="text-sm text-gray-500 mb-6 max-w-xs">
+      <p className="text-sm text-[#888888] mb-6 max-w-xs">
         Создайте производственный план и привяжите к нему материалы
       </p>
       <button
         onClick={onAdd}
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1a472a] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm min-h-[44px]"
+        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm min-h-[44px]"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -525,10 +526,10 @@ export default function PlansClient({
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-[#ededed]">
             Производственные планы
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-[#888888] mt-0.5">
             {plans.length === 0
               ? "Планов нет"
               : `${plans.length} план${plans.length === 1 ? "" : plans.length < 5 ? "а" : "ов"}`}
@@ -536,7 +537,7 @@ export default function PlansClient({
         </div>
         <button
           onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1a472a] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm self-start sm:self-auto min-h-[44px]"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm self-start sm:self-auto min-h-[44px]"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -547,22 +548,22 @@ export default function PlansClient({
 
       {/* ── Status tabs ─────────────────────────────────── */}
       {plans.length > 0 && (
-        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
+        <div className="flex items-center gap-1 bg-[#1f1f1f] rounded-xl p-1 mb-6 w-fit">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                 tab === t.key
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-[#111111] text-[#ededed] shadow-sm"
+                  : "text-[#888888] hover:text-[#888888]"
               }`}
             >
               {t.label}
               {counts[t.key] > 0 && (
                 <span
                   className={`ml-1.5 text-xs ${
-                    tab === t.key ? "text-gray-500" : "text-gray-400"
+                    tab === t.key ? "text-[#888888]" : "text-[#888888]"
                   }`}
                 >
                   {counts[t.key]}
@@ -593,35 +594,35 @@ export default function PlansClient({
             return (
               <div
                 key={plan.id}
-                className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow"
+                className="bg-[#111111] rounded-xl border border-[#1f1f1f] p-5 hover:shadow-sm transition-shadow"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   {/* Left */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <StatusBadge status={plan.status} />
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-[#888888]">
                         {fmtDate(plan.start_date)} — {fmtDate(plan.end_date)}
                       </span>
                     </div>
-                    <h3 className="text-base font-semibold text-gray-900 leading-tight">
+                    <h3 className="text-base font-semibold text-[#ededed] leading-tight">
                       {plan.name}
                     </h3>
 
                     {/* Progress */}
                     <div className="mt-3 max-w-xs">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-500">Прогресс выполнения</span>
+                        <span className="text-xs text-[#888888]">Прогресс выполнения</span>
                       </div>
                       <ProgressBar pct={pct} />
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-[#888888] mt-1">
                         Факт:{" "}
-                        <span className="text-gray-600 font-medium">
-                          {plan.actual_quantity.toFixed(2)}
+                        <span className="text-[#888888] font-medium">
+                          {formatCompact(plan.actual_quantity)}
                         </span>{" "}
                         / План:{" "}
-                        <span className="text-gray-600 font-medium">
-                          {plan.planned_quantity.toFixed(2)}
+                        <span className="text-[#888888] font-medium">
+                          {formatCompact(plan.planned_quantity)}
                         </span>
                       </p>
                     </div>
@@ -630,7 +631,7 @@ export default function PlansClient({
                   {/* Right: link */}
                   <Link
                     href={`/dashboard/plans/${plan.id}`}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-[#1a472a] hover:text-[#1a472a] transition-colors self-start shrink-0"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-[#888888] hover:bg-[#161616] hover:border-[#1a472a] hover:text-[#00f5c4] transition-colors self-start shrink-0"
                   >
                     Открыть
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

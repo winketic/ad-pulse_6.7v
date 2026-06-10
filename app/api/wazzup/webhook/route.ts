@@ -1,8 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import { parseAndSave } from "@/lib/wazzup/parseAndSave";
 
 type ContentType = "text" | "voice" | "image" | "document" | "other";
+
+// ─── Rate limiting ────────────────────────────────────────
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 200;     // requests per window
+const RATE_WINDOW = 60_000; // 1 minute
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || entry.resetAt < now) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
+// ─── Signature verification ───────────────────────────────
+function verifySignature(rawBody: string, sig: string, secret: string): boolean {
+  try {
+    const expected = createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
+    if (sig.length !== expected.length) return false;
+    return timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+}
 
 function resolveContentType(
   msgType: string,
@@ -30,9 +59,35 @@ function resolveContentType(
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limit by IP
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+  if (!checkRateLimit(ip)) {
+    console.warn(`[wazzup/webhook] rate limit exceeded for ip=${ip}`);
+    return NextResponse.json({ ok: true }); // return 200 to avoid Wazzup retry storms
+  }
+
+  // Read raw body for HMAC verification
+  const rawBody = await request.text();
+
+  // HMAC-SHA256 signature check (only when secret is configured)
+  const secret = process.env.WAZZUP_WEBHOOK_SECRET;
+  if (secret) {
+    const sig =
+      request.headers.get("x-wazzup-signature") ??
+      request.headers.get("X-Wazzup-Signature") ??
+      "";
+    if (!verifySignature(rawBody, sig, secret)) {
+      console.warn(`[wazzup/webhook] invalid signature from ip=${ip}`);
+      return NextResponse.json({ ok: true }); // 200 to avoid exposing check existence
+    }
+  }
+
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(rawBody);
   } catch {
     body = null;
   }
@@ -72,136 +127,194 @@ async function processWebhook(body: unknown) {
   const service = createServiceClient();
 
   for (const item of data) {
-    if (!item || typeof item !== "object") {
-      console.log("[wazzup/webhook] SKIP item: null or not object");
-      continue;
-    }
-    const msg = item as Record<string, unknown>;
-
-    // ── DIRECTION FILTER ───────────────────────────────
-    const dir = typeof msg.direction === "string" ? msg.direction.toLowerCase() : "";
-    const messageId = typeof msg.message_id === "string" ? msg.message_id : String(msg.id ?? "");
-    const channelId = typeof msg.channel_id === "string" ? msg.channel_id : String(msg.channelId ?? "");
-
-    console.log(`[wazzup/webhook] item: message_id="${messageId}" channel_id="${channelId}" direction="${dir}" type="${msg.type}" text="${String(msg.text ?? "").slice(0, 80)}"`);
-
-    if (dir !== "in" && dir !== "inbound" && dir !== "incoming") {
-      console.log(`[wazzup/webhook] SKIP: direction="${dir}" is not incoming`);
-      continue;
-    }
-
-    if (!messageId) {
-      console.log("[wazzup/webhook] SKIP: empty message_id");
-      continue;
-    }
-    if (!channelId) {
-      console.log("[wazzup/webhook] SKIP: empty channel_id. Full msg keys:", Object.keys(msg).join(","));
-      continue;
-    }
-
-    const rawType = typeof msg.type === "string" ? msg.type : "text";
-    const text = typeof msg.text === "string" ? msg.text.trim() : "";
-
-    const attachment =
-      msg.attachment && typeof msg.attachment === "object"
-        ? (msg.attachment as Record<string, unknown>)
-        : null;
-    const mediaUrl  = typeof attachment?.url      === "string" ? attachment.url      : null;
-    const mimetype  = typeof attachment?.mimetype === "string" ? attachment.mimetype : null;
-    const contentType = resolveContentType(rawType, mimetype);
-
-    const contact = msg.contact as Record<string, unknown> | undefined;
-    const sender  = msg.sender  as Record<string, unknown> | undefined;
-    const chatId  = typeof msg.chatId === "string" ? msg.chatId.replace(/@.*$/, "") : "";
-    const senderPhone =
-      (typeof contact?.phone === "string" && contact.phone) ||
-      (typeof sender?.phone  === "string" && sender.phone)  ||
-      chatId || "";
-
-    // ── IDEMPOTENCY ────────────────────────────────────
-    const { data: existing } = await service
-      .from("wazzup_messages")
-      .select("id")
-      .eq("message_id", messageId)
-      .maybeSingle();
-
-    if (existing) {
-      console.log(`[wazzup/webhook] SKIP: message_id="${messageId}" already exists`);
-      continue;
-    }
-
-    // ── COMPANY LOOKUP ─────────────────────────────────
-    const { data: token, error: tokenErr } = await service
-      .from("wazzup_tokens")
-      .select("company_id")
-      .contains("channel_ids", [channelId])
-      .maybeSingle();
-
-    console.log(`[wazzup/webhook] company lookup for channel_id="${channelId}": company_id=${token?.company_id ?? "NOT FOUND"} err=${tokenErr?.message ?? "none"}`);
-
-    if (!token?.company_id) {
-      console.warn(`[wazzup/webhook] SKIP: no company found for channel_id="${channelId}"`);
-      continue;
-    }
-
-    // ── ALLOWED CHATS FILTER ───────────────────────────
-    const { data: wazzupCfg } = await service
-      .from("wazzup_config")
-      .select("allowed_chat_ids")
-      .eq("company_id", token.company_id)
-      .maybeSingle();
-
-    const allowedChats: string[] = wazzupCfg?.allowed_chat_ids ?? [];
-    if (allowedChats.length > 0) {
-      const incomingId = chatId || senderPhone;
-      const isAllowed = allowedChats.some(
-        (a) => incomingId && (incomingId.includes(a) || a.includes(incomingId))
-      );
-      if (!isAllowed) {
-        console.log(`[wazzup/webhook] SKIP: chat "${incomingId}" not in allowed list ${JSON.stringify(allowedChats)}`);
-        continue;
-      }
-      console.log(`[wazzup/webhook] chat "${incomingId}" allowed`);
-    }
-
-    // ── INSERT ─────────────────────────────────────────
-    const insertPayload = {
-      company_id:   token.company_id,
-      message_id:   messageId,
-      channel_id:   channelId,
-      chat_id:      chatId || null,
-      direction:    "inbound",
-      sender_phone: senderPhone,
-      raw_text:     text || null,
-      content_type: contentType,
-      media_url:    mediaUrl,
-    };
-    console.log("[wazzup/webhook] INSERT payload:", JSON.stringify(insertPayload));
-
-    let savedId: string | null = null;
+    // Per-item try-catch: one bad message never kills the whole loop
     try {
-      const { data: saved, error: insertErr } = await service
-        .from("wazzup_messages")
-        .insert(insertPayload)
-        .select("id")
-        .single();
-
-      if (insertErr) {
-        console.error(`[wazzup/webhook] INSERT ERROR: ${insertErr.message} | code=${insertErr.code}`);
-        continue;
-      }
-      savedId = saved?.id ?? null;
-      console.log(`[wazzup/webhook] SAVED message id=${savedId}`);
+      await processItem(item, service);
     } catch (err) {
-      console.error("[wazzup/webhook] INSERT EXCEPTION:", err);
-      continue;
-    }
-
-    // Fire-and-forget: parse after save — never blocks or loses the message
-    if (savedId) {
-      void parseAndSave(savedId).catch((err) =>
-        console.error(`[wazzup/webhook] parseAndSave error for id=${savedId}:`, err)
-      );
+      console.error("[wazzup/webhook] ITEM ERROR (unhandled):", err, "| item:", JSON.stringify(item));
     }
   }
+}
+
+async function processItem(
+  item: unknown,
+  service: ReturnType<typeof import("@/lib/supabase/service").createServiceClient>
+) {
+  if (!item || typeof item !== "object") {
+    console.log("[wazzup/webhook] SKIP item: null or not object");
+    return;
+  }
+  const msg = item as Record<string, unknown>;
+
+  // ── RAW FIELD DUMP (for debugging chat_id type issues) ──
+  console.log(
+    "[wazzup/webhook] raw fields:" +
+    ` chat_id=${JSON.stringify(msg.chat_id)} (${typeof msg.chat_id})` +
+    ` channel_id=${JSON.stringify(msg.channel_id)} (${typeof msg.channel_id})` +
+    ` message_id=${JSON.stringify(msg.message_id ?? msg.id)} (${typeof (msg.message_id ?? msg.id)})` +
+    ` sender=${JSON.stringify(msg.sender)}`
+  );
+
+  // ── FIELD EXTRACTION ──────────────────────────────
+  const dir = typeof msg.direction === "string" ? msg.direction.toLowerCase() : "";
+
+  // Wazzup may send numeric IDs — coerce to string in all cases
+  const messageId =
+    (typeof msg.message_id === "string" && msg.message_id) ||
+    (msg.message_id != null             ? String(msg.message_id) : "") ||
+    (typeof msg.id         === "string" && msg.id)         ||
+    (msg.id         != null             ? String(msg.id) : "");
+
+  const channelId =
+    (typeof msg.channel_id === "string" && msg.channel_id) ||
+    (msg.channel_id != null             ? String(msg.channel_id) : "") ||
+    (typeof msg.channelId  === "string" && msg.channelId)  ||
+    "";
+
+  // chat_id: Wazzup sends msg.chat_id — handle both string and number
+  const chatId =
+    (typeof msg.chat_id === "string" && msg.chat_id)           ||
+    (typeof msg.chat_id === "number" && String(msg.chat_id))   ||
+    (typeof msg.chatId  === "string" && msg.chatId.replace(/@.*$/, "")) ||
+    "";
+
+  console.log("[wazzup/webhook] insert payload chat_id:", msg.chat_id, "→ extracted:", chatId);
+
+  const rawType = typeof msg.type === "string" ? msg.type : "text";
+  const text    = typeof msg.text === "string" ? msg.text.trim() : "";
+
+  const contact = msg.contact as Record<string, unknown> | undefined;
+  const sender  = msg.sender  as Record<string, unknown> | undefined;
+  // Per Wazzup docs: sender.phone = phone number, sender.chat_id = WhatsApp ID (handle number too)
+  const senderPhone =
+    (typeof sender?.phone   === "string" && sender.phone)               ||
+    (typeof sender?.chat_id === "string" && sender.chat_id)             ||
+    (typeof sender?.chat_id === "number" && String(sender.chat_id))     ||
+    (typeof contact?.phone  === "string" && contact.phone)              ||
+    chatId || "";
+
+  const attachment = msg.attachment && typeof msg.attachment === "object"
+    ? (msg.attachment as Record<string, unknown>)
+    : null;
+  const mediaUrl  = typeof attachment?.url      === "string" ? attachment.url      : null;
+  const mimetype  = typeof attachment?.mimetype === "string" ? attachment.mimetype : null;
+  const contentType = resolveContentType(rawType, mimetype);
+
+  console.log(
+    `[wazzup/webhook] item: message_id="${messageId}" channel_id="${channelId}"` +
+    ` chat_id="${chatId}" sender_phone="${senderPhone}"` +
+    ` direction="${dir}" type="${rawType}" text="${text.slice(0, 80)}"`
+  );
+  console.log("[wazzup/webhook] step: starting processing");
+
+  // ── DIRECTION FILTER ───────────────────────────────
+  if (dir !== "in" && dir !== "inbound" && dir !== "incoming") {
+    console.log(`[wazzup/webhook] SKIP: direction="${dir}"`);
+    return;
+  }
+
+  if (!messageId) {
+    console.log("[wazzup/webhook] SKIP: empty message_id. Keys:", Object.keys(msg).join(","));
+    return;
+  }
+  if (!channelId) {
+    console.log("[wazzup/webhook] SKIP: empty channel_id. Keys:", Object.keys(msg).join(","));
+    return;
+  }
+  console.log("[wazzup/webhook] step: passed direction+id checks");
+
+  // ── IDEMPOTENCY ────────────────────────────────────
+  console.log("[wazzup/webhook] step: before idempotency check");
+  const { data: existing, error: existErr } = await service
+    .from("wazzup_messages")
+    .select("id")
+    .eq("message_id", messageId)
+    .maybeSingle();
+  console.log(`[wazzup/webhook] step: idempotency done existing=${!!existing} err=${existErr?.message ?? "none"}`);
+
+  if (existing) {
+    console.log(`[wazzup/webhook] SKIP: message_id="${messageId}" already exists`);
+    return;
+  }
+
+  // ── COMPANY LOOKUP ─────────────────────────────────
+  console.log("[wazzup/webhook] step: company lookup");
+  const { data: token, error: tokenErr } = await service
+    .from("wazzup_tokens")
+    .select("company_id")
+    .contains("channel_ids", [channelId])
+    .maybeSingle();
+  console.log(
+    `[wazzup/webhook] step: company result company_id=${token?.company_id ?? "NOT FOUND"} err=${tokenErr?.message ?? "none"}`
+  );
+
+  if (!token?.company_id) {
+    console.warn(`[wazzup/webhook] SKIP: no company for channel_id="${channelId}"`);
+    return;
+  }
+
+  // ── ALLOWED CHATS FILTER ───────────────────────────
+  console.log("[wazzup/webhook] step: allowed chats check");
+  const { data: wazzupCfg, error: cfgErr } = await service
+    .from("wazzup_config")
+    .select("allowed_chat_ids")
+    .eq("company_id", token.company_id)
+    .maybeSingle();
+  console.log(`[wazzup/webhook] step: cfg loaded allowed_count=${(wazzupCfg?.allowed_chat_ids ?? []).length} err=${cfgErr?.message ?? "none"}`);
+
+  const allowedChats: string[] = wazzupCfg?.allowed_chat_ids ?? [];
+  if (allowedChats.length > 0) {
+    const incomingId = chatId || senderPhone;
+    const isAllowed = !!incomingId && allowedChats.some(
+      (a) => incomingId.includes(a) || a.includes(incomingId)
+    );
+    console.log(`[wazzup/webhook] step: allowed check incomingId="${incomingId}" isAllowed=${isAllowed} allowed=${JSON.stringify(allowedChats)}`);
+    if (!isAllowed) {
+      console.log(`[wazzup/webhook] SKIP: incomingId="${incomingId}" not in allowed list`);
+      return;
+    }
+  }
+
+  // ── INSERT ─────────────────────────────────────────
+  console.log("[webhook] inserting chat_id:", chatId, typeof chatId);
+
+  const insertPayload = {
+    company_id:   token.company_id,
+    message_id:   messageId,
+    channel_id:   channelId,
+    chat_id:      chatId || null,
+    direction:    "inbound",
+    sender_phone: senderPhone,
+    raw_text:     text || null,
+    content_type: contentType,
+    media_url:    mediaUrl,
+    parsed:       false,
+    needs_review: false,
+  };
+  console.log("[wazzup/webhook] step: before insert", JSON.stringify(insertPayload));
+
+  const { data: saved, error: insertErr } = await service
+    .from("wazzup_messages")
+    .insert(insertPayload)
+    .select("id")
+    .single();
+
+  console.log(`[wazzup/webhook] step: after insert saved_id=${saved?.id ?? "null"} err=${insertErr?.message ?? "none"} code=${insertErr?.code ?? "none"}`);
+
+  if (insertErr) {
+    console.error(`[wazzup/webhook] INSERT ERROR: ${insertErr.message} | code=${insertErr.code}`);
+    return;
+  }
+
+  const savedId = saved?.id ?? null;
+  console.log(`[wazzup/webhook] SAVED message id=${savedId}`);
+
+  // Fire-and-forget parse — never blocks or loses the message
+  console.log(`[wazzup/webhook] step: before parseAndSave id=${savedId}`);
+  if (savedId) {
+    void parseAndSave(savedId).catch((err) =>
+      console.error(`[wazzup/webhook] parseAndSave error for id=${savedId}:`, err)
+    );
+  }
+  console.log(`[wazzup/webhook] step: after parseAndSave (fire-and-forget launched)`);
 }

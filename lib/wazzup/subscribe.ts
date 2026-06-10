@@ -12,8 +12,16 @@ export async function subscribeToWebhooks(
 ): Promise<void> {
   const service = createServiceClient();
 
-  const webhookUrl = (process.env.NEXT_PUBLIC_APP_URL + '/api/wazzup/webhook').replace(/\uFEFF/g, '').trim();
-  console.log(`[wazzup/subscribe] company=${companyId} webhookUrl=${webhookUrl}`);
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\uFEFF/g, "").replace(/\/$/, "").trim();
+  const webhookUrl = `${appUrl}/api/wazzup/webhook`;
+
+  console.log("[wazzup/subscribe] registering webhook URL:", webhookUrl);
+  if (!appUrl) {
+    console.error("[wazzup/subscribe] ERROR: NEXT_PUBLIC_APP_URL is not set!");
+  }
+  if (appUrl.includes("vercel.app")) {
+    console.warn("[wazzup/subscribe] WARNING: NEXT_PUBLIC_APP_URL still points to vercel.app \u2014 should be the custom domain");
+  }
 
   // ── 1. Register webhook with Wazzup ───────────────────
   const subRes = await fetch(`${WAZZUP_BASE}/webhooks`, {

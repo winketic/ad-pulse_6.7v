@@ -149,6 +149,52 @@ function CredentialsForm({
   );
 }
 
+// ── Resubscribe button ─────────────────────────────────────
+
+function ResubscribeButton() {
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<"idle" | "ok" | "err">("idle");
+
+  async function handleClick() {
+    setLoading(true);
+    setStatus("idle");
+    try {
+      const res = await fetch("/api/wazzup/resubscribe", { method: "POST" });
+      const data = await res.json();
+      setStatus(data.ok ? "ok" : "err");
+    } catch {
+      setStatus("err");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3 mb-3">
+      <button
+        onClick={handleClick}
+        disabled={loading}
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50"
+        style={{ borderColor: "#2a2a3d", color: "#9ca3af", background: "#1a1a2e" }}
+      >
+        {loading ? (
+          <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        ) : (
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        )}
+        Обновить webhook
+      </button>
+      {status === "ok" && <span className="text-xs" style={{ color: "#00f5c4" }}>✓ Зарегистрирован</span>}
+      {status === "err" && <span className="text-xs" style={{ color: "#f87171" }}>Ошибка — см. логи</span>}
+    </div>
+  );
+}
+
 // ── Main card ──────────────────────────────────────────────
 
 export default function WazzupCard({
@@ -290,6 +336,9 @@ export default function WazzupCard({
                 )}
               </div>
             </div>
+
+            {/* Resubscribe webhook */}
+            {isAdmin && <ResubscribeButton />}
 
             {/* Disconnect */}
             {confirmDisconnect ? (

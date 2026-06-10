@@ -21,9 +21,27 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, company_id")
+    .select("full_name, company_id, avatar_url, role")
     .eq("id", user.id)
     .single();
+
+  // Redirect invited users who haven't completed onboarding yet
+  // (their full_name defaults to their email address)
+  if (profile && (!profile.full_name || profile.full_name === user.email)) {
+    redirect("/onboarding");
+  }
+
+  // Redirect admins who haven't completed company setup
+  if (profile?.role === "admin" && profile?.company_id) {
+    const { data: company } = await supabase
+      .from("companies")
+      .select("setup_completed")
+      .eq("id", profile.company_id)
+      .single();
+    if (company && !company.setup_completed) {
+      redirect("/onboarding/setup");
+    }
+  }
 
   const displayName = profile?.full_name || user.email || "Пользователь";
 
@@ -44,7 +62,11 @@ export default async function DashboardLayout({
   }
 
   return (
-    <DashboardShell userName={displayName} whatsappBadge={whatsappBadge}>
+    <DashboardShell
+      userName={displayName}
+      whatsappBadge={whatsappBadge}
+      avatarUrl={profile?.avatar_url ?? null}
+    >
       {children}
     </DashboardShell>
   );

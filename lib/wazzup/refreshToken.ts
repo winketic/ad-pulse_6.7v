@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { getPartnerCredentials } from "./auth";
+import { subscribeToWebhooks } from "./subscribe";
 
 const WAZZUP_BASE = "https://tech.wazzup24.com/v2/oauth";
 const REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
@@ -65,6 +66,11 @@ export async function ensureFreshToken(companyId: string): Promise<string> {
       expires_at: newExpiresAt,
     })
     .eq("company_id", companyId);
+
+  // Re-register webhook after token refresh — Wazzup may expire the old subscription
+  void subscribeToWebhooks(companyId, tokens.access_token).catch((err) =>
+    console.warn("[refreshToken] webhook re-subscribe failed (non-fatal):", err)
+  );
 
   return tokens.access_token;
 }

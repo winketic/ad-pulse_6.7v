@@ -274,7 +274,7 @@ export default function WhatsAppList({
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectPending, startRejectTransition] = useTransition();
 
-  // Realtime subscription — prepend new messages as they arrive
+  // Realtime subscription — INSERT prepends new rows, UPDATE patches existing ones
   useEffect(() => {
     if (!companyId) return;
     const supabase = createClient();
@@ -296,9 +296,24 @@ export default function WhatsAppList({
           });
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "wazzup_messages",
+          filter: `company_id=eq.${companyId}`,
+        },
+        (payload) => {
+          const updated = payload.new as WazzupMessage;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m))
+          );
+        }
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { void supabase.removeChannel(channel); };
   }, [companyId]);
 
   const confirmingMessage = confirmingId

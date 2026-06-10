@@ -10,16 +10,16 @@ export default function TelegramCard({ companyId, telegramConnected, isAdmin }: 
   const code = companyId.slice(0, 8);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] overflow-hidden">
+      <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-[#229ED9]/10 flex items-center justify-center">
           <svg className="w-5 h-5 text-[#229ED9]" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
           </svg>
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Уведомления в Telegram</h3>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <h3 className="text-sm font-semibold text-[#ededed]">Уведомления в Telegram</h3>
+          <p className="text-xs text-[#888888] mt-0.5">
             {telegramConnected ? "Подключён" : "Получайте алерты о материалах"}
           </p>
         </div>
@@ -30,7 +30,7 @@ export default function TelegramCard({ companyId, telegramConnected, isAdmin }: 
               Подключён
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#1f1f1f] text-[#888888]">
               <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
               Не подключён
             </span>
@@ -47,8 +47,8 @@ export default function TelegramCard({ companyId, telegramConnected, isAdmin }: 
               </svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900">Telegram подключён ✓</p>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-sm font-semibold text-[#ededed]">Telegram подключён ✓</p>
+              <p className="text-xs text-[#888888] mt-0.5">
                 Вы получаете алерты о перерасходе, браке и критических остатках.
               </p>
             </div>
@@ -58,7 +58,7 @@ export default function TelegramCard({ companyId, telegramConnected, isAdmin }: 
             <div className="flex items-start gap-3 p-3.5 rounded-lg bg-[#229ED9]/5 border border-[#229ED9]/20">
               <span className="text-lg shrink-0">1</span>
               <div>
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-[#888888]">
                   Найдите бота{" "}
                   <a
                     href="https://t.me/adpulse_alerts_bot"
@@ -73,10 +73,10 @@ export default function TelegramCard({ companyId, telegramConnected, isAdmin }: 
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3.5 rounded-lg bg-gray-50 border border-gray-200">
+            <div className="flex items-start gap-3 p-3.5 rounded-lg bg-[#161616] border border-[#1f1f1f]">
               <span className="text-lg shrink-0">2</span>
               <div>
-                <p className="text-sm text-gray-700 mb-2">
+                <p className="text-sm text-[#888888] mb-2">
                   Отправьте боту ваш код подключения:
                 </p>
                 <div className="flex items-center gap-2">
@@ -85,7 +85,7 @@ export default function TelegramCard({ companyId, telegramConnected, isAdmin }: 
                   </code>
                   <button
                     onClick={() => navigator.clipboard.writeText(code)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    className="p-1.5 rounded-lg text-[#888888] hover:text-[#888888] hover:bg-[#1f1f1f] transition-colors"
                     title="Скопировать"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -97,7 +97,7 @@ export default function TelegramCard({ companyId, telegramConnected, isAdmin }: 
             </div>
           </div>
         ) : (
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-[#888888]">
             Подключение Telegram доступно только администратору.
           </p>
         )}

@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import SettingsClient from "@/components/settings/SettingsClient";
 import type { TabId } from "@/components/settings/SettingsTabs";
 import { listCompanyUsers } from "./actions";
+import { MaterialThresholds } from "@/components/settings/MaterialThresholds";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -53,7 +54,7 @@ export default async function SettingsPage({
   const roleStyle = ROLE_COLORS[role] ?? ROLE_COLORS.warehouse;
 
   // ── Load all data in parallel ───────────────────────────
-  const [companyResult, wazzupTokenResult, wazzupConfigResult, usersResult] = await Promise.all([
+  const [companyResult, wazzupTokenResult, wazzupConfigResult, usersResult, materialsResult, thresholdsResult] = await Promise.all([
     // Company info
     company_id
       ? supabase.from("companies").select("name, telegram_connected").eq("id", company_id).single()
@@ -80,6 +81,16 @@ export default async function SettingsPage({
     company_id && isAdmin
       ? listCompanyUsers().catch(() => [])
       : Promise.resolve([]),
+
+    // Materials (for threshold settings)
+    company_id && (isAdmin || canEditCompany)
+      ? supabase.from("materials").select("id, name, unit").eq("company_id", company_id).order("name")
+      : Promise.resolve({ data: [] }),
+
+    // Existing thresholds
+    company_id && (isAdmin || canEditCompany)
+      ? supabase.from("material_thresholds").select("material_id, min_quantity").eq("company_id", company_id)
+      : Promise.resolve({ data: [] }),
   ]);
 
   // ── Derived values ──────────────────────────────────────
@@ -95,6 +106,18 @@ export default async function SettingsPage({
   const hasConfig = !!(configEmail && configClientId);
 
   const users = Array.isArray(usersResult) ? usersResult : [];
+  const materials = (materialsResult as { data: { id: string; name: string; unit: string }[] | null }).data ?? [];
+  const thresholds = (thresholdsResult as { data: { material_id: string; min_quantity: number }[] | null }).data ?? [];
+
+  const thresholdSection = canEditCompany ? (
+    <div className="mt-6">
+      <h3 className="text-sm font-semibold text-[#ededed] mb-3">Пороги остатков (Telegram-алерты)</h3>
+      <p className="text-xs text-[#888888] mb-4">
+        Укажите минимальный остаток для каждого материала. При достижении порога придёт Telegram-уведомление.
+      </p>
+      <MaterialThresholds materials={materials} initialThresholds={thresholds} />
+    </div>
+  ) : null;
 
   return (
     <SettingsClient
@@ -125,6 +148,7 @@ export default async function SettingsPage({
       canEditCompany={canEditCompany}
       initialTab={initialTab}
       wazzupFlash={searchParams.wazzup ?? null}
+      thresholdSection={thresholdSection}
     />
   );
 }

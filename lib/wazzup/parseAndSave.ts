@@ -8,12 +8,13 @@ import { ensureFreshToken } from "./refreshToken";
 export async function parseAndSave(messageId: string): Promise<void> {
   const service = createServiceClient();
 
-  const { data: msg } = await service
+  const { data: msg, error: msgErr } = await service
     .from("wazzup_messages")
-    .select("id, raw_text, company_id, content_type, media_url")
+    .select("id, raw_text, company_id, content_type, media_url, chat_id")
     .eq("id", messageId)
     .single();
 
+  if (msgErr) console.error(`[parseAndSave] fetch error for id=${messageId}: ${msgErr.message}`);
   if (!msg) return;
 
   let textToParse: string = msg.raw_text ?? "";
@@ -61,7 +62,25 @@ export async function parseAndSave(messageId: string): Promise<void> {
     }
   }
 
-  const result = await parseMessage(textToParse, msg.company_id);
+  // Fetch conversation context (last 5 messages from same chat)
+  let context: string[] = [];
+  if (msg.chat_id) {
+    const { data: prevMsgs } = await service
+      .from("wazzup_messages")
+      .select("raw_text")
+      .eq("company_id", msg.company_id)
+      .eq("chat_id", msg.chat_id)
+      .neq("id", messageId)
+      .not("raw_text", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    context = (prevMsgs ?? [])
+      .map((m) => m.raw_text as string)
+      .filter(Boolean)
+      .reverse(); // chronological order
+  }
+
+  const result = await parseMessage(textToParse, msg.company_id, context);
 
   const allFound = !!(result.type && result.quantity != null && result.material_id);
   const autoCreate = result.confidence === "high" && allFound;
@@ -145,33 +164,51 @@ async function fireAlerts({
     );
   }
 
-  // 2. Critical balance alert (balance < 10% of gost_norm)
+  // 2. Balance checks — compute once and reuse
+  const { data: txs } = await service
+    .from("material_transactions")
+    .select("type, quantity")
+    .eq("company_id", companyId)
+    .eq("material_id", materialId);
+
+  let balance = 0;
+  for (const tx of txs ?? []) {
+    const q = Number(tx.quantity);
+    if (tx.type === "income" || tx.type === "return") balance += q;
+    else balance -= q;
+  }
+
+  // 2a. Critical balance by GOST norm (< 10%)
   if (mat.gost_norm && Number(mat.gost_norm) > 0) {
-    const { data: txs } = await service
-      .from("material_transactions")
-      .select("type, quantity")
-      .eq("company_id", companyId)
-      .eq("material_id", materialId);
-
-    if (txs) {
-      let balance = 0;
-      for (const tx of txs) {
-        const q = Number(tx.quantity);
-        if (tx.type === "income" || tx.type === "return") balance += q;
-        else balance -= q;
-      }
-
-      const gostNorm = Number(mat.gost_norm);
-      if (balance < gostNorm * 0.1) {
-        await sendTelegramAlert(
-          companyId,
-          `📦 <b>Критический остаток</b>\n\n` +
-            `Материал: ${materialName}\n` +
-            `Остаток: ${balance.toFixed(2)} ${unit}\n` +
-            `Норма ГОСТ: ${gostNorm} ${unit}`
-        );
-      }
+    const gostNorm = Number(mat.gost_norm);
+    if (balance < gostNorm * 0.1) {
+      await sendTelegramAlert(
+        companyId,
+        `📦 <b>Критический остаток</b>\n\n` +
+          `Материал: ${materialName}\n` +
+          `Остаток: ${balance.toFixed(2)} ${unit}\n` +
+          `Норма ГОСТ: ${gostNorm} ${unit}`
+      );
     }
+  }
+
+  // 2b. Custom threshold alert
+  const { data: threshold } = await service
+    .from("material_thresholds")
+    .select("min_quantity")
+    .eq("company_id", companyId)
+    .eq("material_id", materialId)
+    .maybeSingle();
+
+  if (threshold && balance < Number(threshold.min_quantity)) {
+    await sendTelegramAlert(
+      companyId,
+      `⚠️ <b>Порог остатка достигнут</b>\n\n` +
+        `Материал: ${materialName}\n` +
+        `Остаток: ${balance.toFixed(2)} ${unit}\n` +
+        `Минимум: ${Number(threshold.min_quantity)} ${unit}\n` +
+        `Требуется пополнение склада`
+    );
   }
 
   // 3. Plan overrun alert (expense > planned * 1.1 in active plans)

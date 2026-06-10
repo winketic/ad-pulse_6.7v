@@ -118,7 +118,7 @@ function FilterBar({
       className="flex flex-wrap items-end gap-3"
     >
       <div>
-        <label className="block text-xs font-medium text-gray-500 mb-1.5">
+        <label className="block text-xs font-medium text-[#888888] mb-1.5">
           Период с
         </label>
         <input
@@ -126,11 +126,11 @@ function FilterBar({
           name="from"
           defaultValue={from}
           required
-          className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a472a]/40 focus:border-[#1a472a] transition-colors"
+          className="px-3 py-2 rounded-lg border border-[#1f1f1f] bg-[#161616] text-sm text-[#ededed] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors [color-scheme:dark]"
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-500 mb-1.5">
+        <label className="block text-xs font-medium text-[#888888] mb-1.5">
           по
         </label>
         <input
@@ -138,13 +138,13 @@ function FilterBar({
           name="to"
           defaultValue={to}
           required
-          className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1a472a]/40 focus:border-[#1a472a] transition-colors"
+          className="px-3 py-2 rounded-lg border border-[#1f1f1f] bg-[#161616] text-sm text-[#ededed] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors [color-scheme:dark]"
         />
       </div>
       <button
         type="submit"
         disabled={isPending}
-        className="px-5 py-2 rounded-lg bg-[#1a472a] hover:bg-[#163d24] text-white text-sm font-semibold transition-colors disabled:opacity-60 flex items-center gap-2"
+        className="px-5 py-2 rounded-lg bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold transition-colors disabled:opacity-60 flex items-center gap-2"
       >
         {isPending && (
           <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
@@ -170,7 +170,7 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
   if (rows.length === 0) {
     return (
       <div className="py-12 text-center">
-        <p className="text-sm text-gray-500">Нет данных за выбранный период</p>
+        <p className="text-sm text-[#888888]">Нет данных за выбранный период</p>
       </div>
     );
   }
@@ -179,7 +179,7 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-200">
+          <tr className="bg-[#161616] border-b border-[#1f1f1f]">
             {[
               ["Материал", "text-left"],
               ["Ед.", "text-left w-16"],
@@ -191,31 +191,31 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
             ].map(([label, cls]) => (
               <th
                 key={label}
-                className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide ${cls}`}
+                className={`px-4 py-3 text-xs font-semibold text-[#888888] uppercase tracking-wide ${cls}`}
               >
                 {label}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="divide-y divide-[#1f1f1f]">
           {rows.map((row) => (
-            <tr key={row.material_id} className="hover:bg-gray-50/50 transition-colors">
-              <td className="px-4 py-3 font-medium text-gray-900">
+            <tr key={row.material_id} className="hover:bg-[#161616]/50 transition-colors">
+              <td className="px-4 py-3 font-medium text-[#ededed]">
                 {row.material_name}
               </td>
               <td className="px-4 py-3">
-                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[#1a472a]/10 text-[#1a472a]">
+                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[#00f5c4]/10 text-[#00f5c4]">
                   {row.unit}
                 </span>
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono text-green-700">
+              <td className="px-4 py-3 text-right tabular-nums font-mono text-green-400">
                 {fmtQty(row.income)}
               </td>
               <td className="px-4 py-3 text-right tabular-nums font-mono text-blue-600">
                 {fmtQty(row.return_qty)}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono text-red-600">
+              <td className="px-4 py-3 text-right tabular-nums font-mono text-red-400">
                 {fmtQty(row.expense)}
               </td>
               <td className="px-4 py-3 text-right tabular-nums font-mono text-amber-600">
@@ -225,10 +225,10 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
                 <span
                   className={`tabular-nums font-mono font-bold ${
                     row.balance > 0
-                      ? "text-[#1a472a]"
+                      ? "text-[#00f5c4]"
                       : row.balance < 0
-                      ? "text-red-600"
-                      : "text-gray-400"
+                      ? "text-red-400"
+                      : "text-[#888888]"
                   }`}
                 >
                   {row.balance === 0
@@ -241,20 +241,20 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
         </tbody>
         {rows.length > 1 && (
           <tfoot>
-            <tr className="border-t-2 border-gray-200 bg-gray-50">
+            <tr className="border-t-2 border-[#1f1f1f] bg-[#161616]">
               <td
                 colSpan={2}
-                className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide"
+                className="px-4 py-3 text-xs font-semibold text-[#888888] uppercase tracking-wide"
               >
                 Итого
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-green-700">
+              <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-green-400">
                 {totalIncome.toFixed(4)}
               </td>
               <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-blue-600">
                 {totalReturn.toFixed(4)}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-red-600">
+              <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-red-400">
                 {totalExpense.toFixed(4)}
               </td>
               <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-amber-600">
@@ -264,10 +264,10 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
                 <span
                   className={`tabular-nums font-mono font-bold ${
                     totalBalance > 0
-                      ? "text-[#1a472a]"
+                      ? "text-[#00f5c4]"
                       : totalBalance < 0
-                      ? "text-red-600"
-                      : "text-gray-400"
+                      ? "text-red-400"
+                      : "text-[#888888]"
                   }`}
                 >
                   {totalBalance > 0 ? "+" : ""}
@@ -293,7 +293,7 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
         </div>
-        <p className="text-sm text-gray-500">Случаев брака за период нет</p>
+        <p className="text-sm text-[#888888]">Случаев брака за период нет</p>
       </div>
     );
   }
@@ -302,7 +302,7 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-200">
+          <tr className="bg-[#161616] border-b border-[#1f1f1f]">
             {[
               ["Дата", "text-left w-24"],
               ["Материал", "text-left"],
@@ -313,38 +313,38 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
             ].map(([label, cls]) => (
               <th
                 key={label}
-                className={`px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide ${cls}`}
+                className={`px-4 py-3 text-xs font-semibold text-[#888888] uppercase tracking-wide ${cls}`}
               >
                 {label}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="divide-y divide-[#1f1f1f]">
           {rows.map((row) => (
-            <tr key={row.id} className="hover:bg-amber-50/30 transition-colors">
-              <td className="px-4 py-3 text-gray-500 text-xs tabular-nums whitespace-nowrap">
+            <tr key={row.id} className="hover:bg-amber-500/10/30 transition-colors">
+              <td className="px-4 py-3 text-[#888888] text-xs tabular-nums whitespace-nowrap">
                 {fmtDate(row.transaction_date)}
               </td>
-              <td className="px-4 py-3 font-medium text-gray-900">
+              <td className="px-4 py-3 font-medium text-[#ededed]">
                 {row.material_name}
               </td>
               <td className="px-4 py-3">
-                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[#1a472a]/10 text-[#1a472a]">
+                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[#00f5c4]/10 text-[#00f5c4]">
                   {row.material_unit}
                 </span>
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono font-semibold text-amber-700">
+              <td className="px-4 py-3 text-right tabular-nums font-mono font-semibold text-amber-400">
                 {row.quantity.toFixed(4)}
               </td>
-              <td className="px-4 py-3 text-gray-600 text-xs max-w-xs">
+              <td className="px-4 py-3 text-[#888888] text-xs max-w-xs">
                 {row.note ? (
                   <span className="block whitespace-pre-line">{row.note}</span>
                 ) : (
-                  <span className="text-gray-300">—</span>
+                  <span className="text-[#444444]">—</span>
                 )}
               </td>
-              <td className="px-4 py-3 text-gray-500 text-xs">
+              <td className="px-4 py-3 text-[#888888] text-xs">
                 {row.creator_name}
               </td>
             </tr>
@@ -400,10 +400,10 @@ export default function ReportsClient({
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Отчёты</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-[#ededed]">Отчёты</h1>
+          <p className="text-sm text-[#888888] mt-0.5">
             Период:{" "}
-            <span className="font-medium text-gray-700">
+            <span className="font-medium text-[#888888]">
               {fmtDate(from)} — {fmtDate(to)}
             </span>
           </p>
@@ -411,7 +411,7 @@ export default function ReportsClient({
         <button
           onClick={handleExport}
           disabled={exporting || summary.length === 0}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-[#1a472a] text-[#1a472a] hover:bg-[#1a472a] hover:text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-[#1a472a] text-[#00f5c4] hover:bg-[#00f5c4] hover:text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed self-start sm:self-auto"
         >
           {exporting ? (
             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -428,23 +428,23 @@ export default function ReportsClient({
       </div>
 
       {/* ── Filter ─────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 px-5 py-4 mb-5">
+      <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] px-5 py-4 mb-5">
         <FilterBar from={from} to={to} onApply={handleApply} isPending={isPending} />
       </div>
 
       {/* ── Summary table ───────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 mb-4">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] mb-4">
+        <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">
+            <h2 className="text-sm font-semibold text-[#ededed]">
               Сводная таблица
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-[#888888] mt-0.5">
               Движение по каждому материалу за выбранный период
             </p>
           </div>
           {summary.length > 0 && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-[#888888]">
               {summary.length} матер.
             </span>
           )}
@@ -457,19 +457,19 @@ export default function ReportsClient({
       </div>
 
       {/* ── Defect cases ────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-[#111111] rounded-xl border border-[#1f1f1f]">
+        <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">
+            <h2 className="text-sm font-semibold text-[#ededed]">
               Случаи брака
             </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-[#888888] mt-0.5">
               Все операции типа «Брак» за период
             </p>
           </div>
           {defects.length > 0 && (
             <div className="text-right">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 border border-amber-500/20 text-amber-400">
                 {defects.length} случ. · {totalDefectQty.toFixed(2)} ед.
               </span>
             </div>
@@ -483,20 +483,20 @@ export default function ReportsClient({
       </div>
 
       {/* ── Legend ─────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-4 mt-4 text-xs text-gray-400">
+      <div className="flex flex-wrap gap-4 mt-4 text-xs text-[#888888]">
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-green-100 border border-green-200" /> Приход
+          <span className="w-2.5 h-2.5 rounded-sm bg-green-500/15 border border-green-500/20 border border-green-200" /> Приход
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-sm bg-blue-100 border border-blue-200" /> Возврат
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-red-100 border border-red-200" /> Расход
+          <span className="w-2.5 h-2.5 rounded-sm bg-red-100 border border-red-500/30" /> Расход
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-amber-100 border border-amber-200" /> Брак
+          <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/15 border border-amber-500/20 border border-amber-500/30" /> Брак
         </span>
-        <span className="ml-auto text-gray-300">
+        <span className="ml-auto text-[#444444]">
           Остаток = (Приход + Возврат) − (Расход + Брак)
         </span>
       </div>
