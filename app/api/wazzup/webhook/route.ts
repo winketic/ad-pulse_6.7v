@@ -225,17 +225,31 @@ async function processItem(
 
   // ── IDEMPOTENCY ────────────────────────────────────
   console.log("[wazzup/webhook] step: before idempotency check");
-  const { data: existing, error: existErr } = await service
-    .from("wazzup_messages")
-    .select("id")
-    .eq("message_id", messageId)
-    .maybeSingle();
-  console.log(`[wazzup/webhook] step: idempotency done existing=${!!existing} err=${existErr?.message ?? "none"}`);
+  try {
+    const { data: existing, error: idempErr } = await service
+      .from("wazzup_messages")
+      .select("id")
+      .eq("message_id", messageId)
+      .maybeSingle();
 
-  if (existing) {
-    console.log(`[wazzup/webhook] SKIP: message_id="${messageId}" already exists`);
-    return;
+    console.log(
+      "[wazzup/webhook] idempotency result:",
+      existing?.id ?? "not found",
+      idempErr?.message ?? "no error"
+    );
+
+    if (idempErr) {
+      console.error("[wazzup/webhook] IDEMPOTENCY ERROR:", idempErr.message, "code:", idempErr.code);
+      // продолжаем — не останавливаемся из-за ошибки проверки дублей
+    } else if (existing) {
+      console.log("[wazzup/webhook] SKIP: duplicate message_id", messageId);
+      return;
+    }
+  } catch (e) {
+    console.error("[wazzup/webhook] IDEMPOTENCY EXCEPTION:", e);
+    // продолжаем — не останавливаемся
   }
+  console.log("[wazzup/webhook] step: after idempotency check");
 
   // ── COMPANY LOOKUP ─────────────────────────────────
   console.log("[wazzup/webhook] step: company lookup");
