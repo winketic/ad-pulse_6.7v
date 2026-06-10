@@ -306,12 +306,15 @@ export default function WhatsAppList({
         },
         (payload) => {
           const updated = payload.new as WazzupMessage;
+          console.log("[whatsapp/realtime] UPDATE received id=", updated.id, "parsed=", updated.parsed);
           setMessages((prev) =>
-            prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m))
+            prev.map((m) => (m.id === updated.id ? updated : m))
           );
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[whatsapp/realtime] channel status:", status);
+      });
 
     return () => { void supabase.removeChannel(channel); };
   }, [companyId]);
