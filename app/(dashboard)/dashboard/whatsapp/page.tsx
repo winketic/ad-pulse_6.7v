@@ -34,7 +34,7 @@ export default async function WhatsAppPage() {
   const companyId = profile.company_id as string;
   const service = createServiceClient();
 
-  const [messagesResult, materialsResult, tokenResult] = await Promise.all([
+  const [messagesResult, materialsResult, tokenResult, profilesResult] = await Promise.all([
     service
       .from("wazzup_messages")
       .select(
@@ -53,10 +53,24 @@ export default async function WhatsAppPage() {
       .select("channel_ids, webhook_id")
       .eq("company_id", companyId)
       .maybeSingle(),
+    // Profiles with phone for sender name lookup
+    service
+      .from("profiles")
+      .select("id, full_name, position, phone")
+      .eq("company_id", companyId)
+      .not("phone", "is", null),
   ]);
 
   const channelIds: string[] = tokenResult.data?.channel_ids ?? [];
   const webhookId: string | null = tokenResult.data?.webhook_id ?? null;
+
+  // phone → {name, position} for sender display
+  const senderMap: Record<string, { name: string; position: string | null }> = {};
+  for (const p of profilesResult.data ?? []) {
+    if (p.phone) {
+      senderMap[p.phone] = { name: p.full_name, position: p.position ?? null };
+    }
+  }
 
   // Allowed chats config
   const { data: wazzupCfg } = await service
@@ -75,6 +89,7 @@ export default async function WhatsAppPage() {
       companyId={companyId}
       allowedChatIds={allowedChatIds}
       isAdmin={isAdmin}
+      senderMap={senderMap}
     />
   );
 }

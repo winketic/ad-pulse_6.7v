@@ -266,6 +266,7 @@ export default function WhatsAppList({
   companyId,
   allowedChatIds = [],
   isAdmin = false,
+  senderMap = {},
 }: {
   messages: WazzupMessage[];
   materials: WazzupMaterial[];
@@ -274,6 +275,7 @@ export default function WhatsAppList({
   companyId?: string;
   allowedChatIds?: string[];
   isAdmin?: boolean;
+  senderMap?: Record<string, { name: string; position: string | null }>;
 }) {
   const [messages, setMessages] = useState<WazzupMessage[]>(initialMessages);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
@@ -283,10 +285,32 @@ export default function WhatsAppList({
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   function handleCopyChatId(msgId: string, chatId: string) {
-    navigator.clipboard.writeText(chatId).then(() => {
+    const done = () => {
       setCopiedId(msgId);
       setTimeout(() => setCopiedId(null), 1500);
-    });
+    };
+    // Modern clipboard API with execCommand fallback
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(chatId).then(done).catch(() => {
+        legacyCopy(chatId);
+        done();
+      });
+    } else {
+      legacyCopy(chatId);
+      done();
+    }
+  }
+
+  function legacyCopy(text: string) {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.style.position = "fixed";
+    el.style.opacity = "0";
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    try { document.execCommand("copy"); } catch {}
+    document.body.removeChild(el);
   }
 
   // Realtime subscription — INSERT prepends new rows, UPDATE patches existing ones
@@ -322,8 +346,9 @@ export default function WhatsAppList({
         (payload) => {
           const updated = payload.new as WazzupMessage;
           console.log("[whatsapp/realtime] UPDATE received id=", updated.id, "parsed=", updated.parsed);
+          // Merge with existing row — Realtime may omit fields like chat_id
           setMessages((prev) =>
-            prev.map((m) => (m.id === updated.id ? updated : m))
+            prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m))
           );
         }
       )
@@ -492,17 +517,30 @@ export default function WhatsAppList({
                           <button
                             onClick={() => handleCopyChatId(msg.id, msg.chat_id!)}
                             title="Нажмите чтобы скопировать Chat ID"
-                            className="relative text-left text-gray-700 hover:text-blue-600 cursor-pointer transition-colors"
+                            className="relative text-left hover:text-blue-600 cursor-pointer transition-colors"
                           >
-                            {msg.sender_phone || "—"}
+                            {msg.sender_phone && senderMap[msg.sender_phone] ? (
+                              <span>
+                                <span className="text-gray-800 font-medium">{senderMap[msg.sender_phone].name}</span>
+                                {senderMap[msg.sender_phone].position && (
+                                  <span className="block text-gray-400 text-[10px]">{senderMap[msg.sender_phone].position}</span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="text-gray-700">{msg.sender_phone || "—"}</span>
+                            )}
                             {copiedId === msg.id && (
-                              <span className="absolute -top-6 left-0 px-2 py-0.5 rounded bg-gray-800 text-white text-[10px] whitespace-nowrap pointer-events-none">
+                              <span className="absolute -top-6 left-0 px-2 py-0.5 rounded bg-gray-800 text-white text-[10px] whitespace-nowrap pointer-events-none z-10">
                                 Скопировано!
                               </span>
                             )}
                           </button>
                         ) : (
-                          <span className="text-gray-700">{msg.sender_phone || "—"}</span>
+                          <span className="text-gray-700">
+                            {msg.sender_phone && senderMap[msg.sender_phone]
+                              ? senderMap[msg.sender_phone].name
+                              : msg.sender_phone || "—"}
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3">
