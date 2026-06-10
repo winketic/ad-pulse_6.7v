@@ -6,8 +6,8 @@
   "regions": ["fra1"],
   "crons": [
     {
-      "path": "/api/cron/refresh-tokens",
-      "schedule": "0 3 * * *"
+      "path": "/api/cron/refresh-wazzup-token",
+      "schedule": "0 */20 * * *"
     }
   ]
 }

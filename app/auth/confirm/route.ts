@@ -3,59 +3,55 @@ import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
+  const { searchParams, origin } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type')
+  const next = searchParams.get('next')
 
-  console.log('[auth/confirm] token_hash:', token_hash, 'type:', type)
+  console.log('[auth/confirm] token_hash:', !!token_hash, 'type:', type, 'next:', next)
 
   if (!token_hash || !type) {
     return NextResponse.redirect(new URL('/login?error=invalid_link', request.url))
   }
 
-  try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              )
-            } catch {
-              // ignore in server context
-            }
-          },
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
         },
-      }
-    )
-
-    const { data, error } = await supabase.auth.verifyOtp({
-      token_hash,
-      type: type as 'email' | 'recovery' | 'invite' | 'magiclink' | 'email_change',
-    })
-
-    console.log('[auth/confirm] result:', { userId: data?.user?.id, error })
-
-    if (error) {
-      console.error('[auth/confirm] error:', error)
-      return NextResponse.redirect(new URL('/login?error=invalid_link', request.url))
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
+        },
+      },
     }
+  )
 
-    if (type === 'recovery') {
-      return NextResponse.redirect(new URL('/reset-password', request.url))
-    }
-    if (type === 'invite' || type === 'signup') {
-      return NextResponse.redirect(new URL('/invite', request.url))
-    }
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  const { error } = await supabase.auth.verifyOtp({
+    type: type as 'email' | 'recovery' | 'invite' | 'magiclink' | 'email_change',
+    token_hash,
+  })
 
-  } catch (e) {
-    console.error('[auth/confirm] exception:', e)
-    return NextResponse.redirect(new URL('/login?error=invalid_link', request.url))
+  if (error) {
+    console.error('[auth/confirm] verifyOtp error:', error.message)
+    return NextResponse.redirect(new URL(`/login?error=invalid_link`, request.url))
   }
+
+  // next param takes priority (allows email template to control destination)
+  if (next) {
+    return NextResponse.redirect(new URL(next, origin))
+  }
+
+  if (type === 'recovery') {
+    return NextResponse.redirect(new URL('/reset-password', origin))
+  }
+  if (type === 'invite' || type === 'signup') {
+    return NextResponse.redirect(new URL('/invite', origin))
+  }
+  return NextResponse.redirect(new URL('/dashboard', origin))
 }

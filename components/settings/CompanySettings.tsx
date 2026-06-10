@@ -32,13 +32,13 @@ export default function CompanySettings({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-gray-900">Компания</h2>
+    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f]">
+      <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-[#ededed]">Компания</h2>
         {canEdit && !editing && (
           <button
             onClick={() => setEditing(true)}
-            className="text-xs text-[#1a472a] hover:underline font-medium"
+            className="text-xs text-[#00f5c4] hover:underline font-medium"
           >
             Изменить
           </button>
@@ -49,7 +49,7 @@ export default function CompanySettings({
         {editing ? (
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">
+              <label className="block text-xs font-medium text-[#888888] mb-1">
                 Название компании
               </label>
               <input
@@ -57,7 +57,7 @@ export default function CompanySettings({
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="Введите название"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#1a472a]"
+                className="w-full px-3 py-2.5 border border-[#1f1f1f] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
                 autoFocus
               />
             </div>
@@ -68,14 +68,14 @@ export default function CompanySettings({
               <button
                 onClick={() => { setEditing(false); setError(""); }}
                 disabled={isPending}
-                className="flex-1 min-h-[44px] px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                className="flex-1 min-h-[44px] px-4 py-2 rounded-lg border border-[#1f1f1f] text-sm font-medium text-[#888888] hover:bg-[#161616] transition-colors"
               >
                 Отмена
               </button>
               <button
                 onClick={handleSave}
                 disabled={isPending || !value.trim()}
-                className="flex-1 min-h-[44px] px-4 py-2 rounded-lg bg-[#1a472a] text-white text-sm font-medium hover:bg-[#1a472a]/90 disabled:opacity-50 transition-colors"
+                className="flex-1 min-h-[44px] px-4 py-2 rounded-lg bg-[#00f5c4] text-white text-sm font-medium hover:bg-[#00f5c4]/90 disabled:opacity-50 transition-colors"
               >
                 {isPending ? "Сохранение…" : "Сохранить"}
               </button>
@@ -84,12 +84,12 @@ export default function CompanySettings({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <p className="text-xs font-medium text-gray-400 mb-0.5">Название</p>
-              <p className="text-sm font-medium text-gray-900">{companyName}</p>
+              <p className="text-xs font-medium text-[#888888] mb-0.5">Название</p>
+              <p className="text-sm font-medium text-[#ededed]">{companyName}</p>
             </div>
             <div>
-              <p className="text-xs font-medium text-gray-400 mb-0.5">ID компании</p>
-              <p className="text-xs text-gray-400 font-mono truncate">{companyId ?? "—"}</p>
+              <p className="text-xs font-medium text-[#888888] mb-0.5">ID компании</p>
+              <p className="text-xs text-[#888888] font-mono truncate">{companyId ?? "—"}</p>
             </div>
           </div>
         )}

@@ -18,7 +18,7 @@ export default async function MaterialsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("company_id")
+    .select("company_id, role")
     .eq("id", user.id)
     .single();
 
@@ -31,5 +31,6 @@ export default async function MaterialsPage() {
     .eq("company_id", company_id)
     .order("created_at", { ascending: false });
 
-  return <MaterialsClient materials={(data as Material[]) ?? []} />;
+  const canImport = profile?.role === "admin" || profile?.role === "manager";
+  return <MaterialsClient materials={(data as Material[]) ?? []} canImport={canImport} />;
 }

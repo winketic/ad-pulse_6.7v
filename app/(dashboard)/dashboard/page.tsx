@@ -2,7 +2,8 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import NoCompanyState from "@/components/ui/NoCompanyState";
-import { formatQuantity, formatCompact } from "@/lib/utils/format";
+import { formatCompact } from "@/lib/utils/format";
+import { BalanceTableRealtime } from "@/components/dashboard/BalanceTableRealtime";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -37,7 +38,7 @@ function StatCard({
   mobileLabel,
   value,
   sub,
-  valueColor = "text-gray-900",
+  valueColor = "text-[#ededed]",
   iconBg,
   iconColor,
   icon,
@@ -52,12 +53,12 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200">
+    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f]">
       {/* Mobile: compact, no icon */}
       <div className="sm:hidden p-4">
-        <p className="text-xs text-gray-500 mb-1">{mobileLabel ?? label}</p>
+        <p className="text-xs text-[#888888] mb-1">{mobileLabel ?? label}</p>
         <p className={`text-2xl font-bold tabular-nums ${valueColor}`}>{value}</p>
-        <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+        <p className="text-xs text-[#888888] mt-0.5">{sub}</p>
       </div>
       {/* Desktop: icon + text */}
       <div className="hidden sm:flex p-5 items-start gap-4">
@@ -65,9 +66,9 @@ function StatCard({
           {icon}
         </div>
         <div className="min-w-0 overflow-hidden">
-          <p className="text-sm text-gray-500 leading-tight truncate">{label}</p>
+          <p className="text-sm text-[#888888] leading-tight truncate">{label}</p>
           <p className={`text-2xl font-bold mt-0.5 tabular-nums ${valueColor}`}>{value}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+          <p className="text-xs text-[#888888] mt-0.5">{sub}</p>
         </div>
       </div>
     </div>
@@ -85,11 +86,11 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between mb-4">
-      <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
+      <h2 className="text-sm font-semibold text-[#ededed]">{title}</h2>
       {href && (
         <Link
           href={href}
-          className="text-xs text-[#1a472a] hover:underline font-medium"
+          className="text-xs text-[#00f5c4] hover:underline font-medium"
         >
           {linkLabel ?? "Смотреть все →"}
         </Link>
@@ -232,10 +233,10 @@ export default async function DashboardPage() {
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* ── Header ─────────────────────────────────────── */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-[#ededed]">
           Добро пожаловать, {firstName}
         </h1>
-        <p className="text-sm text-gray-500 mt-1 capitalize">{todayLabel}</p>
+        <p className="text-sm text-[#888888] mt-1 capitalize">{todayLabel}</p>
       </div>
 
       {/* ── Stat cards ─────────────────────────────────── */}
@@ -245,8 +246,8 @@ export default async function DashboardPage() {
           mobileLabel="Материалы"
           value={formatCompact(materialsCount)}
           sub={materialsCount === 1 ? "позиция" : "позиций"}
-          iconBg="bg-[#1a472a]/10"
-          iconColor="text-[#1a472a]"
+          iconBg="bg-[#00f5c4]/10"
+          iconColor="text-[#00f5c4]"
           icon={
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -299,100 +300,26 @@ export default async function DashboardPage() {
       {/* ── Main grid: balances + recent transactions ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
         {/* Balance table (3/5) */}
-        <div className="lg:col-span-3 bg-white rounded-xl border border-gray-200">
-          <div className="px-5 py-4 border-b border-gray-100">
+        <div className="lg:col-span-3 bg-[#111111] rounded-xl border border-[#1f1f1f]">
+          <div className="px-5 py-4 border-b border-[#1f1f1f]">
             <SectionHeader
               title="Остатки по материалам"
               href="/dashboard/transactions"
               linkLabel="Все транзакции →"
             />
           </div>
-          {materials.length === 0 ? (
-            <div className="py-12 text-center">
-              <p className="text-sm text-gray-400">Материалов нет</p>
-              <Link
-                href="/dashboard/materials"
-                className="mt-2 inline-block text-sm text-[#1a472a] hover:underline"
-              >
-                Добавить материалы
-              </Link>
-            </div>
-          ) : (
-            <>
-              {/* Desktop table */}
-              <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                        Материал
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                        Приход
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                        Расход
-                      </th>
-                      <th className="px-5 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                        Остаток
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {materials.map((mat) => {
-                      const b = balMap.get(mat.id) ?? { income: 0, expense: 0, balance: 0 };
-                      return (
-                        <tr key={mat.id} className="hover:bg-gray-50/50">
-                          <td className="px-5 py-3 font-medium text-gray-900 text-sm">
-                            <span className="block break-words">{mat.name}</span>
-                            <span className="text-xs text-gray-400">{mat.unit}</span>
-                          </td>
-                          <td className="px-4 py-3 text-right tabular-nums text-sm text-green-700 font-mono">
-                            {formatCompact(b.income)}
-                          </td>
-                          <td className="px-4 py-3 text-right tabular-nums text-sm text-red-600 font-mono">
-                            {formatCompact(b.expense)}
-                          </td>
-                          <td className="px-5 py-3 text-right">
-                            <span className={`tabular-nums text-sm font-bold font-mono ${b.balance > 0 ? "text-[#1a472a]" : b.balance < 0 ? "text-red-600" : "text-gray-400"}`}>
-                              {formatCompact(b.balance)}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile cards */}
-              <div className="sm:hidden divide-y divide-gray-50">
-                {materials.map((mat) => {
-                  const b = balMap.get(mat.id) ?? { income: 0, expense: 0, balance: 0 };
-                  return (
-                    <div key={mat.id} className="px-4 py-3 flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 break-words">{mat.name}</p>
-                        <p className="text-xs text-gray-400">{mat.unit}</p>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0 text-xs tabular-nums font-mono">
-                        <span className="text-green-700">+{formatCompact(b.income)}</span>
-                        <span className="text-red-600">−{formatCompact(b.expense)}</span>
-                        <span className={`font-bold text-sm ${b.balance > 0 ? "text-[#1a472a]" : b.balance < 0 ? "text-red-600" : "text-gray-400"}`}>
-                          {formatCompact(b.balance)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+          <BalanceTableRealtime
+            materials={materials}
+            initialBalances={Object.fromEntries(
+              materials.map((mat) => [mat.id, balMap.get(mat.id) ?? { income: 0, expense: 0, balance: 0 }])
+            )}
+            companyId={company_id}
+          />
         </div>
 
         {/* Recent transactions (2/5) */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200">
-          <div className="px-5 py-4 border-b border-gray-100">
+        <div className="lg:col-span-2 bg-[#111111] rounded-xl border border-[#1f1f1f]">
+          <div className="px-5 py-4 border-b border-[#1f1f1f]">
             <SectionHeader
               title="Последние транзакции"
               href="/dashboard/transactions"
@@ -400,10 +327,10 @@ export default async function DashboardPage() {
           </div>
           {recentTxs.length === 0 ? (
             <div className="py-12 text-center">
-              <p className="text-sm text-gray-400">Транзакций нет</p>
+              <p className="text-sm text-[#888888]">Транзакций нет</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-[#1f1f1f]">
               {recentTxs.map((tx) => {
                 const cfg = TYPE_COLORS[tx.type as TxType];
                 const sign =
@@ -411,7 +338,7 @@ export default async function DashboardPage() {
                 return (
                   <div
                     key={tx.id}
-                    className="px-5 py-3 flex items-center gap-3 hover:bg-gray-50/50"
+                    className="px-5 py-3 flex items-center gap-3 hover:bg-[#161616]"
                   >
                     <span
                       className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${cfg.bg} ${cfg.text}`}
@@ -419,10 +346,10 @@ export default async function DashboardPage() {
                       {TYPE_LABELS[tx.type as TxType]}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">
+                      <p className="text-sm font-medium text-[#ededed] truncate">
                         {tx.material_name}
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-[#888888]">
                         {fmtDate(tx.transaction_date)}
                       </p>
                     </div>
@@ -432,8 +359,8 @@ export default async function DashboardPage() {
                       }`}
                     >
                       {sign}
-                      {formatQuantity(Number(tx.quantity))}
-                      <span className="text-xs font-normal text-gray-400 ml-0.5">
+                      {formatCompact(Number(tx.quantity))}
+                      <span className="text-xs font-normal text-[#888888] ml-0.5">
                         {tx.material_unit}
                       </span>
                     </span>
@@ -446,8 +373,8 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Active Plans ────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="px-5 py-4 border-b border-gray-100">
+      <div className="bg-[#111111] rounded-xl border border-[#1f1f1f]">
+        <div className="px-5 py-4 border-b border-[#1f1f1f]">
           <SectionHeader
             title="Активные производственные планы"
             href="/dashboard/plans"
@@ -457,18 +384,18 @@ export default async function DashboardPage() {
 
         {activePlans.length === 0 ? (
           <div className="py-10 text-center">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-[#888888]">
               Нет активных планов
             </p>
             <Link
               href="/dashboard/plans"
-              className="mt-2 inline-block text-sm text-[#1a472a] hover:underline"
+              className="mt-2 inline-block text-sm text-[#00f5c4] hover:underline"
             >
               Создать план
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-[#1f1f1f]">
             {activePlans.map((plan) => {
               const pct =
                 plan.planned_quantity > 0
@@ -484,14 +411,14 @@ export default async function DashboardPage() {
                 <Link
                   key={plan.id}
                   href={`/dashboard/plans/${plan.id}`}
-                  className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors group"
+                  className="flex items-center gap-4 px-5 py-4 hover:bg-[#161616] transition-colors group"
                 >
                   {/* Name + period */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-[#1a472a] transition-colors">
+                    <p className="text-sm font-semibold text-[#ededed] truncate group-hover:text-[#00f5c4] transition-colors">
                       {plan.name}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-[#888888] mt-0.5">
                       {fmtDate(plan.start_date)} — {fmtDate(plan.end_date)}
                     </p>
                   </div>
@@ -499,24 +426,24 @@ export default async function DashboardPage() {
                   {/* Progress */}
                   <div className="w-48 shrink-0 hidden sm:block">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                      <div className="flex-1 h-1.5 rounded-full bg-[#1f1f1f] overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-[#1a472a] transition-all"
+                          className="h-full rounded-full bg-[#00f5c4] transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="text-xs tabular-nums font-medium text-gray-500 w-9 text-right">
+                      <span className="text-xs tabular-nums font-medium text-[#888888] w-9 text-right">
                         {pct.toFixed(0)}%
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5 tabular-nums">
-                      {formatQuantity(Number(plan.actual_quantity))} /{" "}
-                      {formatQuantity(Number(plan.planned_quantity))}
+                    <p className="text-xs text-[#888888] mt-0.5 tabular-nums">
+                      {formatCompact(Number(plan.actual_quantity))} /{" "}
+                      {formatCompact(Number(plan.planned_quantity))}
                     </p>
                   </div>
 
                   <svg
-                    className="w-4 h-4 text-gray-300 group-hover:text-[#1a472a] transition-colors shrink-0"
+                    className="w-4 h-4 text-[#444444] group-hover:text-[#00f5c4] transition-colors shrink-0"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"

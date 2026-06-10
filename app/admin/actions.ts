@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
 const ADMIN_EMAIL = "altai.dx@gmail.com";
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://ad-pulse-eight.vercel.app").replace(/\/$/, "");
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -19,7 +20,6 @@ export async function approveRegistration(id: string) {
   await requireAdmin();
   const service = createServiceClient();
 
-  // Load registration
   const { data: reg, error: regErr } = await service
     .from("registrations")
     .select("*")
@@ -38,12 +38,10 @@ export async function approveRegistration(id: string) {
 
   if (companyErr || !company) throw new Error(`Ошибка создания компании: ${companyErr?.message}`);
 
-  // 2. Invite user
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://ad-pulse-eight.vercel.app").replace(/\/$/, "");
-
+  // 2. Invite user via Supabase mailer
   const { data: invited, error: inviteErr } = await service.auth.admin.inviteUserByEmail(
     reg.email,
-    { redirectTo: `${appUrl}/invite` }
+    { redirectTo: `${APP_URL}/auth/confirm?next=/invite` }
   );
 
   let userId: string;
@@ -55,34 +53,30 @@ export async function approveRegistration(id: string) {
       inviteErr.status === 422;
 
     if (!alreadyExists) {
-      // Rollback company
       await service.from("companies").delete().eq("id", company.id);
       throw new Error(`Ошибка приглашения: ${inviteErr.message}`);
     }
 
     const { data: authList } = await service.auth.admin.listUsers({ perPage: 1000 });
-    const found = (authList?.users ?? []).find((u) => u.email?.toLowerCase() === reg.email);
+    const found = (authList?.users ?? []).find((u) => u.email?.toLowerCase() === reg.email.toLowerCase());
     if (!found) {
       await service.from("companies").delete().eq("id", company.id);
       throw new Error("Пользователь не найден после приглашения");
     }
     userId = found.id;
   } else {
+    if (!invited?.user?.id) {
+      await service.from("companies").delete().eq("id", company.id);
+      throw new Error("Не удалось получить ID пользователя");
+    }
     userId = invited.user.id;
   }
 
-  // 3. Create profile with company_id and admin role
-  const { error: profileErr } = await service
-    .from("profiles")
-    .upsert(
-      {
-        id: userId,
-        company_id: company.id,
-        role: "admin",
-        full_name: reg.contact_name,
-      },
-      { onConflict: "id" }
-    );
+  // 3. Create admin profile
+  const { error: profileErr } = await service.from("profiles").upsert(
+    { id: userId, company_id: company.id, role: "admin", full_name: reg.contact_name },
+    { onConflict: "id" }
+  );
 
   if (profileErr) {
     await service.from("companies").delete().eq("id", company.id);

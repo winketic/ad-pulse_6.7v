@@ -5,7 +5,7 @@ export default function NoCompanyState() {
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
       <div className="w-16 h-16 rounded-2xl bg-[#1a472a]/10 flex items-center justify-center mb-5">
         <svg
-          className="w-8 h-8 text-[#1a472a]"
+          className="w-8 h-8 text-[#00f5c4]"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -19,10 +19,10 @@ export default function NoCompanyState() {
         </svg>
       </div>
 
-      <h2 className="text-xl font-bold text-gray-900 mb-2">
+      <h2 className="text-xl font-bold text-[#ededed] mb-2">
         Компания не найдена
       </h2>
-      <p className="text-sm text-gray-500 max-w-xs mb-6 leading-relaxed">
+      <p className="text-sm text-[#888888] max-w-xs mb-6 leading-relaxed">
         Вы не привязаны ни к одной компании. Попросите администратора добавить
         вас, или проверьте настройки своего аккаунта.
       </p>

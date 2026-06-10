@@ -50,6 +50,46 @@ const UNIT_MAP: Record<string, string> = {
 // Sorted by descending length so longer units match before shorter ones
 const UNIT_KEYS = Object.keys(UNIT_MAP).sort((a, b) => b.length - a.length);
 
+// ─── Levenshtein fuzzy matching ───────────────────────────
+
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const val = a[i - 1] === b[j - 1] ? row[j - 1] : 1 + Math.min(row[j - 1], row[j], prev);
+      row[j - 1] = prev;
+      prev = val;
+    }
+    row[b.length] = prev;
+  }
+  return row[b.length];
+}
+
+function fuzzyMaterialScore(
+  text: string,
+  materialName: string
+): number {
+  const textWords = text.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+  const matWords = materialName.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+  if (matWords.length === 0) return 999;
+
+  let totalScore = 0;
+  for (const mw of matWords) {
+    const threshold = Math.max(1, Math.floor(mw.length * 0.3));
+    const best = textWords.reduce(
+      (min, tw) => Math.min(min, levenshtein(tw, mw)),
+      999
+    );
+    if (best > threshold) return 999; // required word too far off
+    totalScore += best;
+  }
+  return totalScore;
+}
+
 // ─── Helpers ──────────────────────────────────────────────
 
 function detectType(text: string): TxType | null {
@@ -103,6 +143,14 @@ function findMaterial(
   });
   if (partial) return { id: partial.id, name: partial.name };
 
+  // Fuzzy Levenshtein match — catches typos and slight misspellings
+  const scored = materials
+    .map((m) => ({ m, score: fuzzyMaterialScore(lower, m.name) }))
+    .filter(({ score }) => score < 999)
+    .sort((a, b) => a.score - b.score);
+
+  if (scored.length > 0) return { id: scored[0].m.id, name: scored[0].m.name };
+
   return null;
 }
 
@@ -117,17 +165,22 @@ interface GptParsed {
 
 async function callGptParser(
   text: string,
-  materials: { id: string; name: string; unit: string }[]
+  materials: { id: string; name: string; unit: string }[],
+  context: string[] = []
 ): Promise<GptParsed | null> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
 
   const materialsList = materials.map((m) => `- ${m.name} (${m.unit})`).join("\n");
 
+  const contextBlock = context.length > 0
+    ? `\n\nКонтекст предыдущих сообщений из этого чата (от старых к новым):\n${context.map((m, i) => `${i + 1}. ${m}`).join("\n")}\n\nЕсли текущее сообщение ссылается на предыдущее (например «ещё 200 кг», «и цемент тоже», «вернули то же»), используй контекст для определения материала/типа.`
+    : "";
+
   const systemPrompt = `Ты парсер складских сообщений строительного производства. Анализируй сообщения на русском, казахском, сленге, с опечатками — пойми суть.
 
 Список материалов компании:
-${materialsList}
+${materialsList}${contextBlock}
 
 Если сообщение НЕ является складской операцией (приветствие, вопрос, эмодзи, случайный текст, "Когда", ".", "Ок" и т.д.) — верни все поля null.
 
@@ -179,7 +232,8 @@ ${materialsList}
 
 export async function parseMessage(
   text: string,
-  companyId: string
+  companyId: string,
+  context: string[] = []
 ): Promise<ParseResult> {
   const service = createServiceClient();
 
@@ -211,7 +265,7 @@ export async function parseMessage(
 
   // ── Step 2: GPT fallback for fuzzy/slang/Kazakh input ──
   console.log(`[parser] keyword parse incomplete (type=${type}, qty=${qtyResult?.quantity}, mat=${material?.name}), trying GPT`);
-  const gpt = await callGptParser(text, matList);
+  const gpt = await callGptParser(text, matList, context);
 
   if (gpt) {
     // Map GPT's material_name back to a real material id (case-insensitive)

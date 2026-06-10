@@ -178,12 +178,12 @@ function Modal({
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg z-10 max-h-[94dvh] flex flex-col">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+      <div className="relative bg-[#111111] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg z-10 max-h-[94dvh] flex flex-col">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0 border-b border-[#1f1f1f]">
+          <h2 className="text-lg font-semibold text-[#ededed]">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-[#888888] hover:text-[#888888] transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -246,7 +246,7 @@ function AddTransactionForm({
     (!isDefect || !!form.defect_reason.trim());
 
   const inputCls =
-    "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a472a]/40 focus:border-[#1a472a] transition-colors";
+    "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[#ededed] bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
 
   return (
     <form
@@ -259,7 +259,7 @@ function AddTransactionForm({
       {/* Row: type + date */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-[#888888] mb-1.5">
             Тип <span className="text-red-500">*</span>
           </label>
           <select value={form.type} onChange={set("type")} className={inputCls}>
@@ -271,7 +271,7 @@ function AddTransactionForm({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-[#888888] mb-1.5">
             Дата <span className="text-red-500">*</span>
           </label>
           <input
@@ -287,7 +287,7 @@ function AddTransactionForm({
 
       {/* Material */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+        <label className="block text-sm font-medium text-[#888888] mb-1.5">
           Материал <span className="text-red-500">*</span>
         </label>
         {materials.length === 0 ? (
@@ -325,10 +325,10 @@ function AddTransactionForm({
 
       {/* Quantity */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+        <label className="block text-sm font-medium text-[#888888] mb-1.5">
           Количество{" "}
           {selectedMaterial && (
-            <span className="text-gray-400 font-normal">
+            <span className="text-[#888888] font-normal">
               ({selectedMaterial.unit})
             </span>
           )}{" "}
@@ -355,14 +355,14 @@ function AddTransactionForm({
         {quantityError ? (
           <p className="mt-1 text-xs text-red-600">{quantityError}</p>
         ) : (
-          <p className="mt-1 text-xs text-gray-400">Макс. 999 999 999</p>
+          <p className="mt-1 text-xs text-[#888888]">Макс. 999 999 999</p>
         )}
       </div>
 
       {/* Defect reason — only for 'defect' type */}
       {isDefect && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-[#888888] mb-1.5">
             Причина брака <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -378,9 +378,9 @@ function AddTransactionForm({
 
       {/* Note */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+        <label className="block text-sm font-medium text-[#888888] mb-1.5">
           Примечание
-          <span className="ml-1.5 text-xs font-normal text-gray-400">
+          <span className="ml-1.5 text-xs font-normal text-[#888888]">
             (необязательно)
           </span>
         </label>
@@ -417,14 +417,14 @@ function AddTransactionForm({
           type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[#888888] hover:bg-[#161616] transition-colors disabled:opacity-50"
         >
           Отмена
         </button>
         <button
           type="submit"
           disabled={isPending || !canSubmit}
-          className="flex-1 py-2.5 px-4 rounded-lg bg-[#1a472a] hover:bg-[#163d24] text-sm font-semibold text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-2 min-h-[44px]"
+          className="flex-1 py-2.5 px-4 rounded-lg bg-[#00f5c4] hover:bg-[#00ddb3] text-[#0a0a0a] text-sm font-semibold text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-2 min-h-[44px]"
         >
           {isPending && (
             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -455,11 +455,11 @@ function FilterBar({
   onClear: () => void;
 }) {
   const selectCls =
-    "w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a472a]/40 focus:border-[#1a472a] transition-colors";
-  const labelCls = "block text-xs font-medium text-gray-500 mb-1.5";
+    "w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[#ededed] bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
+  const labelCls = "block text-xs font-medium text-[#888888] mb-1.5";
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 mb-5">
+    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] p-4 mb-5">
       <div className="flex flex-wrap gap-3 items-end">
         {/* Type */}
         <div className="flex-1 min-w-[120px]">
@@ -526,7 +526,7 @@ function FilterBar({
         {hasActive && (
           <button
             onClick={onClear}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 border border-gray-300 transition-colors whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[#888888] hover:bg-gray-100 border border-gray-300 transition-colors whitespace-nowrap"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -550,14 +550,14 @@ function EmptyState({
 }) {
   if (isFiltered) {
     return (
-      <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
+      <div className="text-center py-16 bg-[#111111] rounded-xl border border-[#1f1f1f]">
         <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
-          <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <svg className="w-6 h-6 text-[#888888]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
           </svg>
         </div>
-        <p className="text-sm font-medium text-gray-700">Нет результатов</p>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <p className="text-sm font-medium text-[#888888]">Нет результатов</p>
+        <p className="text-sm text-[#888888] mt-0.5">
           Измените или сбросьте фильтры
         </p>
       </div>
@@ -566,20 +566,20 @@ function EmptyState({
 
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-[#1a472a]/8 flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-[#1a472a]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
+      <div className="w-16 h-16 rounded-2xl bg-[#00f5c4]/5 flex items-center justify-center mb-4">
+        <svg className="w-8 h-8 text-[#00f5c4]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
         </svg>
       </div>
-      <h3 className="text-base font-semibold text-gray-900 mb-1">
+      <h3 className="text-base font-semibold text-[#ededed] mb-1">
         Движений ещё нет
       </h3>
-      <p className="text-sm text-gray-500 mb-6 max-w-xs">
+      <p className="text-sm text-[#888888] mb-6 max-w-xs">
         Зафиксируйте первый приход или расход материала
       </p>
       <button
         onClick={onAdd}
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1a472a] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm min-h-[44px]"
+        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#00ddb3] text-[#0a0a0a] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm min-h-[44px]"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -608,7 +608,7 @@ function Pagination({
 
   return (
     <div className="flex items-center justify-between mt-4 px-1">
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-[#888888]">
         Страница <span className="font-semibold text-gray-800">{page}</span>{" "}
         из {totalPages} · {totalCount} {pluralRecords(totalCount)} всего
       </p>
@@ -616,7 +616,7 @@ function Pagination({
         <button
           onClick={() => go(page - 1)}
           disabled={page <= 1}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#1f1f1f] text-sm font-medium text-[#888888] hover:bg-[#161616] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -626,7 +626,7 @@ function Pagination({
         <button
           onClick={() => go(page + 1)}
           disabled={page >= totalPages}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#1f1f1f] text-sm font-medium text-[#888888] hover:bg-[#161616] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           Следующая
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -737,10 +737,10 @@ export default function TransactionsClient({
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-[#ededed]">
             Движение материалов
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-[#888888] mt-0.5">
             {(totalCount ?? transactions.length) === 0
               ? "Записей нет"
               : `${totalCount ?? transactions.length} ${pluralRecords(totalCount ?? transactions.length)} всего`}
@@ -748,7 +748,7 @@ export default function TransactionsClient({
         </div>
         <button
           onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1a472a] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm self-start sm:self-auto min-h-[44px]"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#00ddb3] text-[#0a0a0a] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm self-start sm:self-auto min-h-[44px]"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -773,7 +773,7 @@ export default function TransactionsClient({
 
       {/* ── Count ───────────────────────────────────────── */}
       {hasFilters && filtered.length !== transactions.length && (
-        <p className="text-sm text-gray-500 mb-3">
+        <p className="text-sm text-[#888888] mb-3">
           Показано{" "}
           <span className="font-semibold text-gray-800">{filtered.length}</span>{" "}
           из {transactions.length}
@@ -792,13 +792,13 @@ export default function TransactionsClient({
       {filtered.length > 0 && (
         <>
           <div
-            className={`hidden sm:block bg-white rounded-xl border border-gray-200 overflow-hidden transition-opacity ${
+            className={`hidden sm:block bg-[#111111] rounded-xl border border-[#1f1f1f] overflow-hidden transition-opacity ${
               isPending ? "opacity-60 pointer-events-none" : ""
             }`}
           >
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
+                <tr className="bg-[#161616] border-b border-[#1f1f1f]">
                   {[
                     ["Дата", "w-24"],
                     ["Материал", ""],
@@ -809,25 +809,25 @@ export default function TransactionsClient({
                   ].map(([label, cls]) => (
                     <th
                       key={label as string}
-                      className={`px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide ${cls}`}
+                      className={`px-5 py-3.5 text-left text-xs font-semibold text-[#888888] uppercase tracking-wide ${cls}`}
                     >
                       {label}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-[#1f1f1f]">
                 {filtered.map((tx) => {
                   const cfg = TYPE_CONFIG[tx.type];
                   return (
                     <tr
                       key={tx.id}
-                      className="hover:bg-gray-50/60 transition-colors"
+                      className="hover:bg-[#161616]/60 transition-colors"
                     >
-                      <td className="px-5 py-3.5 text-gray-500 text-xs tabular-nums whitespace-nowrap">
+                      <td className="px-5 py-3.5 text-[#888888] text-xs tabular-nums whitespace-nowrap">
                         {fmtDate(tx.transaction_date)}
                       </td>
-                      <td className="px-5 py-3.5 font-medium text-gray-900">
+                      <td className="px-5 py-3.5 font-medium text-[#ededed]">
                         {tx.material_name}
                       </td>
                       <td className="px-5 py-3.5">
@@ -838,14 +838,14 @@ export default function TransactionsClient({
                       >
                         {cfg.sign}
                         {formatQuantity(tx.quantity)}{" "}
-                        <span className="text-xs font-normal text-gray-400">
+                        <span className="text-xs font-normal text-[#888888]">
                           {tx.material_unit}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-gray-500 text-xs">
+                      <td className="px-5 py-3.5 text-[#888888] text-xs">
                         {tx.creator_name}
                       </td>
-                      <td className="px-5 py-3.5 text-gray-500 text-xs max-w-[180px]">
+                      <td className="px-5 py-3.5 text-[#888888] text-xs max-w-[180px]">
                         {tx.note ? (
                           <span
                             className="block truncate"
@@ -875,16 +875,16 @@ export default function TransactionsClient({
               return (
                 <div
                   key={tx.id}
-                  className="bg-white rounded-xl border border-gray-200 p-4"
+                  className="bg-[#111111] rounded-xl border border-[#1f1f1f] p-4"
                 >
                   <div className="flex items-center justify-between gap-2 mb-2.5">
                     <TypeBadge type={tx.type} />
-                    <span className="text-xs text-gray-400 tabular-nums">
+                    <span className="text-xs text-[#888888] tabular-nums">
                       {fmtDate(tx.transaction_date)}
                     </span>
                   </div>
 
-                  <p className="font-semibold text-gray-900 text-sm">
+                  <p className="font-semibold text-[#ededed] text-sm">
                     {tx.material_name}
                   </p>
 
@@ -893,18 +893,18 @@ export default function TransactionsClient({
                   >
                     {cfg.sign}
                     {formatQuantity(tx.quantity)}{" "}
-                    <span className="text-sm font-normal text-gray-400">
+                    <span className="text-sm font-normal text-[#888888]">
                       {tx.material_unit}
                     </span>
                   </p>
 
                   {tx.note && (
-                    <p className="text-xs text-gray-500 mt-2 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-[#888888] mt-2 line-clamp-2 leading-relaxed">
                       {tx.note}
                     </p>
                   )}
 
-                  <p className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-100">
+                  <p className="text-xs text-[#888888] mt-2 pt-2 border-t border-[#1f1f1f]">
                     {tx.creator_name}
                   </p>
                 </div>
