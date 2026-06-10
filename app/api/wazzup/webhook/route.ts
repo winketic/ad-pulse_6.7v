@@ -95,8 +95,10 @@ export async function POST(request: NextRequest) {
     body = null;
   }
 
+  // ВАЖНО: await (не void) — иначе Vercel убивает функцию сразу после return,
+  // и DB операции не успевают выполниться. parseAndSave внутри остаётся fire-and-forget.
   if (body) {
-    void processWebhook(body).catch((err) =>
+    await processWebhook(body).catch((err) =>
       console.error("[wazzup/webhook] processing error:", err)
     );
   }
@@ -137,14 +139,16 @@ async function processWebhook(body: unknown) {
   }
 }
 
-// Helper: wraps a thenable with a timeout — surfaces hung Supabase queries
-function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
-  return Promise.race([
-    Promise.resolve(promise),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`TIMEOUT ${ms}ms: ${label}`)), ms)
-    ),
-  ]);
+// Явный таймаут на Supabase запросы — обнаруживает зависшие соединения
+async function supabaseWithTimeout<T>(
+  query: PromiseLike<T>,
+  ms = 5000,
+  label = "query"
+): Promise<T> {
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`TIMEOUT ${ms}ms: ${label}`)), ms)
+  );
+  return Promise.race([Promise.resolve(query), timeoutPromise]);
 }
 
 async function processItem(item: unknown) {
@@ -268,11 +272,20 @@ async function processItem(item: unknown) {
   // ── IDEMPOTENCY ────────────────────────────────────
   console.log("[wazzup/webhook] step: before idempotency check");
   try {
-    const { data: existing, error: idempErr } = await withTimeout(
-      service.from("wazzup_messages").select("id").eq("message_id", messageId).maybeSingle(),
-      8000,
-      "idempotency SELECT"
+    const idempotencyPromise = service
+      .from("wazzup_messages")
+      .select("id")
+      .eq("message_id", messageId)
+      .maybeSingle();
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("TIMEOUT 5000ms")), 5000)
     );
+
+    const { data: existing, error: idempErr } = await Promise.race([
+      idempotencyPromise,
+      timeoutPromise,
+    ]);
 
     console.log(
       "[wazzup/webhook] idempotency result:",
@@ -282,25 +295,27 @@ async function processItem(item: unknown) {
 
     if (idempErr) {
       console.error("[wazzup/webhook] IDEMPOTENCY ERROR:", idempErr.message, "code:", idempErr.code);
-      // продолжаем — не останавливаемся из-за ошибки проверки дублей
+      // продолжаем
     } else if (existing) {
       console.log("[wazzup/webhook] SKIP: duplicate message_id", messageId);
       return;
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("[wazzup/webhook] IDEMPOTENCY EXCEPTION:", msg);
-    // если это таймаут — логируем и продолжаем
+    console.error("[wazzup/webhook] idempotency timeout/error:", e instanceof Error ? e.message : e);
+    // продолжаем несмотря на ошибку
   }
   console.log("[wazzup/webhook] step: after idempotency check");
 
   // ── COMPANY LOOKUP ─────────────────────────────────
   console.log("[wazzup/webhook] step: company lookup");
-  const { data: token, error: tokenErr } = await service
+  const tokenPromise = service
     .from("wazzup_tokens")
     .select("company_id")
     .contains("channel_ids", [channelId])
     .maybeSingle();
+  const { data: token, error: tokenErr } = await supabaseWithTimeout(
+    tokenPromise, 5000, "company lookup"
+  );
   console.log(
     `[wazzup/webhook] step: company result company_id=${token?.company_id ?? "NOT FOUND"} err=${tokenErr?.message ?? "none"}`
   );
@@ -312,11 +327,10 @@ async function processItem(item: unknown) {
 
   // ── ALLOWED CHATS FILTER ───────────────────────────
   console.log("[wazzup/webhook] step: allowed chats check");
-  const { data: wazzupCfg, error: cfgErr } = await service
-    .from("wazzup_config")
-    .select("allowed_chat_ids")
-    .eq("company_id", token.company_id)
-    .maybeSingle();
+  const { data: wazzupCfg, error: cfgErr } = await supabaseWithTimeout(
+    service.from("wazzup_config").select("allowed_chat_ids").eq("company_id", token.company_id).maybeSingle(),
+    5000, "allowed chats"
+  );
   console.log(`[wazzup/webhook] step: cfg loaded allowed_count=${(wazzupCfg?.allowed_chat_ids ?? []).length} err=${cfgErr?.message ?? "none"}`);
 
   const allowedChats: string[] = wazzupCfg?.allowed_chat_ids ?? [];
@@ -350,11 +364,10 @@ async function processItem(item: unknown) {
   };
   console.log("[wazzup/webhook] step: before insert", JSON.stringify(insertPayload));
 
-  const { data: saved, error: insertErr } = await service
-    .from("wazzup_messages")
-    .insert(insertPayload)
-    .select("id")
-    .single();
+  const { data: saved, error: insertErr } = await supabaseWithTimeout(
+    service.from("wazzup_messages").insert(insertPayload).select("id").single(),
+    8000, "INSERT wazzup_messages"
+  );
 
   console.log(`[wazzup/webhook] step: after insert saved_id=${saved?.id ?? "null"} err=${insertErr?.message ?? "none"} code=${insertErr?.code ?? "none"}`);
 
