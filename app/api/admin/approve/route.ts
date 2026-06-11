@@ -6,7 +6,7 @@ import { sendTelegramMessage } from "@/lib/telegram/send";
 
 const ADMIN_EMAIL = "altai.dx@gmail.com";
 const ADMIN_CHAT_ID = "1700146125";
-const APP_URL = "https://ad-pulse-eight.vercel.app";
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://pulse.altaidynamics.kz").replace(/\/$/, "");
 
 export async function POST(request: NextRequest) {
   try {

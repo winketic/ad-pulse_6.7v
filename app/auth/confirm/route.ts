@@ -39,6 +39,12 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error('[auth/confirm] verifyOtp error:', error.message)
+    if (type === 'recovery') {
+      return NextResponse.redirect(new URL('/reset-password?error=expired', origin))
+    }
+    if (type === 'invite' || type === 'signup') {
+      return NextResponse.redirect(new URL('/invite?error=expired', origin))
+    }
     return NextResponse.redirect(new URL(`/login?error=invalid_link`, request.url))
   }
 
