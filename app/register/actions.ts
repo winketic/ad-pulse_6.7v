@@ -36,7 +36,7 @@ export async function submitRegistration(data: {
       `👤 ${data.contact_name}\n` +
       `📧 ${data.email}\n` +
       `📱 ${data.phone || "—"}\n\n` +
-      `<a href="https://ad-pulse-eight.vercel.app/admin/registrations">👉 Открыть заявки</a>`
+      `<a href="${appUrl}/admin/registrations">👉 Открыть заявки</a>`
   );
 
   await sendEmail({

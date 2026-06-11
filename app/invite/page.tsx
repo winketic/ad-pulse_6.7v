@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Logo } from "@/components/Logo";
 
@@ -20,9 +20,13 @@ function passwordStrength(pwd: string): { score: number; label: string; color: s
 }
 
 export default function InvitePage() {
+  const searchParams = useSearchParams();
+  const isExpired = searchParams.get("error") === "expired";
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    isExpired ? "Ссылка недействительна или истекла. Попросите администратора отправить приглашение повторно." : ""
+  );
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const router = useRouter();
