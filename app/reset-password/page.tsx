@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Logo } from "@/components/Logo";
 
 export default function ResetPasswordPage() {
-  const searchParams = useSearchParams();
-  const isExpired = searchParams.get("error") === "expired";
-  const [ready, setReady] = useState<boolean | null>(isExpired ? false : null);
+  const [ready, setReady] = useState<boolean | null>(null);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -17,6 +15,11 @@ export default function ResetPasswordPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "expired") {
+      setReady(false);
+      return;
+    }
     supabase.auth.getSession().then(({ data: { session } }) => {
       setReady(!!session);
     });
