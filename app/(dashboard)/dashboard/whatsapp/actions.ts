@@ -64,7 +64,7 @@ export async function confirmWhatsAppTransaction(input: ConfirmInput) {
 
   await service
     .from("wazzup_messages")
-    .update({ needs_review: false, parse_result: updatedParseResult })
+    .update({ parsed: true, needs_review: false, parse_result: updatedParseResult })
     .eq("id", input.messageId);
 
   revalidatePath("/dashboard/whatsapp");
@@ -94,7 +94,7 @@ export async function rejectWhatsAppMessage(messageId: string) {
 
   const { error } = await service
     .from("wazzup_messages")
-    .update({ needs_review: false })
+    .update({ parsed: true, needs_review: false })
     .eq("id", messageId)
     .eq("company_id", profile.company_id);
 

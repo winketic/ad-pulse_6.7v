@@ -67,10 +67,12 @@ function ConfirmModal({
   message,
   materials,
   onClose,
+  onSuccess,
 }: {
   message: WazzupMessage;
   materials: WazzupMaterial[];
   onClose: () => void;
+  onSuccess: (messageId: string) => void;
 }) {
   const pr = message.parse_result;
   const [type, setType] = useState<TxType>(pr?.type ?? "income");
@@ -101,6 +103,7 @@ function ConfirmModal({
           type,
           quantity: qty,
         });
+        onSuccess(message.id);
         onClose();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Ошибка сохранения");
@@ -283,6 +286,12 @@ export default function WhatsAppList({
   const [rejectPending, startRejectTransition] = useTransition();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
+
+  const showToast = (text: string, ok = true) => {
+    setToast({ text, ok });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   function handleCopyChatId(msgId: string, chatId: string) {
     const done = () => {
@@ -368,10 +377,12 @@ export default function WhatsAppList({
     startRejectTransition(async () => {
       try {
         await rejectWhatsAppMessage(id);
-        // Update local state so button disappears without full page reload
         setMessages((prev) =>
           prev.map((m) => m.id === id ? { ...m, needs_review: false, parsed: true } : m)
         );
+        showToast("Сообщение отклонено");
+      } catch {
+        showToast("Ошибка при отклонении", false);
       } finally {
         setRejectingId(null);
       }
@@ -597,7 +608,26 @@ export default function WhatsAppList({
           message={confirmingMessage}
           materials={materials}
           onClose={() => setConfirmingId(null)}
+          onSuccess={(id) => {
+            setMessages((prev) =>
+              prev.map((m) => m.id === id ? { ...m, parsed: true, needs_review: false } : m)
+            );
+            showToast("Транзакция создана");
+          }}
         />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg transition-all ${
+            toast.ok
+              ? "bg-[#00f5c4] text-[#05050a]"
+              : "bg-red-500 text-white"
+          }`}
+        >
+          {toast.text}
+        </div>
       )}
     </div>
   );
