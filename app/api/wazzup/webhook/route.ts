@@ -95,10 +95,10 @@ export async function POST(request: NextRequest) {
     body = null;
   }
 
-  // ВАЖНО: await (не void) — иначе Vercel убивает функцию сразу после return,
-  // и DB операции не успевают выполниться. parseAndSave внутри остаётся fire-and-forget.
+  // Return 200 OK immediately so Wazzup doesn't timeout and retry.
+  // processWebhook runs in the background within Vercel's maxDuration window.
   if (body) {
-    await processWebhook(body).catch((err) =>
+    void processWebhook(body).catch((err) =>
       console.error("[wazzup/webhook] processing error:", err)
     );
   }
@@ -129,14 +129,14 @@ async function processWebhook(body: unknown) {
     return;
   }
 
-  for (const item of data) {
-    // Per-item try-catch: one bad message never kills the whole loop
-    try {
-      await processItem(item);
-    } catch (err) {
-      console.error("[wazzup/webhook] ITEM ERROR (unhandled):", err, "| item:", JSON.stringify(item));
-    }
-  }
+  // Parallel processing: total time = slowest item, not sum of all items
+  await Promise.all(
+    data.map((item) =>
+      processItem(item).catch((err) =>
+        console.error("[wazzup/webhook] ITEM ERROR:", err, "| item:", JSON.stringify(item))
+      )
+    )
+  );
 }
 
 // Явный таймаут на Supabase запросы — обнаруживает зависшие соединения
@@ -379,12 +379,12 @@ async function processItem(item: unknown) {
   const savedId = saved?.id ?? null;
   console.log(`[wazzup/webhook] SAVED message id=${savedId}`);
 
-  // Fire-and-forget parse — never blocks or loses the message
+  // Await parseAndSave — safe now that we return 200 OK before processWebhook runs
   console.log(`[wazzup/webhook] step: before parseAndSave id=${savedId}`);
   if (savedId) {
-    void parseAndSave(savedId).catch((err) =>
+    await parseAndSave(savedId).catch((err) =>
       console.error(`[wazzup/webhook] parseAndSave error for id=${savedId}:`, err)
     );
   }
-  console.log(`[wazzup/webhook] step: after parseAndSave (fire-and-forget launched)`);
+  console.log(`[wazzup/webhook] step: parseAndSave complete`);
 }

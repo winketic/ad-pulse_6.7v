@@ -14,13 +14,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=invalid_link', request.url))
   }
 
-  // For invite: don't consume the token server-side; pass it to /invite for client-side
-  // verifyOtp + password setup. Otherwise the token is spent before the form loads.
+  // For recovery and invite: pass token to the client page — don't call verifyOtp
+  // server-side. Server-side verifyOtp sets a session cookie before the user sees the
+  // form; middleware then treats them as authenticated and may redirect to /dashboard.
+  if (type === 'recovery') {
+    const url = new URL('/reset-password', origin)
+    url.searchParams.set('token_hash', token_hash)
+    url.searchParams.set('type', 'recovery')
+    return NextResponse.redirect(url)
+  }
   if (type === 'invite') {
-    const inviteUrl = new URL('/invite', origin)
-    inviteUrl.searchParams.set('token_hash', token_hash)
-    inviteUrl.searchParams.set('type', 'invite')
-    return NextResponse.redirect(inviteUrl)
+    const url = new URL('/invite', origin)
+    url.searchParams.set('token_hash', token_hash)
+    url.searchParams.set('type', 'invite')
+    return NextResponse.redirect(url)
   }
 
   const cookieStore = await cookies()
@@ -48,10 +55,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error('[auth/confirm] verifyOtp error:', error.message)
-    if (type === 'recovery') {
-      return NextResponse.redirect(new URL('/reset-password?error=expired', origin))
-    }
-    return NextResponse.redirect(new URL(`/login?error=invalid_link`, request.url))
+    return NextResponse.redirect(new URL('/login?error=invalid_link', request.url))
   }
 
   // next param takes priority (allows email template to control destination)
@@ -59,8 +63,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(next, origin))
   }
 
-  if (type === 'recovery') {
-    return NextResponse.redirect(new URL('/reset-password', origin))
-  }
   return NextResponse.redirect(new URL('/dashboard', origin))
 }
