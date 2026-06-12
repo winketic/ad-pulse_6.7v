@@ -118,7 +118,7 @@ function FilterBar({
       className="flex flex-wrap items-end gap-3"
     >
       <div>
-        <label className="block text-xs font-medium text-[#888888] mb-1.5">
+        <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">
           Период с
         </label>
         <input
@@ -126,11 +126,11 @@ function FilterBar({
           name="from"
           defaultValue={from}
           required
-          className="px-3 py-2 rounded-lg border border-[#1f1f1f] bg-[#161616] text-sm text-[#ededed] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors [color-scheme:dark]"
+          className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg3)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors [color-scheme:dark]"
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-[#888888] mb-1.5">
+        <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">
           по
         </label>
         <input
@@ -138,7 +138,7 @@ function FilterBar({
           name="to"
           defaultValue={to}
           required
-          className="px-3 py-2 rounded-lg border border-[#1f1f1f] bg-[#161616] text-sm text-[#ededed] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors [color-scheme:dark]"
+          className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg3)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors [color-scheme:dark]"
         />
       </div>
       <button
@@ -170,7 +170,7 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
   if (rows.length === 0) {
     return (
       <div className="py-12 text-center">
-        <p className="text-sm text-[#888888]">Нет данных за выбранный период</p>
+        <p className="text-sm text-[var(--muted)]">Нет данных за выбранный период</p>
       </div>
     );
   }
@@ -179,7 +179,7 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-[#161616] border-b border-[#1f1f1f]">
+          <tr className="bg-[var(--bg3)] border-b border-[var(--border)]">
             {[
               ["Материал", "text-left"],
               ["Ед.", "text-left w-16"],
@@ -191,17 +191,17 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
             ].map(([label, cls]) => (
               <th
                 key={label}
-                className={`px-4 py-3 text-xs font-semibold text-[#888888] uppercase tracking-wide ${cls}`}
+                className={`px-4 py-3 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide ${cls}`}
               >
                 {label}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#1f1f1f]">
+        <tbody className="divide-y divide-[var(--border)]">
           {rows.map((row) => (
-            <tr key={row.material_id} className="hover:bg-[#161616]/50 transition-colors">
-              <td className="px-4 py-3 font-medium text-[#ededed]">
+            <tr key={row.material_id} className="hover:bg-[var(--bg3)] transition-colors">
+              <td className="px-4 py-3 font-medium text-[var(--text)]">
                 {row.material_name}
               </td>
               <td className="px-4 py-3">
@@ -228,7 +228,7 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
                       ? "text-[#00f5c4]"
                       : row.balance < 0
                       ? "text-red-400"
-                      : "text-[#888888]"
+                      : "text-[var(--muted)]"
                   }`}
                 >
                   {row.balance === 0
@@ -241,10 +241,10 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
         </tbody>
         {rows.length > 1 && (
           <tfoot>
-            <tr className="border-t-2 border-[#1f1f1f] bg-[#161616]">
+            <tr className="border-t-2 border-[var(--border)] bg-[var(--bg3)]">
               <td
                 colSpan={2}
-                className="px-4 py-3 text-xs font-semibold text-[#888888] uppercase tracking-wide"
+                className="px-4 py-3 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide"
               >
                 Итого
               </td>
@@ -267,7 +267,7 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
                       ? "text-[#00f5c4]"
                       : totalBalance < 0
                       ? "text-red-400"
-                      : "text-[#888888]"
+                      : "text-[var(--muted)]"
                   }`}
                 >
                   {totalBalance > 0 ? "+" : ""}
@@ -293,7 +293,7 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
         </div>
-        <p className="text-sm text-[#888888]">Случаев брака за период нет</p>
+        <p className="text-sm text-[var(--muted)]">Случаев брака за период нет</p>
       </div>
     );
   }
@@ -302,7 +302,7 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-[#161616] border-b border-[#1f1f1f]">
+          <tr className="bg-[var(--bg3)] border-b border-[var(--border)]">
             {[
               ["Дата", "text-left w-24"],
               ["Материал", "text-left"],
@@ -313,20 +313,20 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
             ].map(([label, cls]) => (
               <th
                 key={label}
-                className={`px-4 py-3 text-xs font-semibold text-[#888888] uppercase tracking-wide ${cls}`}
+                className={`px-4 py-3 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide ${cls}`}
               >
                 {label}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#1f1f1f]">
+        <tbody className="divide-y divide-[var(--border)]">
           {rows.map((row) => (
             <tr key={row.id} className="hover:bg-amber-500/10/30 transition-colors">
-              <td className="px-4 py-3 text-[#888888] text-xs tabular-nums whitespace-nowrap">
+              <td className="px-4 py-3 text-[var(--muted)] text-xs tabular-nums whitespace-nowrap">
                 {fmtDate(row.transaction_date)}
               </td>
-              <td className="px-4 py-3 font-medium text-[#ededed]">
+              <td className="px-4 py-3 font-medium text-[var(--text)]">
                 {row.material_name}
               </td>
               <td className="px-4 py-3">
@@ -337,14 +337,14 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
               <td className="px-4 py-3 text-right tabular-nums font-mono font-semibold text-amber-400">
                 {row.quantity.toFixed(4)}
               </td>
-              <td className="px-4 py-3 text-[#888888] text-xs max-w-xs">
+              <td className="px-4 py-3 text-[var(--muted)] text-xs max-w-xs">
                 {row.note ? (
                   <span className="block whitespace-pre-line">{row.note}</span>
                 ) : (
-                  <span className="text-[#444444]">—</span>
+                  <span className="text-[var(--muted)]">—</span>
                 )}
               </td>
-              <td className="px-4 py-3 text-[#888888] text-xs">
+              <td className="px-4 py-3 text-[var(--muted)] text-xs">
                 {row.creator_name}
               </td>
             </tr>
@@ -400,10 +400,10 @@ export default function ReportsClient({
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#ededed]">Отчёты</h1>
-          <p className="text-sm text-[#888888] mt-0.5">
+          <h1 className="text-2xl font-bold text-[var(--text)]">Отчёты</h1>
+          <p className="text-sm text-[var(--muted)] mt-0.5">
             Период:{" "}
-            <span className="font-medium text-[#888888]">
+            <span className="font-medium text-[var(--muted)]">
               {fmtDate(from)} — {fmtDate(to)}
             </span>
           </p>
@@ -428,23 +428,23 @@ export default function ReportsClient({
       </div>
 
       {/* ── Filter ─────────────────────────────────────── */}
-      <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] px-5 py-4 mb-5">
+      <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] px-5 py-4 mb-5">
         <FilterBar from={from} to={to} onApply={handleApply} isPending={isPending} />
       </div>
 
       {/* ── Summary table ───────────────────────────────── */}
-      <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] mb-4">
-        <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center justify-between">
+      <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] mb-4">
+        <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-[#ededed]">
+            <h2 className="text-sm font-semibold text-[var(--text)]">
               Сводная таблица
             </h2>
-            <p className="text-xs text-[#888888] mt-0.5">
+            <p className="text-xs text-[var(--muted)] mt-0.5">
               Движение по каждому материалу за выбранный период
             </p>
           </div>
           {summary.length > 0 && (
-            <span className="text-xs text-[#888888]">
+            <span className="text-xs text-[var(--muted)]">
               {summary.length} матер.
             </span>
           )}
@@ -457,13 +457,13 @@ export default function ReportsClient({
       </div>
 
       {/* ── Defect cases ────────────────────────────────── */}
-      <div className="bg-[#111111] rounded-xl border border-[#1f1f1f]">
-        <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center justify-between">
+      <div className="bg-[var(--card)] rounded-xl border border-[var(--border)]">
+        <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-[#ededed]">
+            <h2 className="text-sm font-semibold text-[var(--text)]">
               Случаи брака
             </h2>
-            <p className="text-xs text-[#888888] mt-0.5">
+            <p className="text-xs text-[var(--muted)] mt-0.5">
               Все операции типа «Брак» за период
             </p>
           </div>
@@ -483,7 +483,7 @@ export default function ReportsClient({
       </div>
 
       {/* ── Legend ─────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-4 mt-4 text-xs text-[#888888]">
+      <div className="flex flex-wrap gap-4 mt-4 text-xs text-[var(--muted)]">
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-sm bg-green-500/15 border border-green-500/20 border border-green-200" /> Приход
         </span>
@@ -496,7 +496,7 @@ export default function ReportsClient({
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/15 border border-amber-500/20 border border-amber-500/30" /> Брак
         </span>
-        <span className="ml-auto text-[#444444]">
+        <span className="ml-auto text-[var(--muted)]">
           Остаток = (Приход + Возврат) − (Расход + Брак)
         </span>
       </div>

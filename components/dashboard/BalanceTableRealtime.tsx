@@ -69,7 +69,7 @@ export function BalanceTableRealtime({ materials, initialBalances, companyId }: 
   if (materials.length === 0) {
     return (
       <div className="py-12 text-center">
-        <p className="text-sm text-[#888888]">Материалов нет</p>
+        <p className="text-sm text-[var(--muted)]">Материалов нет</p>
         <Link href="/dashboard/materials" className="mt-2 inline-block text-sm text-[#00f5c4] hover:underline">
           Добавить материалы
         </Link>
@@ -83,26 +83,26 @@ export function BalanceTableRealtime({ materials, initialBalances, companyId }: 
       <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#1f1f1f]">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-[#888888] uppercase tracking-wide">Материал</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-[#888888] uppercase tracking-wide">Приход</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-[#888888] uppercase tracking-wide">Расход</th>
-              <th className="px-5 py-3 text-right text-xs font-semibold text-[#888888] uppercase tracking-wide">Остаток</th>
+            <tr className="border-b border-[var(--border)]">
+              <th className="px-5 py-3 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">Материал</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">Приход</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">Расход</th>
+              <th className="px-5 py-3 text-right text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">Остаток</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#1f1f1f]">
+          <tbody className="divide-y divide-[var(--border)]">
             {materials.map((mat) => {
               const b = balances[mat.id] ?? { income: 0, expense: 0, balance: 0 };
               return (
-                <tr key={mat.id} className="hover:bg-[#161616]">
-                  <td className="px-5 py-3 font-medium text-[#ededed] text-sm">
+                <tr key={mat.id} className="hover:bg-[var(--bg3)]">
+                  <td className="px-5 py-3 font-medium text-[var(--text)] text-sm">
                     <span className="block break-words">{mat.name}</span>
-                    <span className="text-xs text-[#888888]">{mat.unit}</span>
+                    <span className="text-xs text-[var(--muted)]">{mat.unit}</span>
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums text-sm text-green-700 font-mono">{formatCompact(b.income)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-sm text-red-600 font-mono">{formatCompact(b.expense)}</td>
                   <td className="px-5 py-3 text-right">
-                    <span className={`tabular-nums text-sm font-bold font-mono ${b.balance > 0 ? "text-[#00f5c4]" : b.balance < 0 ? "text-red-600" : "text-[#888888]"}`}>
+                    <span className={`tabular-nums text-sm font-bold font-mono ${b.balance > 0 ? "text-[#00f5c4]" : b.balance < 0 ? "text-red-600" : "text-[var(--muted)]"}`}>
                       {formatCompact(b.balance)}
                     </span>
                   </td>
@@ -114,19 +114,19 @@ export function BalanceTableRealtime({ materials, initialBalances, companyId }: 
       </div>
 
       {/* Mobile cards */}
-      <div className="sm:hidden divide-y divide-[#1f1f1f]">
+      <div className="sm:hidden divide-y divide-[var(--border)]">
         {materials.map((mat) => {
           const b = balances[mat.id] ?? { income: 0, expense: 0, balance: 0 };
           return (
             <div key={mat.id} className="px-4 py-3 flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-[#ededed] break-words">{mat.name}</p>
-                <p className="text-xs text-[#888888]">{mat.unit}</p>
+                <p className="text-sm font-medium text-[var(--text)] break-words">{mat.name}</p>
+                <p className="text-xs text-[var(--muted)]">{mat.unit}</p>
               </div>
               <div className="flex items-center gap-3 shrink-0 text-xs tabular-nums font-mono">
                 <span className="text-green-700">+{formatCompact(b.income)}</span>
                 <span className="text-red-600">−{formatCompact(b.expense)}</span>
-                <span className={`font-bold text-sm ${b.balance > 0 ? "text-[#00f5c4]" : b.balance < 0 ? "text-red-600" : "text-[#888888]"}`}>
+                <span className={`font-bold text-sm ${b.balance > 0 ? "text-[#00f5c4]" : b.balance < 0 ? "text-red-600" : "text-[var(--muted)]"}`}>
                   {formatCompact(b.balance)}
                 </span>
               </div>

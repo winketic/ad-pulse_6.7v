@@ -63,8 +63,8 @@ const STATUS_CFG: Record<
   },
   cancelled: {
     label: "Отменён",
-    bg: "bg-[#1f1f1f]",
-    text: "text-[#888888]",
+    bg: "bg-[var(--bg3)]",
+    text: "text-[var(--muted)]",
     dot: "bg-gray-400",
   },
 };
@@ -109,7 +109,7 @@ function ProgressBar({ pct }: { pct: number }) {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full bg-[#1f1f1f] overflow-hidden">
+      <div className="flex-1 h-1.5 rounded-full bg-[var(--bg3)] overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${
             over ? "bg-red-500" : pct >= 75 ? "bg-[#00f5c4]" : "bg-[#00f5c4]"
@@ -119,7 +119,7 @@ function ProgressBar({ pct }: { pct: number }) {
       </div>
       <span
         className={`text-xs tabular-nums font-medium w-10 text-right ${
-          over ? "text-red-600" : "text-[#888888]"
+          over ? "text-red-600" : "text-[var(--muted)]"
         }`}
       >
         {pct.toFixed(0)}%
@@ -151,12 +151,12 @@ function Modal({
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative bg-[#111111] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl z-10 max-h-[94dvh] flex flex-col">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0 border-b border-[#1f1f1f]">
-          <h2 className="text-lg font-semibold text-[#ededed]">{title}</h2>
+      <div className="relative bg-[var(--card)] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl z-10 max-h-[94dvh] flex flex-col">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0 border-b border-[var(--border)]">
+          <h2 className="text-lg font-semibold text-[var(--text)]">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-[#1f1f1f] text-[#888888] hover:text-[#888888] transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[var(--bg3)] text-[var(--muted)] hover:text-[var(--muted)] transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -249,7 +249,7 @@ function CreatePlanForm({
   };
 
   const inputCls =
-    "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[#ededed] bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
+    "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
 
   if (materials.length === 0) {
     return (
@@ -259,8 +259,8 @@ function CreatePlanForm({
             <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
           </svg>
         </div>
-        <p className="text-sm font-medium text-[#ededed]">Нет материалов в справочнике</p>
-        <p className="text-sm text-[#888888] mt-1">
+        <p className="text-sm font-medium text-[var(--text)]">Нет материалов в справочнике</p>
+        <p className="text-sm text-[var(--muted)] mt-1">
           Сначала добавьте материалы в{" "}
           <a href="/dashboard/materials" className="text-[#00f5c4] underline">
             справочник
@@ -274,7 +274,7 @@ function CreatePlanForm({
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Name */}
       <div>
-        <label className="block text-sm font-medium text-[#888888] mb-1.5">
+        <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
           Название плана <span className="text-red-500">*</span>
         </label>
         <input
@@ -292,7 +292,7 @@ function CreatePlanForm({
       {/* Dates */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-[#888888] mb-1.5">
+          <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
             Дата начала <span className="text-red-500">*</span>
           </label>
           <input
@@ -304,7 +304,7 @@ function CreatePlanForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#888888] mb-1.5">
+          <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
             Дата окончания <span className="text-red-500">*</span>
           </label>
           <input
@@ -321,7 +321,7 @@ function CreatePlanForm({
       {/* Materials */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-[#888888]">
+          <label className="text-sm font-medium text-[var(--muted)]">
             Материалы плана <span className="text-red-500">*</span>
           </label>
           {hasDuplicates && (
@@ -337,11 +337,11 @@ function CreatePlanForm({
               <div
                 key={row.uid}
                 className={`flex items-center gap-2 p-2.5 rounded-lg border ${
-                  isDuplicate ? "border-red-300 bg-red-50" : "border-[#1f1f1f] bg-[#161616]"
+                  isDuplicate ? "border-red-300 bg-red-50" : "border-[var(--border)] bg-[var(--bg3)]"
                 }`}
               >
                 {/* Row number */}
-                <span className="text-xs font-medium text-[#888888] w-5 text-center shrink-0">
+                <span className="text-xs font-medium text-[var(--muted)] w-5 text-center shrink-0">
                   {idx + 1}
                 </span>
 
@@ -349,7 +349,7 @@ function CreatePlanForm({
                 <select
                   value={row.material_id}
                   onChange={(e) => updateRow(row.uid, "material_id", e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-[#ededed] bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors min-w-0"
+                  className="flex-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors min-w-0"
                 >
                   {materials.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -367,9 +367,9 @@ function CreatePlanForm({
                     placeholder="0.00"
                     min="0.0001"
                     step="0.0001"
-                    className="w-28 px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-[#ededed] text-right focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors"
+                    className="w-28 px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] text-right focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors"
                   />
-                  <span className="text-xs text-[#888888] w-10 truncate">
+                  <span className="text-xs text-[var(--muted)] w-10 truncate">
                     {materials.find((m) => m.id === row.material_id)?.unit ?? ""}
                   </span>
                 </div>
@@ -379,7 +379,7 @@ function CreatePlanForm({
                   type="button"
                   onClick={() => removeRow(row.uid)}
                   disabled={rows.length === 1}
-                  className="p-1 rounded-lg text-[#888888] hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                  className="p-1 rounded-lg text-[var(--muted)] hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                   title="Удалить строку"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -420,7 +420,7 @@ function CreatePlanForm({
           type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[#888888] hover:bg-[#161616] transition-colors disabled:opacity-50"
+          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50"
         >
           Отмена
         </button>
@@ -454,7 +454,7 @@ function EmptyState({
   if (isFiltered)
     return (
       <div className="text-center py-16">
-        <p className="text-sm text-[#888888]">Нет планов с этим статусом</p>
+        <p className="text-sm text-[var(--muted)]">Нет планов с этим статусом</p>
       </div>
     );
 
@@ -465,10 +465,10 @@ function EmptyState({
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
       </div>
-      <h3 className="text-base font-semibold text-[#ededed] mb-1">
+      <h3 className="text-base font-semibold text-[var(--text)] mb-1">
         Планов пока нет
       </h3>
-      <p className="text-sm text-[#888888] mb-6 max-w-xs">
+      <p className="text-sm text-[var(--muted)] mb-6 max-w-xs">
         Создайте производственный план и привяжите к нему материалы
       </p>
       <button
@@ -526,10 +526,10 @@ export default function PlansClient({
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#ededed]">
+          <h1 className="text-2xl font-bold text-[var(--text)]">
             Производственные планы
           </h1>
-          <p className="text-sm text-[#888888] mt-0.5">
+          <p className="text-sm text-[var(--muted)] mt-0.5">
             {plans.length === 0
               ? "Планов нет"
               : `${plans.length} план${plans.length === 1 ? "" : plans.length < 5 ? "а" : "ов"}`}
@@ -548,22 +548,22 @@ export default function PlansClient({
 
       {/* ── Status tabs ─────────────────────────────────── */}
       {plans.length > 0 && (
-        <div className="flex items-center gap-1 bg-[#1f1f1f] rounded-xl p-1 mb-6 w-fit">
+        <div className="flex items-center gap-1 bg-[var(--bg3)] rounded-xl p-1 mb-6 w-fit">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                 tab === t.key
-                  ? "bg-[#111111] text-[#ededed] shadow-sm"
-                  : "text-[#888888] hover:text-[#888888]"
+                  ? "bg-[var(--card)] text-[var(--text)] shadow-sm"
+                  : "text-[var(--muted)] hover:text-[var(--muted)]"
               }`}
             >
               {t.label}
               {counts[t.key] > 0 && (
                 <span
                   className={`ml-1.5 text-xs ${
-                    tab === t.key ? "text-[#888888]" : "text-[#888888]"
+                    tab === t.key ? "text-[var(--muted)]" : "text-[var(--muted)]"
                   }`}
                 >
                   {counts[t.key]}
@@ -594,34 +594,34 @@ export default function PlansClient({
             return (
               <div
                 key={plan.id}
-                className="bg-[#111111] rounded-xl border border-[#1f1f1f] p-5 hover:shadow-sm transition-shadow"
+                className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-5 hover:shadow-sm transition-shadow"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   {/* Left */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <StatusBadge status={plan.status} />
-                      <span className="text-xs text-[#888888]">
+                      <span className="text-xs text-[var(--muted)]">
                         {fmtDate(plan.start_date)} — {fmtDate(plan.end_date)}
                       </span>
                     </div>
-                    <h3 className="text-base font-semibold text-[#ededed] leading-tight">
+                    <h3 className="text-base font-semibold text-[var(--text)] leading-tight">
                       {plan.name}
                     </h3>
 
                     {/* Progress */}
                     <div className="mt-3 max-w-xs">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-[#888888]">Прогресс выполнения</span>
+                        <span className="text-xs text-[var(--muted)]">Прогресс выполнения</span>
                       </div>
                       <ProgressBar pct={pct} />
-                      <p className="text-xs text-[#888888] mt-1">
+                      <p className="text-xs text-[var(--muted)] mt-1">
                         Факт:{" "}
-                        <span className="text-[#888888] font-medium">
+                        <span className="text-[var(--muted)] font-medium">
                           {formatCompact(plan.actual_quantity)}
                         </span>{" "}
                         / План:{" "}
-                        <span className="text-[#888888] font-medium">
+                        <span className="text-[var(--muted)] font-medium">
                           {formatCompact(plan.planned_quantity)}
                         </span>
                       </p>
@@ -631,7 +631,7 @@ export default function PlansClient({
                   {/* Right: link */}
                   <Link
                     href={`/dashboard/plans/${plan.id}`}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-[#888888] hover:bg-[#161616] hover:border-[#1a472a] hover:text-[#00f5c4] transition-colors self-start shrink-0"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] hover:border-[#1a472a] hover:text-[#00f5c4] transition-colors self-start shrink-0"
                   >
                     Открыть
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

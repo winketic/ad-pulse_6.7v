@@ -38,7 +38,7 @@ function StatCard({
   mobileLabel,
   value,
   sub,
-  valueColor = "text-[#ededed]",
+  valueColor = "text-[var(--text)]",
   iconBg,
   iconColor,
   icon,
@@ -53,12 +53,12 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f]">
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)]">
       {/* Mobile: compact, no icon */}
       <div className="sm:hidden p-4">
-        <p className="text-xs text-[#888888] mb-1">{mobileLabel ?? label}</p>
+        <p className="text-xs text-[var(--muted)] mb-1">{mobileLabel ?? label}</p>
         <p className={`text-2xl font-bold tabular-nums ${valueColor}`}>{value}</p>
-        <p className="text-xs text-[#888888] mt-0.5">{sub}</p>
+        <p className="text-xs text-[var(--muted)] mt-0.5">{sub}</p>
       </div>
       {/* Desktop: icon + text */}
       <div className="hidden sm:flex p-5 items-start gap-4">
@@ -66,9 +66,9 @@ function StatCard({
           {icon}
         </div>
         <div className="min-w-0 overflow-hidden">
-          <p className="text-sm text-[#888888] leading-tight truncate">{label}</p>
+          <p className="text-sm text-[var(--muted)] leading-tight truncate">{label}</p>
           <p className={`text-2xl font-bold mt-0.5 tabular-nums ${valueColor}`}>{value}</p>
-          <p className="text-xs text-[#888888] mt-0.5">{sub}</p>
+          <p className="text-xs text-[var(--muted)] mt-0.5">{sub}</p>
         </div>
       </div>
     </div>
@@ -86,7 +86,7 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between mb-4">
-      <h2 className="text-sm font-semibold text-[#ededed]">{title}</h2>
+      <h2 className="text-sm font-semibold text-[var(--text)]">{title}</h2>
       {href && (
         <Link
           href={href}
@@ -233,10 +233,10 @@ export default async function DashboardPage() {
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* ── Header ─────────────────────────────────────── */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#ededed]">
+        <h1 className="text-2xl font-bold text-[var(--text)]">
           Добро пожаловать, {firstName}
         </h1>
-        <p className="text-sm text-[#888888] mt-1 capitalize">{todayLabel}</p>
+        <p className="text-sm text-[var(--muted)] mt-1 capitalize">{todayLabel}</p>
       </div>
 
       {/* ── Stat cards ─────────────────────────────────── */}
@@ -300,8 +300,8 @@ export default async function DashboardPage() {
       {/* ── Main grid: balances + recent transactions ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
         {/* Balance table (3/5) */}
-        <div className="lg:col-span-3 bg-[#111111] rounded-xl border border-[#1f1f1f]">
-          <div className="px-5 py-4 border-b border-[#1f1f1f]">
+        <div className="lg:col-span-3 bg-[var(--card)] rounded-xl border border-[var(--border)]">
+          <div className="px-5 py-4 border-b border-[var(--border)]">
             <SectionHeader
               title="Остатки по материалам"
               href="/dashboard/transactions"
@@ -318,8 +318,8 @@ export default async function DashboardPage() {
         </div>
 
         {/* Recent transactions (2/5) */}
-        <div className="lg:col-span-2 bg-[#111111] rounded-xl border border-[#1f1f1f]">
-          <div className="px-5 py-4 border-b border-[#1f1f1f]">
+        <div className="lg:col-span-2 bg-[var(--card)] rounded-xl border border-[var(--border)]">
+          <div className="px-5 py-4 border-b border-[var(--border)]">
             <SectionHeader
               title="Последние транзакции"
               href="/dashboard/transactions"
@@ -327,10 +327,10 @@ export default async function DashboardPage() {
           </div>
           {recentTxs.length === 0 ? (
             <div className="py-12 text-center">
-              <p className="text-sm text-[#888888]">Транзакций нет</p>
+              <p className="text-sm text-[var(--muted)]">Транзакций нет</p>
             </div>
           ) : (
-            <div className="divide-y divide-[#1f1f1f]">
+            <div className="divide-y divide-[var(--border)]">
               {recentTxs.map((tx) => {
                 const cfg = TYPE_COLORS[tx.type as TxType];
                 const sign =
@@ -338,7 +338,7 @@ export default async function DashboardPage() {
                 return (
                   <div
                     key={tx.id}
-                    className="px-5 py-3 flex items-center gap-3 hover:bg-[#161616]"
+                    className="px-5 py-3 flex items-center gap-3 hover:bg-[var(--bg3)]"
                   >
                     <span
                       className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${cfg.bg} ${cfg.text}`}
@@ -346,10 +346,10 @@ export default async function DashboardPage() {
                       {TYPE_LABELS[tx.type as TxType]}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#ededed] truncate">
+                      <p className="text-sm font-medium text-[var(--text)] truncate">
                         {tx.material_name}
                       </p>
-                      <p className="text-xs text-[#888888]">
+                      <p className="text-xs text-[var(--muted)]">
                         {fmtDate(tx.transaction_date)}
                       </p>
                     </div>
@@ -360,7 +360,7 @@ export default async function DashboardPage() {
                     >
                       {sign}
                       {formatCompact(Number(tx.quantity))}
-                      <span className="text-xs font-normal text-[#888888] ml-0.5">
+                      <span className="text-xs font-normal text-[var(--muted)] ml-0.5">
                         {tx.material_unit}
                       </span>
                     </span>
@@ -373,8 +373,8 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Active Plans ────────────────────────────────── */}
-      <div className="bg-[#111111] rounded-xl border border-[#1f1f1f]">
-        <div className="px-5 py-4 border-b border-[#1f1f1f]">
+      <div className="bg-[var(--card)] rounded-xl border border-[var(--border)]">
+        <div className="px-5 py-4 border-b border-[var(--border)]">
           <SectionHeader
             title="Активные производственные планы"
             href="/dashboard/plans"
@@ -384,7 +384,7 @@ export default async function DashboardPage() {
 
         {activePlans.length === 0 ? (
           <div className="py-10 text-center">
-            <p className="text-sm text-[#888888]">
+            <p className="text-sm text-[var(--muted)]">
               Нет активных планов
             </p>
             <Link
@@ -395,7 +395,7 @@ export default async function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-[#1f1f1f]">
+          <div className="divide-y divide-[var(--border)]">
             {activePlans.map((plan) => {
               const pct =
                 plan.planned_quantity > 0
@@ -411,14 +411,14 @@ export default async function DashboardPage() {
                 <Link
                   key={plan.id}
                   href={`/dashboard/plans/${plan.id}`}
-                  className="flex items-center gap-4 px-5 py-4 hover:bg-[#161616] transition-colors group"
+                  className="flex items-center gap-4 px-5 py-4 hover:bg-[var(--bg3)] transition-colors group"
                 >
                   {/* Name + period */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[#ededed] truncate group-hover:text-[#00f5c4] transition-colors">
+                    <p className="text-sm font-semibold text-[var(--text)] truncate group-hover:text-[#00f5c4] transition-colors">
                       {plan.name}
                     </p>
-                    <p className="text-xs text-[#888888] mt-0.5">
+                    <p className="text-xs text-[var(--muted)] mt-0.5">
                       {fmtDate(plan.start_date)} — {fmtDate(plan.end_date)}
                     </p>
                   </div>
@@ -426,24 +426,24 @@ export default async function DashboardPage() {
                   {/* Progress */}
                   <div className="w-48 shrink-0 hidden sm:block">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1.5 rounded-full bg-[#1f1f1f] overflow-hidden">
+                      <div className="flex-1 h-1.5 rounded-full bg-[var(--bg3)] overflow-hidden">
                         <div
                           className="h-full rounded-full bg-[#00f5c4] transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="text-xs tabular-nums font-medium text-[#888888] w-9 text-right">
+                      <span className="text-xs tabular-nums font-medium text-[var(--muted)] w-9 text-right">
                         {pct.toFixed(0)}%
                       </span>
                     </div>
-                    <p className="text-xs text-[#888888] mt-0.5 tabular-nums">
+                    <p className="text-xs text-[var(--muted)] mt-0.5 tabular-nums">
                       {formatCompact(Number(plan.actual_quantity))} /{" "}
                       {formatCompact(Number(plan.planned_quantity))}
                     </p>
                   </div>
 
                   <svg
-                    className="w-4 h-4 text-[#444444] group-hover:text-[#00f5c4] transition-colors shrink-0"
+                    className="w-4 h-4 text-[var(--muted)] group-hover:text-[#00f5c4] transition-colors shrink-0"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"

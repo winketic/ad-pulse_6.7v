@@ -88,13 +88,13 @@ function Modal({
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative bg-[#111111] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md z-10 max-h-[92dvh] sm:max-h-[90vh] flex flex-col">
+      <div className="relative bg-[var(--card)] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md z-10 max-h-[92dvh] sm:max-h-[90vh] flex flex-col">
         {/* Modal header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
-          <h2 className="text-lg font-semibold text-[#ededed]">{title}</h2>
+          <h2 className="text-lg font-semibold text-[var(--text)]">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-[#1f1f1f] text-[#888888] hover:text-[#888888] transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[var(--bg3)] text-[var(--muted)] hover:text-[var(--muted)] transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -143,7 +143,7 @@ function MaterialForm({
       <div>
         <label
           htmlFor="mat-name"
-          className="block text-sm font-medium text-[#888888] mb-1.5"
+          className="block text-sm font-medium text-[var(--muted)] mb-1.5"
         >
           Название{" "}
           <span className="text-red-500" aria-hidden>
@@ -159,7 +159,7 @@ function MaterialForm({
           required
           maxLength={200}
           autoFocus
-          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-[#ededed] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors"
+          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors"
         />
       </div>
 
@@ -167,7 +167,7 @@ function MaterialForm({
       <div>
         <label
           htmlFor="mat-unit"
-          className="block text-sm font-medium text-[#888888] mb-1.5"
+          className="block text-sm font-medium text-[var(--muted)] mb-1.5"
         >
           Единица измерения{" "}
           <span className="text-red-500" aria-hidden>
@@ -178,7 +178,7 @@ function MaterialForm({
           id="mat-unit"
           value={form.unit}
           onChange={set("unit")}
-          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-[#ededed] bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors"
+          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors"
         >
           {UNITS.map((u) => (
             <option key={u} value={u}>
@@ -192,10 +192,10 @@ function MaterialForm({
       <div>
         <label
           htmlFor="mat-gost"
-          className="block text-sm font-medium text-[#888888] mb-1.5"
+          className="block text-sm font-medium text-[var(--muted)] mb-1.5"
         >
           Норма расхода по ГОСТ
-          <span className="ml-1.5 text-xs font-normal text-[#888888]">
+          <span className="ml-1.5 text-xs font-normal text-[var(--muted)]">
             (необязательно)
           </span>
         </label>
@@ -207,9 +207,9 @@ function MaterialForm({
           placeholder="0.0000"
           min="0"
           step="0.0001"
-          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-[#ededed] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors"
+          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors"
         />
-        <p className="mt-1.5 text-xs text-[#888888]">
+        <p className="mt-1.5 text-xs text-[var(--muted)]">
           Нормативный расход согласно технической документации ГОСТа
         </p>
       </div>
@@ -238,7 +238,7 @@ function MaterialForm({
           type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[#888888] hover:bg-[#161616] transition-colors disabled:opacity-50"
+          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50"
         >
           Отмена
         </button>
@@ -295,10 +295,10 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
           />
         </svg>
       </div>
-      <h3 className="text-base font-semibold text-[#ededed] mb-1">
+      <h3 className="text-base font-semibold text-[var(--text)] mb-1">
         Справочник пуст
       </h3>
-      <p className="text-sm text-[#888888] mb-6 max-w-xs">
+      <p className="text-sm text-[var(--muted)] mb-6 max-w-xs">
         Добавьте первый материал, чтобы начать вести учёт прихода и расхода
       </p>
       <button
@@ -340,7 +340,7 @@ function RowActions({
   if (confirming) {
     return (
       <div className="flex items-center justify-end gap-2">
-        <span className="text-xs text-[#888888] hidden sm:inline">Удалить?</span>
+        <span className="text-xs text-[var(--muted)] hidden sm:inline">Удалить?</span>
         <button
           onClick={onDelete}
           disabled={isPending}
@@ -351,7 +351,7 @@ function RowActions({
         <button
           onClick={() => setConfirming(false)}
           disabled={isPending}
-          className="px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-300 hover:bg-[#161616] text-[#888888] transition-colors"
+          className="px-2.5 py-1 rounded-lg text-xs font-medium border border-gray-300 hover:bg-[var(--bg3)] text-[var(--muted)] transition-colors"
         >
           Нет
         </button>
@@ -363,7 +363,7 @@ function RowActions({
     <div className="flex items-center justify-end gap-1">
       <button
         onClick={onEdit}
-        className="p-1.5 rounded-lg text-[#888888] hover:bg-[#1f1f1f] hover:text-[#00f5c4] transition-colors"
+        className="p-1.5 rounded-lg text-[var(--muted)] hover:bg-[var(--bg3)] hover:text-[#00f5c4] transition-colors"
         title="Редактировать"
       >
         <svg
@@ -382,7 +382,7 @@ function RowActions({
       </button>
       <button
         onClick={() => setConfirming(true)}
-        className="p-1.5 rounded-lg text-[#888888] hover:bg-red-50 hover:text-red-600 transition-colors"
+        className="p-1.5 rounded-lg text-[var(--muted)] hover:bg-red-50 hover:text-red-600 transition-colors"
         title="Удалить"
       >
         <svg
@@ -419,10 +419,10 @@ function MobileCard({
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] p-4">
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-[#ededed] text-sm leading-tight">
+          <h3 className="font-semibold text-[var(--text)] text-sm leading-tight">
             {material.name}
           </h3>
           <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -430,19 +430,19 @@ function MobileCard({
               {material.unit}
             </span>
             {material.gost_norm != null && (
-              <span className="text-xs text-[#888888] tabular-nums">
+              <span className="text-xs text-[var(--muted)] tabular-nums">
                 ГОСТ: {formatGost(material.gost_norm)}
               </span>
             )}
           </div>
-          <p className="text-xs text-[#888888] mt-1.5">
+          <p className="text-xs text-[var(--muted)] mt-1.5">
             {formatDate(material.created_at)}
           </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={onEdit}
-            className="p-2 rounded-lg text-[#888888] hover:bg-[#1f1f1f] hover:text-[#00f5c4] transition-colors"
+            className="p-2 rounded-lg text-[var(--muted)] hover:bg-[var(--bg3)] hover:text-[#00f5c4] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -450,7 +450,7 @@ function MobileCard({
           </button>
           <button
             onClick={() => setConfirming(true)}
-            className="p-2 rounded-lg text-[#888888] hover:bg-red-50 hover:text-red-600 transition-colors"
+            className="p-2 rounded-lg text-[var(--muted)] hover:bg-red-50 hover:text-red-600 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -460,12 +460,12 @@ function MobileCard({
       </div>
 
       {confirming && (
-        <div className="mt-3 pt-3 border-t border-[#1f1f1f] flex items-center justify-between gap-3">
-          <p className="text-sm text-[#888888]">Удалить «{material.name}»?</p>
+        <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-center justify-between gap-3">
+          <p className="text-sm text-[var(--muted)]">Удалить «{material.name}»?</p>
           <div className="flex gap-2 shrink-0">
             <button
               onClick={() => setConfirming(false)}
-              className="px-3 py-1.5 rounded-lg text-sm border border-gray-300 hover:bg-[#161616] text-[#888888] transition-colors"
+              className="px-3 py-1.5 rounded-lg text-sm border border-gray-300 hover:bg-[var(--bg3)] text-[var(--muted)] transition-colors"
             >
               Нет
             </button>
@@ -587,8 +587,8 @@ export default function MaterialsClient({
       {/* ── Page Header ─────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#ededed]">Материалы</h1>
-          <p className="text-sm text-[#888888] mt-0.5">
+          <h1 className="text-2xl font-bold text-[var(--text)]">Материалы</h1>
+          <p className="text-sm text-[var(--muted)] mt-0.5">
             {materials.length === 0
               ? "Справочник пуст"
               : `${materials.length} ${pluralMaterials(materials.length)}`}
@@ -620,7 +620,7 @@ export default function MaterialsClient({
       {materials.length > 0 && (
         <div className="relative mb-5">
           <svg
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#888888] pointer-events-none"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)] pointer-events-none"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -637,12 +637,12 @@ export default function MaterialsClient({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Поиск по названию..."
-            className="w-full sm:max-w-sm pl-10 pr-9 py-2.5 rounded-xl border border-gray-300 text-sm text-[#ededed] placeholder-gray-400 bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors"
+            className="w-full sm:max-w-sm pl-10 pr-9 py-2.5 rounded-xl border border-gray-300 text-sm text-[var(--text)] placeholder-gray-400 bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors"
           />
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-[#888888] hover:text-[#888888] transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-[var(--muted)] hover:text-[var(--muted)] transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -658,15 +658,15 @@ export default function MaterialsClient({
       {/* ── No search results ────────────────────────── */}
       {materials.length > 0 && filtered.length === 0 && (
         <div className="text-center py-16">
-          <div className="w-12 h-12 rounded-xl bg-[#1f1f1f] flex items-center justify-center mx-auto mb-3">
-            <svg className="w-6 h-6 text-[#888888]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="w-12 h-12 rounded-xl bg-[var(--bg3)] flex items-center justify-center mx-auto mb-3">
+            <svg className="w-6 h-6 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <p className="text-sm text-[#888888] font-medium">
+          <p className="text-sm text-[var(--muted)] font-medium">
             Ничего не найдено
           </p>
-          <p className="text-sm text-[#888888] mt-0.5 mb-3">
+          <p className="text-sm text-[var(--muted)] mt-0.5 mb-3">
             По запросу «{search}» результатов нет
           </p>
           <button
@@ -682,35 +682,35 @@ export default function MaterialsClient({
       {filtered.length > 0 && (
         <>
           <div
-            className={`hidden sm:block bg-[#111111] rounded-xl border border-[#1f1f1f] overflow-hidden transition-opacity ${
+            className={`hidden sm:block bg-[var(--card)] rounded-xl border border-[var(--border)] overflow-hidden transition-opacity ${
               isPending ? "opacity-60 pointer-events-none" : ""
             }`}
           >
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#161616] border-b border-[#1f1f1f]">
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-[#888888] uppercase tracking-wide">
+                <tr className="bg-[var(--bg3)] border-b border-[var(--border)]">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">
                     Название
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-[#888888] uppercase tracking-wide w-28">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wide w-28">
                     Ед. изм.
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-[#888888] uppercase tracking-wide w-36">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wide w-36">
                     Норма ГОСТ
                   </th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-[#888888] uppercase tracking-wide w-36">
+                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wide w-36">
                     Добавлен
                   </th>
                   <th className="px-5 py-3.5 w-28" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1f1f1f]">
+              <tbody className="divide-y divide-[var(--border)]">
                 {filtered.map((m) => (
                   <tr
                     key={m.id}
-                    className="hover:bg-[#161616]/70 transition-colors group"
+                    className="hover:bg-[var(--bg3)] transition-colors group"
                   >
-                    <td className="px-5 py-3.5 font-medium text-[#ededed]">
+                    <td className="px-5 py-3.5 font-medium text-[var(--text)]">
                       {m.name}
                     </td>
                     <td className="px-5 py-3.5">
@@ -718,10 +718,10 @@ export default function MaterialsClient({
                         {m.unit}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-[#888888] tabular-nums font-mono text-xs">
+                    <td className="px-5 py-3.5 text-[var(--muted)] tabular-nums font-mono text-xs">
                       {formatGost(m.gost_norm)}
                     </td>
-                    <td className="px-5 py-3.5 text-[#888888]">
+                    <td className="px-5 py-3.5 text-[var(--muted)]">
                       {formatDate(m.created_at)}
                     </td>
                     <td className="px-5 py-3.5">

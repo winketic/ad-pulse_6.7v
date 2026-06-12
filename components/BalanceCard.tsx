@@ -18,10 +18,10 @@ export default function BalanceCard({ balances }: { balances: BalanceData[] }) {
   return (
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <h2 className="text-sm font-semibold text-[#888888] uppercase tracking-wide">
+        <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wide">
           Текущий остаток
         </h2>
-        <span className="text-xs text-[#888888]">{balances.length} материалов</span>
+        <span className="text-xs text-[var(--muted)]">{balances.length} материалов</span>
       </div>
 
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 sm:mx-0 px-4 sm:px-0 snap-x">
@@ -32,11 +32,11 @@ export default function BalanceCard({ balances }: { balances: BalanceData[] }) {
           return (
             <div
               key={b.material_id}
-              className="bg-[#111111] rounded-xl border border-[#1f1f1f] p-4 min-w-[172px] max-w-[220px] flex-shrink-0 snap-start hover:shadow-sm transition-shadow"
+              className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4 min-w-[172px] max-w-[220px] flex-shrink-0 snap-start hover:shadow-sm transition-shadow"
             >
               {/* Name */}
               <p
-                className="text-xs font-medium text-[#888888] uppercase tracking-wide truncate mb-2"
+                className="text-xs font-medium text-[var(--muted)] uppercase tracking-wide truncate mb-2"
                 title={b.name}
               >
                 {b.name}
@@ -46,7 +46,7 @@ export default function BalanceCard({ balances }: { balances: BalanceData[] }) {
               <p
                 className={`text-2xl font-bold tabular-nums leading-none ${
                   isZero
-                    ? "text-[#888888]"
+                    ? "text-[var(--muted)]"
                     : isNegative
                     ? "text-red-600"
                     : "text-[#00f5c4]"
@@ -55,15 +55,15 @@ export default function BalanceCard({ balances }: { balances: BalanceData[] }) {
                 {isNegative ? "" : ""}
                 {formatCompact(b.balance)}
               </p>
-              <p className="text-xs text-[#888888] mt-0.5">{b.unit}</p>
+              <p className="text-xs text-[var(--muted)] mt-0.5">{b.unit}</p>
 
               {/* Breakdown */}
-              <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[#1f1f1f]">
+              <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[var(--border)]">
                 <div className="flex items-center gap-1 text-xs">
                   <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-100 text-green-600 font-bold text-[10px]">
                     ↑
                   </span>
-                  <span className="tabular-nums text-[#888888] font-medium">
+                  <span className="tabular-nums text-[var(--muted)] font-medium">
                     {formatCompact(b.totalIn)}
                   </span>
                 </div>
@@ -71,7 +71,7 @@ export default function BalanceCard({ balances }: { balances: BalanceData[] }) {
                   <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-100 text-red-500 font-bold text-[10px]">
                     ↓
                   </span>
-                  <span className="tabular-nums text-[#888888] font-medium">
+                  <span className="tabular-nums text-[var(--muted)] font-medium">
                     {formatCompact(b.totalOut)}
                   </span>
                 </div>
