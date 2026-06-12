@@ -46,9 +46,9 @@ export default function AllowedChatsCard({ initialChatIds }: AllowedChatsCardPro
   };
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] p-5">
-      <h3 className="text-sm font-semibold text-[#ededed] mb-1">Разрешённые чаты</h3>
-      <p className="text-xs text-[#888888] mb-4">
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-5">
+      <h3 className="text-sm font-semibold text-[var(--text)] mb-1">Разрешённые чаты</h3>
+      <p className="text-xs text-[var(--muted)] mb-4">
         {chatIds.length === 0
           ? "Список пуст — обрабатываются все входящие сообщения"
           : "Обрабатываются только сообщения из этих чатов"}
@@ -57,12 +57,12 @@ export default function AllowedChatsCard({ initialChatIds }: AllowedChatsCardPro
       {chatIds.length > 0 && (
         <div className="flex flex-col gap-2 mb-4">
           {chatIds.map((id) => (
-            <div key={id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[#161616] border border-[#1f1f1f]">
-              <span className="text-xs text-[#ededed] font-mono truncate">{id}</span>
+            <div key={id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[var(--bg3)] border border-[var(--border)]">
+              <span className="text-xs text-[var(--text)] font-mono truncate">{id}</span>
               <button
                 onClick={() => remove(id)}
                 disabled={loading}
-                className="text-[#888888] hover:text-red-400 transition-colors shrink-0 disabled:opacity-50"
+                className="text-[var(--muted)] hover:text-red-400 transition-colors shrink-0 disabled:opacity-50"
                 title="Удалить"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -81,7 +81,7 @@ export default function AllowedChatsCard({ initialChatIds }: AllowedChatsCardPro
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
           placeholder="79001234567 или ID группы"
-          className="flex-1 px-3 py-2 rounded-lg bg-[#161616] border border-[#1f1f1f] text-sm text-[#ededed] placeholder-[#888888] focus:outline-none focus:border-[#00f5c4]"
+          className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg3)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[#00f5c4]"
         />
         <button
           onClick={add}

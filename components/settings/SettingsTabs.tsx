@@ -18,7 +18,7 @@ export default function SettingsTabs({
   return (
     <div
       className="flex gap-1 p-1 rounded-xl mb-6"
-      style={{ background: "#05050a" }}
+      style={{ background: "var(--bg)" }}
     >
       {TABS.map((tab) => {
         const isActive = activeTab === tab.id;

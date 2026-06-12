@@ -32,9 +32,9 @@ export default function CompanySettings({
   };
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f]">
-      <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-[#ededed]">Компания</h2>
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)]">
+      <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-[var(--text)]">Компания</h2>
         {canEdit && !editing && (
           <button
             onClick={() => setEditing(true)}
@@ -49,7 +49,7 @@ export default function CompanySettings({
         {editing ? (
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-[#888888] mb-1">
+              <label className="block text-xs font-medium text-[var(--muted)] mb-1">
                 Название компании
               </label>
               <input
@@ -57,7 +57,7 @@ export default function CompanySettings({
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="Введите название"
-                className="w-full px-3 py-2.5 border border-[#1f1f1f] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
+                className="w-full px-3 py-2.5 border border-[var(--border)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
                 autoFocus
               />
             </div>
@@ -68,7 +68,7 @@ export default function CompanySettings({
               <button
                 onClick={() => { setEditing(false); setError(""); }}
                 disabled={isPending}
-                className="flex-1 min-h-[44px] px-4 py-2 rounded-lg border border-[#1f1f1f] text-sm font-medium text-[#888888] hover:bg-[#161616] transition-colors"
+                className="flex-1 min-h-[44px] px-4 py-2 rounded-lg border border-[var(--border)] text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors"
               >
                 Отмена
               </button>
@@ -84,12 +84,12 @@ export default function CompanySettings({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <p className="text-xs font-medium text-[#888888] mb-0.5">Название</p>
-              <p className="text-sm font-medium text-[#ededed]">{companyName}</p>
+              <p className="text-xs font-medium text-[var(--muted)] mb-0.5">Название</p>
+              <p className="text-sm font-medium text-[var(--text)]">{companyName}</p>
             </div>
             <div>
-              <p className="text-xs font-medium text-[#888888] mb-0.5">ID компании</p>
-              <p className="text-xs text-[#888888] font-mono truncate">{companyId ?? "—"}</p>
+              <p className="text-xs font-medium text-[var(--muted)] mb-0.5">ID компании</p>
+              <p className="text-xs text-[var(--muted)] font-mono truncate">{companyId ?? "—"}</p>
             </div>
           </div>
         )}

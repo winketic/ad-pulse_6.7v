@@ -111,8 +111,8 @@ export default async function SettingsPage({
 
   const thresholdSection = canEditCompany ? (
     <div className="mt-6">
-      <h3 className="text-sm font-semibold text-[#ededed] mb-3">Пороги остатков (Telegram-алерты)</h3>
-      <p className="text-xs text-[#888888] mb-4">
+      <h3 className="text-sm font-semibold text-[var(--text)] mb-3">Пороги остатков (Telegram-алерты)</h3>
+      <p className="text-xs text-[var(--muted)] mb-4">
         Укажите минимальный остаток для каждого материала. При достижении порога придёт Telegram-уведомление.
       </p>
       <MaterialThresholds materials={materials} initialThresholds={thresholds} />

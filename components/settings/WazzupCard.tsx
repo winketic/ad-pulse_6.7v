@@ -63,19 +63,19 @@ function CredentialsForm({
 
   if (!editing && hasConfig) {
     return (
-      <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-[#161616] border border-[#1f1f1f] mb-4">
+      <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-[var(--bg3)] border border-[var(--border)] mb-4">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-[#888888]">Партнёрский аккаунт Wazzup</p>
-          <p className="text-sm text-[#ededed] font-mono mt-0.5 truncate">{configEmail}</p>
+          <p className="text-xs font-medium text-[var(--muted)]">Партнёрский аккаунт Wazzup</p>
+          <p className="text-sm text-[var(--text)] font-mono mt-0.5 truncate">{configEmail}</p>
           {configClientId && (
-            <p className="text-xs text-[#888888] font-mono mt-0.5 truncate">
+            <p className="text-xs text-[var(--muted)] font-mono mt-0.5 truncate">
               Client ID: {configClientId}
             </p>
           )}
         </div>
         <button
           onClick={() => setEditing(true)}
-          className="text-xs text-[#888888] hover:text-[#00f5c4] transition-colors ml-3 shrink-0"
+          className="text-xs text-[var(--muted)] hover:text-[#00f5c4] transition-colors ml-3 shrink-0"
         >
           Изменить
         </button>
@@ -86,7 +86,7 @@ function CredentialsForm({
   return (
     <form onSubmit={handleSubmit} className="mb-4 space-y-3">
       <div>
-        <label className="block text-xs font-medium text-[#888888] mb-1">
+        <label className="block text-xs font-medium text-[var(--muted)] mb-1">
           Client ID партнёра Wazzup
         </label>
         <input
@@ -95,11 +95,11 @@ function CredentialsForm({
           onChange={(e) => setClientId(e.target.value)}
           placeholder="2083-9002"
           required
-          className="w-full px-3 py-2 bg-[#161616] border border-[#1f1f1f] rounded-lg text-sm font-mono text-[#ededed] placeholder-[#888888] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
+          className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--border)] rounded-lg text-sm font-mono text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-[#888888] mb-1">
+        <label className="block text-xs font-medium text-[var(--muted)] mb-1">
           Email партнёрского аккаунта Wazzup
         </label>
         <input
@@ -108,11 +108,11 @@ function CredentialsForm({
           onChange={(e) => setEmail(e.target.value)}
           placeholder="partner@example.com"
           required
-          className="w-full px-3 py-2 bg-[#161616] border border-[#1f1f1f] rounded-lg text-sm text-[#ededed] placeholder-[#888888] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
+          className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
         />
       </div>
       <div>
-        <label className="block text-xs font-medium text-[#888888] mb-1">
+        <label className="block text-xs font-medium text-[var(--muted)] mb-1">
           Пароль партнёрского аккаунта
         </label>
         <input
@@ -121,7 +121,7 @@ function CredentialsForm({
           onChange={(e) => setPassword(e.target.value)}
           placeholder={hasConfig ? "Оставьте пустым, чтобы не менять" : "••••••••"}
           required={!hasConfig}
-          className="w-full px-3 py-2 bg-[#161616] border border-[#1f1f1f] rounded-lg text-sm text-[#ededed] placeholder-[#888888] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
+          className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
         />
       </div>
       {error && (
@@ -132,7 +132,7 @@ function CredentialsForm({
           <button
             type="button"
             onClick={() => { setEditing(false); setPassword(""); setError(""); }}
-            className="px-3 py-1.5 rounded-lg border border-[#1f1f1f] text-xs font-medium text-[#888888] hover:bg-[#161616]"
+            className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs font-medium text-[var(--muted)] hover:bg-[var(--bg3)]"
           >
             Отмена
           </button>
@@ -175,7 +175,7 @@ function ResubscribeButton() {
         onClick={handleClick}
         disabled={loading}
         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50"
-        style={{ borderColor: "#2a2a3d", color: "#9ca3af", background: "#1a1a2e" }}
+        style={{ borderColor: "var(--border)", color: "var(--muted)", background: "var(--bg3)" }}
       >
         {loading ? (
           <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
@@ -239,7 +239,7 @@ export default function WazzupCard({
   const isError = flash === "error";
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] overflow-hidden">
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] overflow-hidden">
       {/* Flash message */}
       {showFlash && (isSuccess || isError) && (
         <div
@@ -281,7 +281,7 @@ export default function WazzupCard({
           </span>
           <button
             onClick={() => setShowFlash(false)}
-            className="ml-auto p-0.5 rounded text-[#888888] hover:text-[#888888]"
+            className="ml-auto p-0.5 rounded text-[var(--muted)] hover:text-[var(--muted)]"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -291,15 +291,15 @@ export default function WazzupCard({
       )}
 
       {/* Card header */}
-      <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center gap-3">
+      <div className="px-5 py-4 border-b border-[var(--border)] flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-[#25D366]/10 flex items-center justify-center">
           <WhatsAppIcon className="w-5 h-5 text-[#25D366]" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-[#ededed]">
+          <h3 className="text-sm font-semibold text-[var(--text)]">
             WhatsApp через Wazzup
           </h3>
-          <p className="text-xs text-[#888888] mt-0.5">
+          <p className="text-xs text-[var(--muted)] mt-0.5">
             Подключите WhatsApp для получения сообщений
           </p>
         </div>
@@ -317,13 +317,13 @@ export default function WazzupCard({
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-[#ededed]">
+                <p className="text-sm font-semibold text-[var(--text)]">
                   WhatsApp подключён
                 </p>
                 {expiresAt && (
-                  <p className="text-xs text-[#888888] mt-0.5">
+                  <p className="text-xs text-[var(--muted)] mt-0.5">
                     Токен действителен до:{" "}
-                    <span className="text-[#888888]">
+                    <span className="text-[var(--muted)]">
                       {new Date(expiresAt).toLocaleDateString("ru-RU", {
                         day: "2-digit",
                         month: "long",
@@ -372,7 +372,7 @@ export default function WazzupCard({
             ) : (
               <button
                 onClick={() => setConfirmDisconnect(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-[#888888] hover:bg-[#161616] hover:border-red-300 hover:text-red-600 transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] hover:border-red-300 hover:text-red-600 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -387,11 +387,11 @@ export default function WazzupCard({
             {/* Credentials form — desktop only, admin only */}
             {isAdmin && (
               <div className="hidden md:block">
-                <p className="text-xs font-medium text-[#888888] mb-3">
+                <p className="text-xs font-medium text-[var(--muted)] mb-3">
                   Шаг 1 — Укажите данные партнёрского аккаунта Wazzup
                 </p>
                 <CredentialsForm hasConfig={hasConfig} configEmail={configEmail} configClientId={configClientId} />
-                <p className="text-xs font-medium text-[#888888] mb-3">
+                <p className="text-xs font-medium text-[var(--muted)] mb-3">
                   Шаг 2 — Подключите WhatsApp аккаунт
                 </p>
               </div>
@@ -410,16 +410,16 @@ export default function WazzupCard({
             )}
 
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#1f1f1f] shrink-0">
-                <svg className="w-4 h-4 text-[#888888]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--bg3)] shrink-0">
+                <svg className="w-4 h-4 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-[#888888]">
+                <p className="text-sm font-semibold text-[var(--muted)]">
                   WhatsApp не подключён
                 </p>
-                <p className="text-xs text-[#888888] mt-0.5">
+                <p className="text-xs text-[var(--muted)] mt-0.5">
                   Авторизуйтесь через партнёрский кабинет Wazzup
                 </p>
               </div>
@@ -439,7 +439,7 @@ export default function WazzupCard({
               Подключить WhatsApp через Wazzup
             </a>
             {!hasConfig && isAdmin && (
-              <p className="mt-2 text-xs text-[#888888] hidden md:block">
+              <p className="mt-2 text-xs text-[var(--muted)] hidden md:block">
                 Сначала укажите данные партнёрского аккаунта выше
               </p>
             )}

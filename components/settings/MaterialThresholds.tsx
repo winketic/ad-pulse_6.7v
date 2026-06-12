@@ -53,7 +53,7 @@ export function MaterialThresholds({ materials, initialThresholds }: Props) {
 
   if (materials.length === 0) {
     return (
-      <p className="text-sm text-[#888888] py-4">Добавьте материалы для настройки порогов.</p>
+      <p className="text-sm text-[var(--muted)] py-4">Добавьте материалы для настройки порогов.</p>
     );
   }
 
@@ -69,15 +69,15 @@ export function MaterialThresholds({ materials, initialThresholds }: Props) {
         return (
           <div key={mat.id}
             className="flex items-center gap-3 px-4 py-3 rounded-xl"
-            style={{ background: "#111111", border: "1px solid #1f1f2e" }}>
+            style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[#ededed] truncate">{mat.name}</p>
+              <p className="text-sm font-medium text-[var(--text)] truncate">{mat.name}</p>
               {current != null ? (
                 <p className="text-xs" style={{ color: "#00f5c4" }}>
                   Алерт при остатке &lt; {current} {mat.unit}
                 </p>
               ) : (
-                <p className="text-xs text-[#555555]">Порог не задан</p>
+                <p className="text-xs text-[var(--muted)]">Порог не задан</p>
               )}
             </div>
 
@@ -94,7 +94,7 @@ export function MaterialThresholds({ materials, initialThresholds }: Props) {
                   className="w-24 px-2 py-1 text-sm rounded-lg outline-none text-right"
                   style={{ background: "#1a1a2e", border: "1px solid #00f5c4", color: "#f9fafb" }}
                 />
-                <span className="text-xs text-[#888888]">{mat.unit}</span>
+                <span className="text-xs text-[var(--muted)]">{mat.unit}</span>
                 <button
                   onClick={() => handleSave(mat.id, mat.unit)}
                   disabled={isPending}
@@ -113,7 +113,7 @@ export function MaterialThresholds({ materials, initialThresholds }: Props) {
                     ✕
                   </button>
                 )}
-                <button onClick={() => setEditing(null)} className="text-xs text-[#555555]">
+                <button onClick={() => setEditing(null)} className="text-xs text-[var(--muted)]">
                   Отмена
                 </button>
               </div>
