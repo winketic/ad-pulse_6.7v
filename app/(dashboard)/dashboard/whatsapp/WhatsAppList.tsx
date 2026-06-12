@@ -6,12 +6,15 @@ import { confirmWhatsAppTransaction, rejectWhatsAppMessage, type TxType } from "
 import AllowedChatsCard from "@/components/settings/AllowedChatsCard";
 import ResubscribeButton from "@/components/settings/ResubscribeButton";
 
+// ── Types ─────────────────────────────────────────────────
+
 type ParseResult = {
   type: TxType | null;
   quantity: number | null;
   unit: string | null;
   material_id: string | null;
   material_name: string | null;
+  note: string | null;
   confidence: "high" | "low";
   transaction_created: boolean;
 };
@@ -25,6 +28,8 @@ export type WazzupMessage = {
   needs_review: boolean;
   parse_result: ParseResult | null;
   created_at: string;
+  content_type: string | null;
+  media_url: string | null;
 };
 
 export type WazzupMaterial = {
@@ -34,11 +39,20 @@ export type WazzupMaterial = {
 };
 
 const TX_TYPE_LABELS: Record<TxType, string> = {
-  income: "Приход",
+  income:  "Приход",
   expense: "Расход",
-  defect: "Брак",
-  return: "Возврат",
+  defect:  "Брак",
+  return:  "Возврат",
 };
+
+const TX_TYPE_COLORS: Record<TxType, string> = {
+  income:  "text-[#00f5c4]",
+  expense: "text-orange-400",
+  defect:  "text-red-400",
+  return:  "text-blue-400",
+};
+
+// ── Helpers ───────────────────────────────────────────────
 
 function messageStatus(msg: WazzupMessage): "green" | "yellow" | "gray" {
   if (!msg.parsed) return "gray";
@@ -48,11 +62,8 @@ function messageStatus(msg: WazzupMessage): "green" | "yellow" | "gray" {
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
+    day: "2-digit", month: "2-digit", year: "2-digit",
+    hour: "2-digit", minute: "2-digit",
   });
 }
 
@@ -61,7 +72,36 @@ function truncate(text: string | null, len = 80) {
   return text.length > len ? text.slice(0, len) + "…" : text;
 }
 
-// ── Confirm modal ──────────────────────────────────────────
+// ── Status badge ──────────────────────────────────────────
+
+function StatusBadge({ status }: { status: "green" | "yellow" | "gray" }) {
+  if (status === "green") return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#00f5c4]/10 text-[#00f5c4] text-xs font-medium border border-[#00f5c4]/20">
+      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+      Создано
+    </span>
+  );
+  if (status === "yellow") return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-400/10 text-yellow-400 text-xs font-medium border border-yellow-400/20">
+      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01" />
+      </svg>
+      Проверка
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#888888]/10 text-[#888888] text-xs font-medium border border-[#888888]/20">
+      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+      Не распознано
+    </span>
+  );
+}
+
+// ── Confirm modal (dark) ──────────────────────────────────
 
 function ConfirmModal({
   message,
@@ -84,25 +124,12 @@ function ConfirmModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
     const qty = parseFloat(quantity.replace(",", "."));
-    if (isNaN(qty) || qty <= 0) {
-      setError("Введите корректное количество");
-      return;
-    }
-    if (!materialId) {
-      setError("Выберите материал");
-      return;
-    }
-
+    if (isNaN(qty) || qty <= 0) { setError("Введите корректное количество"); return; }
+    if (!materialId) { setError("Выберите материал"); return; }
     startTransition(async () => {
       try {
-        await confirmWhatsAppTransaction({
-          messageId: message.id,
-          materialId,
-          type,
-          quantity: qty,
-        });
+        await confirmWhatsAppTransaction({ messageId: message.id, materialId, type, quantity: qty });
         onSuccess(message.id);
         onClose();
       } catch (err) {
@@ -112,111 +139,65 @@ function ConfirmModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">
-            Подтвердить транзакцию
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="rounded-2xl w-full max-w-md" style={{ background: "#111111", border: "1px solid #1f1f1f" }}>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid #1f1f1f" }}>
+          <h2 className="text-sm font-semibold text-[#ededed]">Подтвердить транзакцию</h2>
+          <button onClick={onClose} className="p-1 rounded-lg text-[#888888] hover:text-[#ededed] hover:bg-[#1f1f1f] transition-colors">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Original message */}
         <div className="px-5 pt-4">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-            Сообщение
-          </p>
-          <p className="text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2 leading-relaxed">
+          <p className="text-xs font-medium text-[#888888] mb-1.5">Исходное сообщение</p>
+          <p className="text-sm text-[#ededed] rounded-lg px-3 py-2.5 leading-relaxed"
+            style={{ background: "#161616", border: "1px solid #1f1f1f" }}>
             {message.raw_text || "—"}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
-          {/* Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Тип операции
-            </label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as TxType)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#1a472a]"
-            >
-              {(Object.entries(TX_TYPE_LABELS) as [TxType, string][]).map(
-                ([val, label]) => (
-                  <option key={val} value={val}>
-                    {label}
-                  </option>
-                )
-              )}
-            </select>
-          </div>
-
-          {/* Material */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Материал
-            </label>
-            <select
-              value={materialId}
-              onChange={(e) => setMaterialId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#1a472a]"
-            >
-              <option value="">— выберите —</option>
-              {materials.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.unit})
-                </option>
+            <label className="block text-xs font-medium text-[#888888] mb-1.5">Тип операции</label>
+            <select value={type} onChange={(e) => setType(e.target.value as TxType)}
+              className="dp-input text-sm">
+              {(Object.entries(TX_TYPE_LABELS) as [TxType, string][]).map(([val, label]) => (
+                <option key={val} value={val}>{label}</option>
               ))}
             </select>
           </div>
 
-          {/* Quantity */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Количество
-              {pr?.unit && (
-                <span className="ml-1 font-normal text-gray-400">
-                  ({pr.unit})
-                </span>
-              )}
+            <label className="block text-xs font-medium text-[#888888] mb-1.5">Материал</label>
+            <select value={materialId} onChange={(e) => setMaterialId(e.target.value)}
+              className="dp-input text-sm">
+              <option value="">— выберите —</option>
+              {materials.map((m) => (
+                <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[#888888] mb-1.5">
+              Количество{pr?.unit && <span className="ml-1 font-normal text-[#555555]">({pr.unit})</span>}
             </label>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              placeholder="0"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#1a472a]"
-            />
+            <input type="text" inputMode="decimal" value={quantity}
+              onChange={(e) => setQuantity(e.target.value)} placeholder="0" className="dp-input text-sm" />
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
+            <p className="text-xs text-red-400 rounded-lg px-3 py-2"
+              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
               {error}
             </p>
           )}
 
           <div className="flex gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="flex-1 px-4 py-2 rounded-lg bg-[#1a472a] text-white text-sm font-medium hover:bg-[#1a472a]/90 disabled:opacity-50 transition-colors"
-            >
+            <button type="button" onClick={onClose} className="dp-btn-secondary flex-1 py-2">Отмена</button>
+            <button type="submit" disabled={pending} className="dp-btn-primary flex-1 py-2">
               {pending ? "Сохранение…" : "Сохранить"}
             </button>
           </div>
@@ -226,36 +207,176 @@ function ConfirmModal({
   );
 }
 
-// ── Status badge ──────────────────────────────────────────
+// ── Message detail drawer ─────────────────────────────────
 
-function StatusBadge({ status }: { status: "green" | "yellow" | "gray" }) {
-  if (status === "green") {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs font-medium">
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-        Распознано
-      </span>
-    );
-  }
-  if (status === "yellow") {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 text-xs font-medium">
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14A7 7 0 0012 5z" />
-        </svg>
-        Требует проверки
-      </span>
-    );
-  }
+function MessageDetailDrawer({
+  message,
+  senderMap,
+  onClose,
+  onOpenConfirm,
+  onReject,
+  rejectPending,
+  rejectingId,
+}: {
+  message: WazzupMessage;
+  senderMap: Record<string, { name: string; position: string | null }>;
+  onClose: () => void;
+  onOpenConfirm: (id: string) => void;
+  onReject: (id: string) => void;
+  rejectPending: boolean;
+  rejectingId: string | null;
+}) {
+  const pr = message.parse_result;
+  const status = messageStatus(message);
+  const sender = message.sender_phone ? senderMap[message.sender_phone] : null;
+  const isRejectingThis = rejectPending && rejectingId === message.id;
+
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium">
-      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-      Не распознано
-    </span>
+    <>
+      <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
+      <div
+        className="fixed right-0 top-0 h-full z-50 flex flex-col"
+        style={{ width: 420, background: "#0d0d14", borderLeft: "1px solid #1f1f2e" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 shrink-0"
+          style={{ borderBottom: "1px solid #1f1f2e" }}>
+          <div className="flex items-center gap-3">
+            <button onClick={onClose}
+              className="p-1.5 rounded-lg text-[#888888] hover:text-[#ededed] hover:bg-[#1f1f2e] transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <StatusBadge status={status} />
+          </div>
+          <span className="text-xs text-[#555555]">{formatDate(message.created_at)}</span>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+
+          {/* Sender */}
+          <div>
+            <p className="text-xs font-medium text-[#888888] mb-1.5">Отправитель</p>
+            {sender ? (
+              <div>
+                <p className="text-sm font-medium text-[#ededed]">{sender.name}</p>
+                {sender.position && <p className="text-xs text-[#888888] mt-0.5">{sender.position}</p>}
+                <p className="text-xs text-[#555555] mt-0.5 font-mono">{message.sender_phone}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-[#ededed] font-mono">{message.sender_phone || "—"}</p>
+            )}
+          </div>
+
+          {/* Raw message */}
+          <div>
+            <p className="text-xs font-medium text-[#888888] mb-1.5">Исходное сообщение</p>
+            <div className="rounded-xl px-4 py-3" style={{ background: "#111111", border: "1px solid #1f1f2e" }}>
+              <p className="text-sm text-[#ededed] leading-relaxed whitespace-pre-wrap">
+                {message.raw_text || "—"}
+              </p>
+            </div>
+          </div>
+
+          {/* Image preview */}
+          {message.content_type === "image" && message.media_url && (
+            <div>
+              <p className="text-xs font-medium text-[#888888] mb-1.5">Изображение</p>
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #1f1f2e" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={message.media_url}
+                  alt="Вложение"
+                  className="w-full max-h-64 object-contain"
+                  style={{ background: "#111111" }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Parse result */}
+          {pr && (pr.type || pr.material_name || pr.quantity != null) && (
+            <div>
+              <p className="text-xs font-medium text-[#888888] mb-1.5">Результат парсинга</p>
+              <div className="rounded-xl px-4 py-3 space-y-2.5" style={{ background: "#111111", border: "1px solid #1f1f2e" }}>
+                {pr.type && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[#888888]">Тип операции</span>
+                    <span className={`text-xs font-semibold ${TX_TYPE_COLORS[pr.type]}`}>
+                      {TX_TYPE_LABELS[pr.type]}
+                    </span>
+                  </div>
+                )}
+                {pr.material_name && (
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs text-[#888888] shrink-0">Материал</span>
+                    <span className="text-xs text-[#ededed] font-medium text-right">{pr.material_name}</span>
+                  </div>
+                )}
+                {pr.quantity != null && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[#888888]">Количество</span>
+                    <span className="text-xs text-[#ededed] font-medium">
+                      {pr.quantity}{pr.unit ? " " + pr.unit : ""}
+                    </span>
+                  </div>
+                )}
+                {pr.note && (
+                  <>
+                    <div className="h-px" style={{ background: "#1f1f2e" }} />
+                    <div>
+                      <span className="text-xs text-[#888888]">Примечание</span>
+                      <p className="text-xs text-[#888888] mt-1 leading-relaxed">{pr.note}</p>
+                    </div>
+                  </>
+                )}
+                <div className="flex items-center justify-between pt-0.5" style={{ borderTop: "1px solid #1f1f2e" }}>
+                  <span className="text-xs text-[#888888]">Уверенность</span>
+                  <span className={`text-xs font-medium ${pr.confidence === "high" ? "text-[#00f5c4]" : "text-yellow-400"}`}>
+                    {pr.confidence === "high" ? "Высокая" : "Низкая"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Go to transaction */}
+          {pr?.transaction_created && (
+            <a
+              href={`/dashboard/transactions?wazzup_message_id=${message.id}`}
+              className="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors"
+              style={{ background: "rgba(0,245,196,0.08)", border: "1px solid rgba(0,245,196,0.2)", color: "#00f5c4" }}
+            >
+              <span>Перейти к транзакции</span>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          )}
+
+          {/* Confirm / Reject */}
+          {status === "yellow" && (
+            <div className="space-y-2 pt-1">
+              <button
+                onClick={() => onOpenConfirm(message.id)}
+                className="dp-btn-primary w-full py-2.5"
+              >
+                Подтвердить транзакцию
+              </button>
+              <button
+                onClick={() => onReject(message.id)}
+                disabled={isRejectingThis}
+                className="dp-btn-danger w-full py-2.5 disabled:opacity-50"
+              >
+                {isRejectingThis ? "Отклоняем…" : "Отклонить"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -281,11 +402,12 @@ export default function WhatsAppList({
   senderMap?: Record<string, { name: string; position: string | null }>;
 }) {
   const [messages, setMessages] = useState<WazzupMessage[]>(initialMessages);
+  const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectPending, startRejectTransition] = useTransition();
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
 
   const showToast = (text: string, ok = true) => {
@@ -293,93 +415,49 @@ export default function WhatsAppList({
     setTimeout(() => setToast(null), 3000);
   };
 
-  function handleCopyChatId(msgId: string, chatId: string) {
-    const done = () => {
-      setCopiedId(msgId);
-      setTimeout(() => setCopiedId(null), 1500);
-    };
-    // Modern clipboard API with execCommand fallback
+  function handleCopyChatId(e: React.MouseEvent, msgId: string, chatId: string) {
+    e.stopPropagation();
+    const done = () => { setCopiedId(msgId); setTimeout(() => setCopiedId(null), 1500); };
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(chatId).then(done).catch(() => {
-        legacyCopy(chatId);
-        done();
-      });
-    } else {
-      legacyCopy(chatId);
-      done();
-    }
+      navigator.clipboard.writeText(chatId).then(done).catch(() => { legacyCopy(chatId); done(); });
+    } else { legacyCopy(chatId); done(); }
   }
 
   function legacyCopy(text: string) {
     const el = document.createElement("textarea");
-    el.value = text;
-    el.style.position = "fixed";
-    el.style.opacity = "0";
-    document.body.appendChild(el);
-    el.focus();
-    el.select();
+    el.value = text; el.style.position = "fixed"; el.style.opacity = "0";
+    document.body.appendChild(el); el.focus(); el.select();
     try { document.execCommand("copy"); } catch {}
     document.body.removeChild(el);
   }
 
-  // Realtime subscription — INSERT prepends new rows, UPDATE patches existing ones
   useEffect(() => {
     if (!companyId) return;
     const supabase = createClient();
     const channel = supabase
       .channel(`wazzup_messages:${companyId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "wazzup_messages",
-          filter: `company_id=eq.${companyId}`,
-        },
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "wazzup_messages", filter: `company_id=eq.${companyId}` },
         (payload) => {
           const newMsg = payload.new as WazzupMessage;
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id)) return prev;
-            return [newMsg, ...prev];
-          });
+          setMessages((prev) => prev.some((m) => m.id === newMsg.id) ? prev : [newMsg, ...prev]);
         }
       )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "wazzup_messages",
-          filter: `company_id=eq.${companyId}`,
-        },
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "wazzup_messages", filter: `company_id=eq.${companyId}` },
         (payload) => {
           const updated = payload.new as WazzupMessage;
-          console.log("[whatsapp/realtime] UPDATE received id=", updated.id, "parsed=", updated.parsed);
-          // Merge with existing row — Realtime may omit fields like chat_id
-          setMessages((prev) =>
-            prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m))
-          );
+          setMessages((prev) => prev.map((m) => m.id === updated.id ? { ...m, ...updated } : m));
         }
       )
-      .subscribe((status) => {
-        console.log("[whatsapp/realtime] channel status:", status);
-      });
-
+      .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [companyId]);
-
-  const confirmingMessage = confirmingId
-    ? messages.find((m) => m.id === confirmingId) ?? null
-    : null;
 
   const handleReject = (id: string) => {
     setRejectingId(id);
     startRejectTransition(async () => {
       try {
         await rejectWhatsAppMessage(id);
-        setMessages((prev) =>
-          prev.map((m) => m.id === id ? { ...m, needs_review: false, parsed: true } : m)
-        );
+        setMessages((prev) => prev.map((m) => m.id === id ? { ...m, needs_review: false, parsed: true } : m));
         showToast("Сообщение отклонено");
       } catch {
         showToast("Ошибка при отклонении", false);
@@ -389,18 +467,24 @@ export default function WhatsAppList({
     });
   };
 
+  const handleConfirmSuccess = (id: string) => {
+    setMessages((prev) => prev.map((m) => m.id === id ? { ...m, parsed: true, needs_review: false } : m));
+    showToast("Транзакция создана");
+  };
+
+  const selectedMessage = selectedMsgId ? messages.find((m) => m.id === selectedMsgId) ?? null : null;
+  const confirmingMessage = confirmingId ? messages.find((m) => m.id === confirmingId) ?? null : null;
+
   return (
     <div className="p-6">
-      {/* ── Header ───────────────────────────────────────── */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-[#ededed]">WhatsApp</h1>
-          <p className="text-sm text-[#888888] mt-0.5">
-            Входящие сообщения и автоматически созданные транзакции
-          </p>
+          <p className="text-sm text-[#888888] mt-0.5">Входящие сообщения и автоматически созданные транзакции</p>
         </div>
         <button
-          onClick={() => setDrawerOpen(true)}
+          onClick={() => setSettingsOpen(true)}
           title="Настройки подключения"
           className="p-2 rounded-lg transition-colors text-[#888888] hover:text-[#ededed] hover:bg-[#1f1f2e]"
         >
@@ -410,68 +494,50 @@ export default function WhatsAppList({
         </button>
       </div>
 
-      {/* ── Right drawer ─────────────────────────────────── */}
-      {drawerOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50"
-          onClick={() => setDrawerOpen(false)}
-        />
+      {/* Settings drawer */}
+      {settingsOpen && (
+        <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setSettingsOpen(false)} />
       )}
       <div
         className={`fixed right-0 top-0 h-full z-50 flex flex-col transition-transform duration-300 ease-in-out ${
-          drawerOpen ? "translate-x-0" : "translate-x-full"
+          settingsOpen ? "translate-x-0" : "translate-x-full"
         }`}
         style={{ width: 380, background: "#0d0d14", borderLeft: "1px solid #1f1f2e" }}
       >
-        {/* Drawer header */}
         <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid #1f1f2e" }}>
-          <span className="text-sm font-semibold" style={{ color: "#ededed" }}>Настройки WhatsApp</span>
-          <button
-            onClick={() => setDrawerOpen(false)}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: "#888888" }}
-          >
+          <span className="text-sm font-semibold text-[#ededed]">Настройки WhatsApp</span>
+          <button onClick={() => setSettingsOpen(false)}
+            className="p-1.5 rounded-lg text-[#888888] hover:text-[#ededed] hover:bg-[#1f1f2e] transition-colors">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-
-        {/* Drawer body (scrollable) */}
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-          {/* Connection status */}
           <div className="rounded-xl p-4" style={{ background: "#111111", border: "1px solid #1f1f2e" }}>
             <div className="flex items-center gap-2 mb-3">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${channelIds.length > 0 ? "bg-[#25D366]" : "bg-gray-500"}`} />
-              <span className="text-sm font-medium" style={{ color: "#ededed" }}>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${channelIds.length > 0 ? "bg-[#25D366]" : "bg-[#888888]"}`} />
+              <span className="text-sm font-medium text-[#ededed]">
                 {channelIds.length > 0 ? "Подключено" : "Не подключено"}
               </span>
             </div>
-
             {channelIds.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-medium" style={{ color: "#888888" }}>Channel ID</p>
+                <p className="text-xs font-medium text-[#888888]">Channel ID</p>
                 {channelIds.map((id) => (
                   <span key={id} className="block px-2 py-1 rounded-lg text-xs font-mono truncate"
-                    style={{ background: "#161616", border: "1px solid #1f1f2e", color: "#9ca3af" }}>
-                    {id}
-                  </span>
+                    style={{ background: "#161616", border: "1px solid #1f1f2e", color: "#9ca3af" }}>{id}</span>
                 ))}
               </div>
             )}
-
             {webhookId && (
               <div className="mt-3">
-                <p className="text-xs font-medium mb-1" style={{ color: "#888888" }}>Webhook ID</p>
+                <p className="text-xs font-medium text-[#888888] mb-1">Webhook ID</p>
                 <span className="block px-2 py-1 rounded-lg text-xs font-mono truncate"
-                  style={{ background: "#161616", border: "1px solid #1f1f2e", color: "#555555" }}>
-                  {webhookId}
-                </span>
+                  style={{ background: "#161616", border: "1px solid #1f1f2e", color: "#555555" }}>{webhookId}</span>
               </div>
             )}
           </div>
-
-          {/* Allowed chats + resubscribe — admin only */}
           {isAdmin && (
             <>
               <AllowedChatsCard initialChatIds={allowedChatIds} />
@@ -481,92 +547,88 @@ export default function WhatsAppList({
         </div>
       </div>
 
+      {/* Message list */}
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-            <svg className="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
+            style={{ background: "#111111", border: "1px solid #1f1f1f" }}>
+            <svg className="w-7 h-7 text-[#888888]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
-          <p className="text-gray-500 text-sm">Сообщений пока нет</p>
-          <p className="text-gray-400 text-xs mt-1">
-            Подключите WhatsApp в Настройках, чтобы начать получать сообщения
-          </p>
+          <p className="text-[#888888] text-sm">Сообщений пока нет</p>
+          <p className="text-[#555555] text-xs mt-1">Подключите WhatsApp в Настройках, чтобы начать получать сообщения</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #1f1f1f", background: "#111111" }}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-36">
-                    Дата
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">
-                    Отправитель
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    Сообщение
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-40">
-                    Статус
-                  </th>
-                  <th className="px-4 py-3 w-28" />
+                <tr style={{ borderBottom: "1px solid #1f1f1f", background: "#0d0d0d" }}>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-36">Дата</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-32">Отправитель</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[#888888]">Сообщение</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-32">Статус</th>
+                  <th className="px-4 py-3 w-24" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
-                {messages.map((msg) => {
+              <tbody>
+                {messages.map((msg, i) => {
                   const status = messageStatus(msg);
                   const pr = msg.parse_result;
+                  const sender = msg.sender_phone ? senderMap[msg.sender_phone] : null;
+                  const isSelected = msg.id === selectedMsgId;
                   return (
-                    <tr key={msg.id} className="hover:bg-gray-50/60 transition-colors">
-                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+                    <tr
+                      key={msg.id}
+                      onClick={() => setSelectedMsgId(msg.id)}
+                      className="cursor-pointer transition-colors"
+                      style={{
+                        borderTop: i > 0 ? "1px solid #1a1a1a" : undefined,
+                        background: isSelected ? "rgba(0,245,196,0.04)" : undefined,
+                      }}
+                      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#161616"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = isSelected ? "rgba(0,245,196,0.04)" : ""; }}
+                    >
+                      <td className="px-4 py-3 text-[#888888] text-xs whitespace-nowrap">
                         {formatDate(msg.created_at)}
                       </td>
                       <td className="px-4 py-3 text-xs whitespace-nowrap">
                         {msg.chat_id ? (
                           <button
-                            onClick={() => handleCopyChatId(msg.id, msg.chat_id!)}
-                            title="Нажмите чтобы скопировать Chat ID"
-                            className="relative text-left hover:text-blue-600 cursor-pointer transition-colors"
+                            onClick={(e) => handleCopyChatId(e, msg.id, msg.chat_id!)}
+                            title="Скопировать Chat ID"
+                            className="relative text-left transition-colors hover:text-[#00f5c4]"
                           >
-                            {msg.sender_phone && senderMap[msg.sender_phone] ? (
+                            {sender ? (
                               <span>
-                                <span className="text-gray-800 font-medium">{senderMap[msg.sender_phone].name}</span>
-                                {senderMap[msg.sender_phone].position && (
-                                  <span className="block text-gray-400 text-[10px]">{senderMap[msg.sender_phone].position}</span>
-                                )}
+                                <span className="text-[#ededed] font-medium">{sender.name}</span>
+                                {sender.position && <span className="block text-[#888888] text-[10px]">{sender.position}</span>}
                               </span>
                             ) : (
-                              <span className="text-gray-700">{msg.sender_phone || "—"}</span>
+                              <span className="text-[#888888] font-mono">{msg.sender_phone || "—"}</span>
                             )}
                             {copiedId === msg.id && (
-                              <span className="absolute -top-6 left-0 px-2 py-0.5 rounded bg-gray-800 text-white text-[10px] whitespace-nowrap pointer-events-none z-10">
+                              <span className="absolute -top-6 left-0 px-2 py-0.5 rounded bg-[#0a0a0a] text-[#00f5c4] text-[10px] whitespace-nowrap pointer-events-none z-10 border border-[#1f1f1f]">
                                 Скопировано!
                               </span>
                             )}
                           </button>
                         ) : (
-                          <span className="text-gray-700">
-                            {msg.sender_phone && senderMap[msg.sender_phone]
-                              ? senderMap[msg.sender_phone].name
-                              : msg.sender_phone || "—"}
+                          <span className="text-[#888888] font-mono">
+                            {sender ? sender.name : (msg.sender_phone || "—")}
                           </span>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-gray-800">{truncate(msg.raw_text)}</p>
-                        {pr && (pr.type || pr.material_name || pr.quantity) && (
-                          <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-[#ededed] text-sm">{truncate(msg.raw_text)}</p>
+                        {pr && (pr.type || pr.material_name || pr.quantity != null) && (
+                          <p className="text-xs text-[#888888] mt-0.5">
                             {[
                               pr.type ? TX_TYPE_LABELS[pr.type] : null,
                               pr.material_name,
-                              pr.quantity != null
-                                ? `${pr.quantity}${pr.unit ? " " + pr.unit : ""}`
-                                : null,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
+                              pr.quantity != null ? `${pr.quantity}${pr.unit ? " " + pr.unit : ""}` : null,
+                            ].filter(Boolean).join(" · ")}
                           </p>
                         )}
                       </td>
@@ -575,23 +637,13 @@ export default function WhatsAppList({
                       </td>
                       <td className="px-4 py-3 text-right">
                         {status === "yellow" && (
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => setConfirmingId(msg.id)}
-                              className="px-3 py-1.5 rounded-lg bg-yellow-50 text-yellow-800 text-xs font-medium hover:bg-yellow-100 transition-colors border border-yellow-200"
-                            >
-                              Подтвердить
-                            </button>
-                            <button
-                              onClick={() => handleReject(msg.id)}
-                              disabled={rejectPending && rejectingId === msg.id}
-                              className="px-3 py-1.5 rounded-lg bg-gray-50 text-gray-500 text-xs font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors border border-gray-200 disabled:opacity-50"
-                            >
-                              {rejectPending && rejectingId === msg.id
-                                ? "…"
-                                : "Отклонить"}
-                            </button>
-                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setConfirmingId(msg.id); }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                            style={{ background: "rgba(0,245,196,0.1)", color: "#00f5c4", border: "1px solid rgba(0,245,196,0.2)" }}
+                          >
+                            Проверить
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -603,29 +655,34 @@ export default function WhatsAppList({
         </div>
       )}
 
+      {/* Message detail drawer */}
+      {selectedMessage && (
+        <MessageDetailDrawer
+          message={selectedMessage}
+          senderMap={senderMap}
+          onClose={() => setSelectedMsgId(null)}
+          onOpenConfirm={(id) => setConfirmingId(id)}
+          onReject={handleReject}
+          rejectPending={rejectPending}
+          rejectingId={rejectingId}
+        />
+      )}
+
+      {/* Confirm modal */}
       {confirmingMessage && (
         <ConfirmModal
           message={confirmingMessage}
           materials={materials}
           onClose={() => setConfirmingId(null)}
-          onSuccess={(id) => {
-            setMessages((prev) =>
-              prev.map((m) => m.id === id ? { ...m, parsed: true, needs_review: false } : m)
-            );
-            showToast("Транзакция создана");
-          }}
+          onSuccess={handleConfirmSuccess}
         />
       )}
 
       {/* Toast */}
       {toast && (
-        <div
-          className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg transition-all ${
-            toast.ok
-              ? "bg-[#00f5c4] text-[#05050a]"
-              : "bg-red-500 text-white"
-          }`}
-        >
+        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg ${
+          toast.ok ? "bg-[#00f5c4] text-[#05050a]" : "bg-red-500 text-white"
+        }`}>
           {toast.text}
         </div>
       )}

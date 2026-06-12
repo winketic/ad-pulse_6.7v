@@ -38,7 +38,7 @@ export default async function WhatsAppPage() {
     service
       .from("wazzup_messages")
       .select(
-        "id, chat_id, sender_phone, raw_text, parsed, needs_review, parse_result, created_at"
+        "id, chat_id, sender_phone, raw_text, parsed, needs_review, parse_result, created_at, content_type, media_url"
       )
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
