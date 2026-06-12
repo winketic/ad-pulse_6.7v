@@ -3,6 +3,7 @@
 import { useState } from "react";
 import SettingsTabs, { type TabId } from "./SettingsTabs";
 import ProfileCard from "./ProfileCard";
+import ThemeToggle from "@/components/ThemeToggle";
 import CompanySettings from "./CompanySettings";
 import UserManagement from "./UserManagement";
 import WazzupCard from "./WazzupCard";
@@ -54,25 +55,28 @@ export default function SettingsClient({
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="mb-5">
-        <h1 className="text-2xl font-bold text-[#ededed]">Настройки</h1>
+        <h1 className="text-2xl font-bold text-[var(--text)]">Настройки</h1>
       </div>
 
       <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* ── Профиль ───────────────────────────────────── */}
       {activeTab === "profile" && (
-        <ProfileCard
-          fullName={fullName}
-          email={email}
-          roleLabel={roleLabel}
-          roleBg={roleBg}
-          roleText={roleText}
-          position={position}
-          userId={userId}
-          companyId={companyId}
-          avatarUrl={avatarUrl}
-          bannerColor={bannerColor}
-        />
+        <>
+          <ProfileCard
+            fullName={fullName}
+            email={email}
+            roleLabel={roleLabel}
+            roleBg={roleBg}
+            roleText={roleText}
+            position={position}
+            userId={userId}
+            companyId={companyId}
+            avatarUrl={avatarUrl}
+            bannerColor={bannerColor}
+          />
+          <ThemeToggle />
+        </>
       )}
 
       {/* ── Компания ──────────────────────────────────── */}
@@ -115,8 +119,8 @@ export default function SettingsClient({
             isAdmin={isAdmin}
           />
         ) : (
-          <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] py-12 text-center">
-            <p className="text-sm text-[#888888]">Компания не найдена</p>
+          <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] py-12 text-center">
+            <p className="text-sm text-[var(--muted)]">Компания не найдена</p>
           </div>
         )
       )}

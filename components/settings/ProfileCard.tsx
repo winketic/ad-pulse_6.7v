@@ -24,7 +24,7 @@ const BANNER_COLORS = [
 ];
 
 const inputCls =
-  "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[#ededed] bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
+  "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
 
 interface ProfileCardProps {
   fullName: string | null;
@@ -141,7 +141,7 @@ export default function ProfileCard({
   }
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] overflow-hidden">
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] overflow-hidden">
       {/* ── Banner ────────────────────────────────────── */}
       <div className="h-20 pointer-events-none" style={{ background: displayBanner }} />
 
@@ -158,7 +158,7 @@ export default function ProfileCard({
             />
           ) : (
             <div
-              className="w-14 h-14 rounded-full ring-2 ring-[#1f1f1f] shadow-sm flex items-center justify-center text-white text-lg font-bold"
+              className="w-14 h-14 rounded-full ring-2 ring-[var(--border)] shadow-sm flex items-center justify-center text-white text-lg font-bold"
               style={{ background: displayBanner === "#0a0a0a" ? "#1f1f1f" : displayBanner }}
             >
               {initials}
@@ -216,7 +216,7 @@ export default function ProfileCard({
 
       {/* ── Card header ────────────────────────────────── */}
       <div className="px-5 pt-3 pb-1 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[#ededed]">Профиль</h2>
+        <h2 className="text-sm font-semibold text-[var(--text)]">Профиль</h2>
         {!editing && (
           <button
             onClick={() => setEditing(true)}
@@ -239,7 +239,7 @@ export default function ProfileCard({
         {editing ? (
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-[#888888] mb-1">
+              <label className="block text-xs font-medium text-[var(--muted)] mb-1">
                 Полное имя <span className="text-red-500">*</span>
               </label>
               <input
@@ -252,9 +252,9 @@ export default function ProfileCard({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#888888] mb-1">
+              <label className="block text-xs font-medium text-[var(--muted)] mb-1">
                 Должность
-                <span className="ml-1.5 text-[#888888] font-normal">(необязательно)</span>
+                <span className="ml-1.5 text-[var(--muted)] font-normal">(необязательно)</span>
               </label>
               <input
                 type="text"
@@ -268,7 +268,7 @@ export default function ProfileCard({
               <button
                 onClick={handleCancel}
                 disabled={isPending}
-                className="flex-1 py-2 rounded-lg border border-gray-300 text-sm text-[#888888] hover:bg-[#161616] transition-colors disabled:opacity-50"
+                className="flex-1 py-2 rounded-lg border border-gray-300 text-sm text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50"
               >
                 Отмена
               </button>
@@ -284,28 +284,28 @@ export default function ProfileCard({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <p className="text-xs font-medium text-[#888888] mb-0.5">Полное имя</p>
-              <p className="text-sm font-medium text-[#ededed]">{displayName ?? "—"}</p>
+              <p className="text-xs font-medium text-[var(--muted)] mb-0.5">Полное имя</p>
+              <p className="text-sm font-medium text-[var(--text)]">{displayName ?? "—"}</p>
             </div>
             <div>
-              <p className="text-xs font-medium text-[#888888] mb-0.5">Email</p>
-              <p className="text-sm text-[#888888] truncate">{email}</p>
+              <p className="text-xs font-medium text-[var(--muted)] mb-0.5">Email</p>
+              <p className="text-sm text-[var(--muted)] truncate">{email}</p>
             </div>
             <div>
-              <p className="text-xs font-medium text-[#888888] mb-0.5">Роль</p>
+              <p className="text-xs font-medium text-[var(--muted)] mb-0.5">Роль</p>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${roleBg} ${roleText}`}>
                 {roleLabel}
               </span>
             </div>
             {displayPos && (
               <div>
-                <p className="text-xs font-medium text-[#888888] mb-0.5">Должность</p>
-                <p className="text-sm text-[#888888]">{displayPos}</p>
+                <p className="text-xs font-medium text-[var(--muted)] mb-0.5">Должность</p>
+                <p className="text-sm text-[var(--muted)]">{displayPos}</p>
               </div>
             )}
             <div>
-              <p className="text-xs font-medium text-[#888888] mb-0.5">ID пользователя</p>
-              <p className="text-xs text-[#888888] font-mono truncate">{userId}</p>
+              <p className="text-xs font-medium text-[var(--muted)] mb-0.5">ID пользователя</p>
+              <p className="text-xs text-[var(--muted)] font-mono truncate">{userId}</p>
             </div>
           </div>
         )}

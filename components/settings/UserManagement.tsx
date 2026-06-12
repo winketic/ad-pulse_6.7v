@@ -119,12 +119,12 @@ export default function UserManagement({
   };
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f]">
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)]">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-[#1f1f1f] flex items-center justify-between gap-3">
+      <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-[#ededed]">Пользователи</h2>
-          <p className="text-xs text-[#888888] mt-0.5">{users.length} участников</p>
+          <h2 className="text-sm font-semibold text-[var(--text)]">Пользователи</h2>
+          <p className="text-xs text-[var(--muted)] mt-0.5">{users.length} участников</p>
         </div>
         {isAdmin && (
           <button
@@ -148,25 +148,25 @@ export default function UserManagement({
 
       {/* Invite form */}
       {showInvite && (
-        <form onSubmit={handleInvite} className="px-5 py-4 border-b border-[#1f1f1f] bg-[#161616] space-y-3">
-          <p className="text-xs font-semibold text-[#888888]">Добавить пользователя</p>
+        <form onSubmit={handleInvite} className="px-5 py-4 border-b border-[var(--border)] bg-[var(--bg3)] space-y-3">
+          <p className="text-xs font-semibold text-[var(--muted)]">Добавить пользователя</p>
           <div>
-            <label className="block text-xs text-[#888888] mb-1">Email</label>
+            <label className="block text-xs text-[var(--muted)] mb-1">Email</label>
             <input
               type="email"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="user@example.com"
               required
-              className="w-full px-3 py-2.5 border border-[#1f1f1f] rounded-lg text-sm bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#00f5c4]"
+              className="w-full px-3 py-2.5 border border-[var(--border)] rounded-lg text-sm bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#00f5c4]"
             />
           </div>
           <div>
-            <label className="block text-xs text-[#888888] mb-1">Роль</label>
+            <label className="block text-xs text-[var(--muted)] mb-1">Роль</label>
             <select
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value)}
-              className="w-full px-3 py-2.5 border border-[#1f1f1f] rounded-lg text-sm bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#00f5c4]"
+              className="w-full px-3 py-2.5 border border-[var(--border)] rounded-lg text-sm bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#00f5c4]"
             >
               {ROLES.map((r) => (
                 <option key={r.value} value={r.value}>{r.label}</option>
@@ -177,7 +177,7 @@ export default function UserManagement({
             <button
               type="button"
               onClick={() => setShowInvite(false)}
-              className="flex-1 min-h-[44px] px-3 py-2 rounded-lg border border-[#1f1f1f] text-sm text-[#888888] hover:bg-[#1f1f1f] transition-colors"
+              className="flex-1 min-h-[44px] px-3 py-2 rounded-lg border border-[var(--border)] text-sm text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors"
             >
               Отмена
             </button>
@@ -195,7 +195,7 @@ export default function UserManagement({
       {/* User list */}
       {users.length === 0 ? (
         <div className="py-10 text-center">
-          <p className="text-sm text-[#888888]">Пользователей нет</p>
+          <p className="text-sm text-[var(--muted)]">Пользователей нет</p>
         </div>
       ) : (() => {
         const sorted = [...users].sort((a, b) => (ROLE_ORDER[a.role] ?? 99) - (ROLE_ORDER[b.role] ?? 99));
@@ -208,7 +208,7 @@ export default function UserManagement({
               <RoleBadge role={user.role} />
               {isAdmin && !isSelf && (
                 <button onClick={() => setEditingRoleId(user.id)}
-                  className="text-[10px] text-[#888888] hover:text-[#00f5c4] hover:underline">
+                  className="text-[10px] text-[var(--muted)] hover:text-[#00f5c4] hover:underline">
                   изменить
                 </button>
               )}
@@ -218,13 +218,13 @@ export default function UserManagement({
             <div className="flex items-center gap-2 flex-wrap">
               <select value={roleValues[user.id] ?? user.role}
                 onChange={(e) => setRoleValues((prev) => ({ ...prev, [user.id]: e.target.value }))}
-                className="px-2 py-1.5 border border-[#1f1f1f] rounded-md text-xs bg-[#161616] text-[#ededed] focus:outline-none focus:ring-1 focus:ring-[#00f5c4]">
+                className="px-2 py-1.5 border border-[var(--border)] rounded-md text-xs bg-[var(--bg3)] text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-[#00f5c4]">
                 {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
               <button onClick={() => handleRoleSave(user.id)} disabled={isPending}
                 className="text-xs text-[#00f5c4] font-medium hover:underline disabled:opacity-50">Сохранить</button>
               <button onClick={() => setEditingRoleId(null)}
-                className="text-xs text-[#888888] hover:underline">Отмена</button>
+                className="text-xs text-[var(--muted)] hover:underline">Отмена</button>
             </div>
           );
         };
@@ -246,7 +246,7 @@ export default function UserManagement({
         );
 
         return (
-          <div className="divide-y divide-[#1f1f1f]">
+          <div className="divide-y divide-[var(--border)]">
             {sorted.map((user) => {
               const isMe = user.id === currentUserId;
               const isRemoving = removingId === user.id;
@@ -259,18 +259,18 @@ export default function UserManagement({
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#ededed] truncate">
+                      <p className="text-sm font-medium text-[var(--text)] truncate">
                         {user.full_name ?? user.email}
-                        {isMe && <span className="ml-1 text-xs text-[#888888]">(вы)</span>}
+                        {isMe && <span className="ml-1 text-xs text-[var(--muted)]">(вы)</span>}
                       </p>
-                      <p className="text-xs text-[#888888] truncate">{user.email}</p>
-                      {user.position && <p className="text-xs text-[#888888] mt-0.5">{user.position}</p>}
+                      <p className="text-xs text-[var(--muted)] truncate">{user.email}</p>
+                      {user.position && <p className="text-xs text-[var(--muted)] mt-0.5">{user.position}</p>}
                       <div className="mt-2"><RoleEdit user={user} /></div>
                       {isRemoving && <RemoveConfirm user={user} />}
                     </div>
                     {isAdmin && !isMe && !isRemoving && (
                       <button onClick={() => setRemovingId(user.id)}
-                        className="p-1.5 rounded-lg text-[#444444] hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                        className="p-1.5 rounded-lg text-[var(--muted)] hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
                         title="Удалить из компании">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

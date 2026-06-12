@@ -27,15 +27,15 @@ export default function ResubscribeButton() {
   };
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] p-5">
-      <h3 className="text-sm font-semibold text-[#ededed] mb-1">Webhook Wazzup</h3>
-      <p className="text-xs text-[#888888] mb-4">
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-5">
+      <h3 className="text-sm font-semibold text-[var(--text)] mb-1">Webhook Wazzup</h3>
+      <p className="text-xs text-[var(--muted)] mb-4">
         Переподключить webhook если сообщения не приходят после OAuth
       </p>
       <button
         onClick={handle}
         disabled={status === "loading"}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#161616] border border-[#1f1f1f] text-sm text-[#ededed] hover:border-[#00f5c4] hover:text-[#00f5c4] disabled:opacity-50 transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--bg3)] border border-[var(--border)] text-sm text-[var(--text)] hover:border-[#00f5c4] hover:text-[#00f5c4] disabled:opacity-50 transition-colors"
       >
         {status === "loading" ? (
           <>

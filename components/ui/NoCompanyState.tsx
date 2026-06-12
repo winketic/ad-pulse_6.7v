@@ -19,10 +19,10 @@ export default function NoCompanyState() {
         </svg>
       </div>
 
-      <h2 className="text-xl font-bold text-[#ededed] mb-2">
+      <h2 className="text-xl font-bold text-[var(--text)] mb-2">
         Компания не найдена
       </h2>
-      <p className="text-sm text-[#888888] max-w-xs mb-6 leading-relaxed">
+      <p className="text-sm text-[var(--muted)] max-w-xs mb-6 leading-relaxed">
         Вы не привязаны ни к одной компании. Попросите администратора добавить
         вас, или проверьте настройки своего аккаунта.
       </p>

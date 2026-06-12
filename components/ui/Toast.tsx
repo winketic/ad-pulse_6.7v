@@ -61,13 +61,13 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 rounded-xl border bg-[#161616] shadow-2xl min-w-[280px] max-w-[380px] animate-in slide-in-from-bottom-2 duration-200 ${borders[toast.type]}`}
+      className={`flex items-start gap-3 px-4 py-3 rounded-xl border bg-[var(--card)] shadow-2xl min-w-[280px] max-w-[380px] animate-in slide-in-from-bottom-2 duration-200 ${borders[toast.type]}`}
     >
       {icons[toast.type]}
-      <p className="text-sm text-[#ededed] flex-1 leading-snug">{toast.message}</p>
+      <p className="text-sm text-[var(--text)] flex-1 leading-snug">{toast.message}</p>
       <button
         onClick={onRemove}
-        className="text-[#444444] hover:text-[#888888] transition-colors mt-0.5 shrink-0"
+        className="text-[var(--muted)] hover:text-[var(--muted)] transition-colors mt-0.5 shrink-0"
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
