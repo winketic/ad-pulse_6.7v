@@ -14,15 +14,16 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Logo } from "@/components/Logo";
+import OnboardingTour from "@/components/OnboardingTour";
 
 const NAV_ITEMS = [
-  { href: "/dashboard",              label: "Обзор",      Icon: LayoutDashboard },
-  { href: "/dashboard/materials",    label: "Материалы",  Icon: Package         },
-  { href: "/dashboard/transactions", label: "Движение",   Icon: ArrowLeftRight  },
-  { href: "/dashboard/plans",        label: "Планы",      Icon: ClipboardList   },
-  { href: "/dashboard/reports",      label: "Отчёты",     Icon: BarChart2       },
-  { href: "/dashboard/whatsapp",     label: "WhatsApp",   Icon: MessageCircle   },
-  { href: "/dashboard/settings",     label: "Настройки",  Icon: Settings        },
+  { href: "/dashboard",              label: "Обзор",      Icon: LayoutDashboard, tourId: "tour-nav-overview"      },
+  { href: "/dashboard/materials",    label: "Материалы",  Icon: Package,         tourId: "tour-nav-materials"     },
+  { href: "/dashboard/transactions", label: "Движение",   Icon: ArrowLeftRight,  tourId: "tour-nav-transactions"  },
+  { href: "/dashboard/plans",        label: "Планы",      Icon: ClipboardList,   tourId: undefined                },
+  { href: "/dashboard/reports",      label: "Отчёты",     Icon: BarChart2,       tourId: undefined                },
+  { href: "/dashboard/whatsapp",     label: "WhatsApp",   Icon: MessageCircle,   tourId: "tour-nav-whatsapp"      },
+  { href: "/dashboard/settings",     label: "Настройки",  Icon: Settings,        tourId: "tour-nav-settings"      },
 ];
 
 const MOBILE_NAV = NAV_ITEMS.filter((i) => i.href !== "/dashboard/whatsapp");
@@ -77,6 +78,7 @@ export default function DashboardShell({
                 key={item.href}
                 href={item.href}
                 prefetch
+                id={item.tourId}
                 className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   active
                     ? "bg-[#1f1f1f] text-[#ededed]"
@@ -173,6 +175,8 @@ export default function DashboardShell({
           {children}
         </main>
       </div>
+
+      <OnboardingTour />
 
       {/* ── Mobile bottom navigation ──────────────────── */}
       <nav
