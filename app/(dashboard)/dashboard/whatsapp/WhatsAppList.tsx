@@ -92,7 +92,7 @@ function StatusBadge({ status }: { status: "green" | "yellow" | "gray" }) {
     </span>
   );
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#888888]/10 text-[#888888] text-xs font-medium border border-[#888888]/20">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#888888]/10 text-[var(--muted)] text-xs font-medium border border-[#888888]/20">
       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
       </svg>
@@ -140,10 +140,10 @@ function ConfirmModal({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="rounded-2xl w-full max-w-md" style={{ background: "#111111", border: "1px solid #1f1f1f" }}>
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid #1f1f1f" }}>
-          <h2 className="text-sm font-semibold text-[#ededed]">Подтвердить транзакцию</h2>
-          <button onClick={onClose} className="p-1 rounded-lg text-[#888888] hover:text-[#ededed] hover:bg-[#1f1f1f] transition-colors">
+      <div className="rounded-2xl w-full max-w-md" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+          <h2 className="text-sm font-semibold text-[var(--text)]">Подтвердить транзакцию</h2>
+          <button onClick={onClose} className="p-1 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg3)] transition-colors">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -151,16 +151,16 @@ function ConfirmModal({
         </div>
 
         <div className="px-5 pt-4">
-          <p className="text-xs font-medium text-[#888888] mb-1.5">Исходное сообщение</p>
-          <p className="text-sm text-[#ededed] rounded-lg px-3 py-2.5 leading-relaxed"
-            style={{ background: "#161616", border: "1px solid #1f1f1f" }}>
+          <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Исходное сообщение</p>
+          <p className="text-sm text-[var(--text)] rounded-lg px-3 py-2.5 leading-relaxed"
+            style={{ background: "var(--bg3)", border: "1px solid var(--border)" }}>
             {message.raw_text || "—"}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
           <div>
-            <label className="block text-xs font-medium text-[#888888] mb-1.5">Тип операции</label>
+            <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Тип операции</label>
             <select value={type} onChange={(e) => setType(e.target.value as TxType)}
               className="dp-input text-sm">
               {(Object.entries(TX_TYPE_LABELS) as [TxType, string][]).map(([val, label]) => (
@@ -170,7 +170,7 @@ function ConfirmModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-[#888888] mb-1.5">Материал</label>
+            <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Материал</label>
             <select value={materialId} onChange={(e) => setMaterialId(e.target.value)}
               className="dp-input text-sm">
               <option value="">— выберите —</option>
@@ -181,8 +181,8 @@ function ConfirmModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-[#888888] mb-1.5">
-              Количество{pr?.unit && <span className="ml-1 font-normal text-[#555555]">({pr.unit})</span>}
+            <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">
+              Количество{pr?.unit && <span className="ml-1 font-normal text-[var(--muted)]">({pr.unit})</span>}
             </label>
             <input type="text" inputMode="decimal" value={quantity}
               onChange={(e) => setQuantity(e.target.value)} placeholder="0" className="dp-input text-sm" />
@@ -236,21 +236,21 @@ function MessageDetailDrawer({
       <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
       <div
         className="fixed right-0 top-0 h-full z-50 flex flex-col"
-        style={{ width: 420, background: "#0d0d14", borderLeft: "1px solid #1f1f2e" }}
+        style={{ width: 420, background: "var(--bg)", borderLeft: "1px solid var(--border)" }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 shrink-0"
-          style={{ borderBottom: "1px solid #1f1f2e" }}>
+          style={{ borderBottom: "1px solid var(--border)" }}>
           <div className="flex items-center gap-3">
             <button onClick={onClose}
-              className="p-1.5 rounded-lg text-[#888888] hover:text-[#ededed] hover:bg-[#1f1f2e] transition-colors">
+              className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg3)] transition-colors">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
             <StatusBadge status={status} />
           </div>
-          <span className="text-xs text-[#555555]">{formatDate(message.created_at)}</span>
+          <span className="text-xs text-[var(--muted)]">{formatDate(message.created_at)}</span>
         </div>
 
         {/* Scrollable body */}
@@ -258,23 +258,23 @@ function MessageDetailDrawer({
 
           {/* Sender */}
           <div>
-            <p className="text-xs font-medium text-[#888888] mb-1.5">Отправитель</p>
+            <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Отправитель</p>
             {sender ? (
               <div>
-                <p className="text-sm font-medium text-[#ededed]">{sender.name}</p>
-                {sender.position && <p className="text-xs text-[#888888] mt-0.5">{sender.position}</p>}
-                <p className="text-xs text-[#555555] mt-0.5 font-mono">{message.sender_phone}</p>
+                <p className="text-sm font-medium text-[var(--text)]">{sender.name}</p>
+                {sender.position && <p className="text-xs text-[var(--muted)] mt-0.5">{sender.position}</p>}
+                <p className="text-xs text-[var(--muted)] mt-0.5 font-mono">{message.sender_phone}</p>
               </div>
             ) : (
-              <p className="text-sm text-[#ededed] font-mono">{message.sender_phone || "—"}</p>
+              <p className="text-sm text-[var(--text)] font-mono">{message.sender_phone || "—"}</p>
             )}
           </div>
 
           {/* Raw message */}
           <div>
-            <p className="text-xs font-medium text-[#888888] mb-1.5">Исходное сообщение</p>
-            <div className="rounded-xl px-4 py-3" style={{ background: "#111111", border: "1px solid #1f1f2e" }}>
-              <p className="text-sm text-[#ededed] leading-relaxed whitespace-pre-wrap">
+            <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Исходное сообщение</p>
+            <div className="rounded-xl px-4 py-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+              <p className="text-sm text-[var(--text)] leading-relaxed whitespace-pre-wrap">
                 {message.raw_text || "—"}
               </p>
             </div>
@@ -283,14 +283,14 @@ function MessageDetailDrawer({
           {/* Image preview */}
           {message.content_type === "image" && message.media_url && (
             <div>
-              <p className="text-xs font-medium text-[#888888] mb-1.5">Изображение</p>
-              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #1f1f2e" }}>
+              <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Изображение</p>
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={message.media_url}
                   alt="Вложение"
                   className="w-full max-h-64 object-contain"
-                  style={{ background: "#111111" }}
+                  style={{ background: "var(--card)" }}
                 />
               </div>
             </div>
@@ -299,11 +299,11 @@ function MessageDetailDrawer({
           {/* Parse result */}
           {pr && (pr.type || pr.material_name || pr.quantity != null) && (
             <div>
-              <p className="text-xs font-medium text-[#888888] mb-1.5">Результат парсинга</p>
-              <div className="rounded-xl px-4 py-3 space-y-2.5" style={{ background: "#111111", border: "1px solid #1f1f2e" }}>
+              <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Результат парсинга</p>
+              <div className="rounded-xl px-4 py-3 space-y-2.5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                 {pr.type && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#888888]">Тип операции</span>
+                    <span className="text-xs text-[var(--muted)]">Тип операции</span>
                     <span className={`text-xs font-semibold ${TX_TYPE_COLORS[pr.type]}`}>
                       {TX_TYPE_LABELS[pr.type]}
                     </span>
@@ -311,29 +311,29 @@ function MessageDetailDrawer({
                 )}
                 {pr.material_name && (
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-xs text-[#888888] shrink-0">Материал</span>
-                    <span className="text-xs text-[#ededed] font-medium text-right">{pr.material_name}</span>
+                    <span className="text-xs text-[var(--muted)] shrink-0">Материал</span>
+                    <span className="text-xs text-[var(--text)] font-medium text-right">{pr.material_name}</span>
                   </div>
                 )}
                 {pr.quantity != null && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-[#888888]">Количество</span>
-                    <span className="text-xs text-[#ededed] font-medium">
+                    <span className="text-xs text-[var(--muted)]">Количество</span>
+                    <span className="text-xs text-[var(--text)] font-medium">
                       {pr.quantity}{pr.unit ? " " + pr.unit : ""}
                     </span>
                   </div>
                 )}
                 {pr.note && (
                   <>
-                    <div className="h-px" style={{ background: "#1f1f2e" }} />
+                    <div className="h-px" style={{ background: "var(--border)" }} />
                     <div>
-                      <span className="text-xs text-[#888888]">Примечание</span>
-                      <p className="text-xs text-[#888888] mt-1 leading-relaxed">{pr.note}</p>
+                      <span className="text-xs text-[var(--muted)]">Примечание</span>
+                      <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed">{pr.note}</p>
                     </div>
                   </>
                 )}
-                <div className="flex items-center justify-between pt-0.5" style={{ borderTop: "1px solid #1f1f2e" }}>
-                  <span className="text-xs text-[#888888]">Уверенность</span>
+                <div className="flex items-center justify-between pt-0.5" style={{ borderTop: "1px solid var(--border)" }}>
+                  <span className="text-xs text-[var(--muted)]">Уверенность</span>
                   <span className={`text-xs font-medium ${pr.confidence === "high" ? "text-[#00f5c4]" : "text-yellow-400"}`}>
                     {pr.confidence === "high" ? "Высокая" : "Низкая"}
                   </span>
@@ -484,13 +484,13 @@ export default function WhatsAppList({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-[#ededed]">WhatsApp</h1>
-          <p className="text-sm text-[#888888] mt-0.5">Входящие сообщения и автоматически созданные транзакции</p>
+          <h1 className="text-xl font-bold text-[var(--text)]">WhatsApp</h1>
+          <p className="text-sm text-[var(--muted)] mt-0.5">Входящие сообщения и автоматически созданные транзакции</p>
         </div>
         <button
           onClick={() => setSettingsOpen(true)}
           title="Настройки подключения"
-          className="p-2 rounded-lg transition-colors text-[#888888] hover:text-[#ededed] hover:bg-[#1f1f2e]"
+          className="p-2 rounded-lg transition-colors text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg3)]"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -506,39 +506,39 @@ export default function WhatsAppList({
         className={`fixed right-0 top-0 h-full z-50 flex flex-col transition-transform duration-300 ease-in-out ${
           settingsOpen ? "translate-x-0" : "translate-x-full"
         }`}
-        style={{ width: 380, background: "#0d0d14", borderLeft: "1px solid #1f1f2e" }}
+        style={{ width: 380, background: "var(--bg)", borderLeft: "1px solid var(--border)" }}
       >
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid #1f1f2e" }}>
-          <span className="text-sm font-semibold text-[#ededed]">Настройки WhatsApp</span>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+          <span className="text-sm font-semibold text-[var(--text)]">Настройки WhatsApp</span>
           <button onClick={() => setSettingsOpen(false)}
-            className="p-1.5 rounded-lg text-[#888888] hover:text-[#ededed] hover:bg-[#1f1f2e] transition-colors">
+            className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg3)] transition-colors">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-          <div className="rounded-xl p-4" style={{ background: "#111111", border: "1px solid #1f1f2e" }}>
+          <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
             <div className="flex items-center gap-2 mb-3">
               <span className={`w-2 h-2 rounded-full shrink-0 ${channelIds.length > 0 ? "bg-[#25D366]" : "bg-[#888888]"}`} />
-              <span className="text-sm font-medium text-[#ededed]">
+              <span className="text-sm font-medium text-[var(--text)]">
                 {channelIds.length > 0 ? "Подключено" : "Не подключено"}
               </span>
             </div>
             {channelIds.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-[#888888]">Channel ID</p>
+                <p className="text-xs font-medium text-[var(--muted)]">Channel ID</p>
                 {channelIds.map((id) => (
                   <span key={id} className="block px-2 py-1 rounded-lg text-xs font-mono truncate"
-                    style={{ background: "#161616", border: "1px solid #1f1f2e", color: "#9ca3af" }}>{id}</span>
+                    style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "#9ca3af" }}>{id}</span>
                 ))}
               </div>
             )}
             {webhookId && (
               <div className="mt-3">
-                <p className="text-xs font-medium text-[#888888] mb-1">Webhook ID</p>
+                <p className="text-xs font-medium text-[var(--muted)] mb-1">Webhook ID</p>
                 <span className="block px-2 py-1 rounded-lg text-xs font-mono truncate"
-                  style={{ background: "#161616", border: "1px solid #1f1f2e", color: "#555555" }}>{webhookId}</span>
+                  style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--muted)" }}>{webhookId}</span>
               </div>
             )}
           </div>
@@ -555,25 +555,25 @@ export default function WhatsAppList({
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
-            style={{ background: "#111111", border: "1px solid #1f1f1f" }}>
-            <svg className="w-7 h-7 text-[#888888]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <svg className="w-7 h-7 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
-          <p className="text-[#888888] text-sm">Сообщений пока нет</p>
-          <p className="text-[#555555] text-xs mt-1">Подключите WhatsApp в Настройках, чтобы начать получать сообщения</p>
+          <p className="text-[var(--muted)] text-sm">Сообщений пока нет</p>
+          <p className="text-[var(--muted)] text-xs mt-1">Подключите WhatsApp в Настройках, чтобы начать получать сообщения</p>
         </div>
       ) : (
-        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #1f1f1f", background: "#111111" }}>
+        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)", background: "var(--card)" }}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ borderBottom: "1px solid #1f1f1f", background: "#0d0d0d" }}>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-36">Дата</th>
-                  <th id="tour-sender-col" className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-36">Отправитель</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-32">Chat ID</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-[#888888]">Сообщение</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-32">Статус</th>
+                <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--bg3)" }}>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--muted)] w-36">Дата</th>
+                  <th id="tour-sender-col" className="text-left px-4 py-3 text-xs font-medium text-[var(--muted)] w-36">Отправитель</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--muted)] w-32">Chat ID</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--muted)]">Сообщение</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--muted)] w-32">Статус</th>
                   <th className="px-4 py-3 w-24" />
                 </tr>
               </thead>
@@ -589,13 +589,13 @@ export default function WhatsAppList({
                       onClick={() => setSelectedMsgId(msg.id)}
                       className="cursor-pointer transition-colors"
                       style={{
-                        borderTop: i > 0 ? "1px solid #1a1a1a" : undefined,
+                        borderTop: i > 0 ? "1px solid var(--border)" : undefined,
                         background: isSelected ? "rgba(0,245,196,0.04)" : undefined,
                       }}
-                      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#161616"; }}
+                      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "var(--bg3)"; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = isSelected ? "rgba(0,245,196,0.04)" : ""; }}
                     >
-                      <td className="px-4 py-3 text-[#888888] text-xs whitespace-nowrap">
+                      <td className="px-4 py-3 text-[var(--muted)] text-xs whitespace-nowrap">
                         {formatDate(msg.created_at)}
                       </td>
                       <td className="px-4 py-3 text-xs whitespace-nowrap">
@@ -608,14 +608,14 @@ export default function WhatsAppList({
                             <div>
                               {sender ? (
                                 <>
-                                  <span className="text-[#ededed] font-medium group-hover:text-[#00f5c4] transition-colors">{sender.name}</span>
-                                  {sender.position && <span className="block text-[#888888] text-[10px]">{sender.position}</span>}
+                                  <span className="text-[var(--text)] font-medium group-hover:text-[#00f5c4] transition-colors">{sender.name}</span>
+                                  {sender.position && <span className="block text-[var(--muted)] text-[10px]">{sender.position}</span>}
                                 </>
                               ) : (
-                                <span className="text-[#888888] font-mono group-hover:text-[#00f5c4] transition-colors">{msg.sender_phone || "—"}</span>
+                                <span className="text-[var(--muted)] font-mono group-hover:text-[#00f5c4] transition-colors">{msg.sender_phone || "—"}</span>
                               )}
                             </div>
-                            <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-[#888888] group-hover:text-[#00f5c4]">
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-[var(--muted)] group-hover:text-[#00f5c4]">
                               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                                 <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
@@ -623,7 +623,7 @@ export default function WhatsAppList({
                             </span>
                           </button>
                         ) : (
-                          <span className="text-[#888888]">
+                          <span className="text-[var(--muted)]">
                             {sender ? sender.name : (msg.sender_phone || "—")}
                           </span>
                         )}
@@ -633,7 +633,7 @@ export default function WhatsAppList({
                           <button
                             onClick={(e) => handleCopyChatId(e, msg.id, msg.chat_id!)}
                             title="Скопировать Chat ID"
-                            className="group flex items-center gap-1.5 cursor-pointer font-mono text-[#888888] hover:text-[#00f5c4] transition-colors"
+                            className="group flex items-center gap-1.5 cursor-pointer font-mono text-[var(--muted)] hover:text-[#00f5c4] transition-colors"
                           >
                             <span>
                               {msg.chat_id.length > 12 ? msg.chat_id.slice(0, 12) + "…" : msg.chat_id}
@@ -646,13 +646,13 @@ export default function WhatsAppList({
                             </span>
                           </button>
                         ) : (
-                          <span className="text-[#555555]">—</span>
+                          <span className="text-[var(--muted)]">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-[#ededed] text-sm">{truncate(msg.raw_text)}</p>
+                        <p className="text-[var(--text)] text-sm">{truncate(msg.raw_text)}</p>
                         {pr && (pr.type || pr.material_name || pr.quantity != null) && (
-                          <p className="text-xs text-[#888888] mt-0.5">
+                          <p className="text-xs text-[var(--muted)] mt-0.5">
                             {[
                               pr.type ? TX_TYPE_LABELS[pr.type] : null,
                               pr.material_name,

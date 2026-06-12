@@ -179,12 +179,12 @@ function Modal({
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative bg-[#111111] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg z-10 max-h-[94dvh] flex flex-col">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0 border-b border-[#1f1f1f]">
-          <h2 className="text-lg font-semibold text-[#ededed]">{title}</h2>
+      <div className="relative bg-[var(--card)] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg z-10 max-h-[94dvh] flex flex-col">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0 border-b border-[var(--border)]">
+          <h2 className="text-lg font-semibold text-[var(--text)]">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-[#888888] hover:text-[#888888] transition-colors"
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-[var(--muted)] hover:text-[var(--muted)] transition-colors"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -247,7 +247,7 @@ function AddTransactionForm({
     (!isDefect || !!form.defect_reason.trim());
 
   const inputCls =
-    "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[#ededed] bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
+    "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
 
   return (
     <form
@@ -260,7 +260,7 @@ function AddTransactionForm({
       {/* Row: type + date */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-[#888888] mb-1.5">
+          <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
             Тип <span className="text-red-500">*</span>
           </label>
           <select value={form.type} onChange={set("type")} className={inputCls}>
@@ -272,7 +272,7 @@ function AddTransactionForm({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#888888] mb-1.5">
+          <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
             Дата <span className="text-red-500">*</span>
           </label>
           <input
@@ -288,7 +288,7 @@ function AddTransactionForm({
 
       {/* Material */}
       <div>
-        <label className="block text-sm font-medium text-[#888888] mb-1.5">
+        <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
           Материал <span className="text-red-500">*</span>
         </label>
         {materials.length === 0 ? (
@@ -326,10 +326,10 @@ function AddTransactionForm({
 
       {/* Quantity */}
       <div>
-        <label className="block text-sm font-medium text-[#888888] mb-1.5">
+        <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
           Количество{" "}
           {selectedMaterial && (
-            <span className="text-[#888888] font-normal">
+            <span className="text-[var(--muted)] font-normal">
               ({selectedMaterial.unit})
             </span>
           )}{" "}
@@ -356,14 +356,14 @@ function AddTransactionForm({
         {quantityError ? (
           <p className="mt-1 text-xs text-red-600">{quantityError}</p>
         ) : (
-          <p className="mt-1 text-xs text-[#888888]">Макс. 999 999 999</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">Макс. 999 999 999</p>
         )}
       </div>
 
       {/* Defect reason — only for 'defect' type */}
       {isDefect && (
         <div>
-          <label className="block text-sm font-medium text-[#888888] mb-1.5">
+          <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
             Причина брака <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -379,9 +379,9 @@ function AddTransactionForm({
 
       {/* Note */}
       <div>
-        <label className="block text-sm font-medium text-[#888888] mb-1.5">
+        <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
           Примечание
-          <span className="ml-1.5 text-xs font-normal text-[#888888]">
+          <span className="ml-1.5 text-xs font-normal text-[var(--muted)]">
             (необязательно)
           </span>
         </label>
@@ -418,7 +418,7 @@ function AddTransactionForm({
           type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[#888888] hover:bg-[#161616] transition-colors disabled:opacity-50"
+          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50"
         >
           Отмена
         </button>
@@ -456,11 +456,11 @@ function FilterBar({
   onClear: () => void;
 }) {
   const selectCls =
-    "w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[#ededed] bg-[#111111] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
-  const labelCls = "block text-xs font-medium text-[#888888] mb-1.5";
+    "w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
+  const labelCls = "block text-xs font-medium text-[var(--muted)] mb-1.5";
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] p-4 mb-5">
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4 mb-5">
       <div className="flex flex-wrap gap-3 items-end">
         {/* Type */}
         <div className="flex-1 min-w-[120px]">
@@ -527,7 +527,7 @@ function FilterBar({
         {hasActive && (
           <button
             onClick={onClear}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[#888888] hover:bg-gray-100 border border-gray-300 transition-colors whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[var(--muted)] hover:bg-gray-100 border border-gray-300 transition-colors whitespace-nowrap"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -551,14 +551,14 @@ function EmptyState({
 }) {
   if (isFiltered) {
     return (
-      <div className="text-center py-16 bg-[#111111] rounded-xl border border-[#1f1f1f]">
+      <div className="text-center py-16 bg-[var(--card)] rounded-xl border border-[var(--border)]">
         <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
-          <svg className="w-6 h-6 text-[#888888]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <svg className="w-6 h-6 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
           </svg>
         </div>
-        <p className="text-sm font-medium text-[#888888]">Нет результатов</p>
-        <p className="text-sm text-[#888888] mt-0.5">
+        <p className="text-sm font-medium text-[var(--muted)]">Нет результатов</p>
+        <p className="text-sm text-[var(--muted)] mt-0.5">
           Измените или сбросьте фильтры
         </p>
       </div>
@@ -572,10 +572,10 @@ function EmptyState({
           <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
         </svg>
       </div>
-      <h3 className="text-base font-semibold text-[#ededed] mb-1">
+      <h3 className="text-base font-semibold text-[var(--text)] mb-1">
         Движений ещё нет
       </h3>
-      <p className="text-sm text-[#888888] mb-6 max-w-xs">
+      <p className="text-sm text-[var(--muted)] mb-6 max-w-xs">
         Зафиксируйте первый приход или расход материала
       </p>
       <button
@@ -609,7 +609,7 @@ function Pagination({
 
   return (
     <div className="flex items-center justify-between mt-4 px-1">
-      <p className="text-sm text-[#888888]">
+      <p className="text-sm text-[var(--muted)]">
         Страница <span className="font-semibold text-gray-800">{page}</span>{" "}
         из {totalPages} · {totalCount} {pluralRecords(totalCount)} всего
       </p>
@@ -617,7 +617,7 @@ function Pagination({
         <button
           onClick={() => go(page - 1)}
           disabled={page <= 1}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#1f1f1f] text-sm font-medium text-[#888888] hover:bg-[#161616] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[var(--border)] text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -627,7 +627,7 @@ function Pagination({
         <button
           onClick={() => go(page + 1)}
           disabled={page >= totalPages}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#1f1f1f] text-sm font-medium text-[#888888] hover:bg-[#161616] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[var(--border)] text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           Следующая
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -738,10 +738,10 @@ export default function TransactionsClient({
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#ededed]">
+          <h1 className="text-2xl font-bold text-[var(--text)]">
             Движение материалов
           </h1>
-          <p className="text-sm text-[#888888] mt-0.5">
+          <p className="text-sm text-[var(--muted)] mt-0.5">
             {(totalCount ?? transactions.length) === 0
               ? "Записей нет"
               : `${totalCount ?? transactions.length} ${pluralRecords(totalCount ?? transactions.length)} всего`}
@@ -774,7 +774,7 @@ export default function TransactionsClient({
 
       {/* ── Count ───────────────────────────────────────── */}
       {hasFilters && filtered.length !== transactions.length && (
-        <p className="text-sm text-[#888888] mb-3">
+        <p className="text-sm text-[var(--muted)] mb-3">
           Показано{" "}
           <span className="font-semibold text-gray-800">{filtered.length}</span>{" "}
           из {transactions.length}
@@ -793,13 +793,13 @@ export default function TransactionsClient({
       {filtered.length > 0 && (
         <>
           <div
-            className={`hidden sm:block bg-[#111111] rounded-xl border border-[#1f1f1f] overflow-hidden transition-opacity ${
+            className={`hidden sm:block bg-[var(--card)] rounded-xl border border-[var(--border)] overflow-hidden transition-opacity ${
               isPending ? "opacity-60 pointer-events-none" : ""
             }`}
           >
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#161616] border-b border-[#1f1f1f]">
+                <tr className="bg-[var(--bg3)] border-b border-[var(--border)]">
                   {[
                     ["Дата", "w-24"],
                     ["Материал", ""],
@@ -810,25 +810,25 @@ export default function TransactionsClient({
                   ].map(([label, cls]) => (
                     <th
                       key={label as string}
-                      className={`px-5 py-3.5 text-left text-xs font-semibold text-[#888888] uppercase tracking-wide ${cls}`}
+                      className={`px-5 py-3.5 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wide ${cls}`}
                     >
                       {label}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1f1f1f]">
+              <tbody className="divide-y divide-[var(--border)]">
                 {filtered.map((tx) => {
                   const cfg = TYPE_CONFIG[tx.type];
                   return (
                     <tr
                       key={tx.id}
-                      className="hover:bg-[#161616]/60 transition-colors"
+                      className="hover:bg-[var(--bg3)] transition-colors"
                     >
-                      <td className="px-5 py-3.5 text-[#888888] text-xs tabular-nums whitespace-nowrap">
+                      <td className="px-5 py-3.5 text-[var(--muted)] text-xs tabular-nums whitespace-nowrap">
                         {fmtDate(tx.transaction_date)}
                       </td>
-                      <td className="px-5 py-3.5 font-medium text-[#ededed]">
+                      <td className="px-5 py-3.5 font-medium text-[var(--text)]">
                         {tx.material_name}
                       </td>
                       <td className="px-5 py-3.5">
@@ -839,7 +839,7 @@ export default function TransactionsClient({
                       >
                         {cfg.sign}
                         {formatQuantity(tx.quantity)}{" "}
-                        <span className="text-xs font-normal text-[#888888]">
+                        <span className="text-xs font-normal text-[var(--muted)]">
                           {tx.material_unit}
                         </span>
                       </td>
@@ -849,13 +849,13 @@ export default function TransactionsClient({
                             <svg className="w-3 h-3 shrink-0 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24">
                               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                             </svg>
-                            <span className="text-[#888888]">{tx.creator_name}</span>
+                            <span className="text-[var(--muted)]">{tx.creator_name}</span>
                           </div>
                         ) : (
-                          <span className="text-[#888888]">{tx.creator_name}</span>
+                          <span className="text-[var(--muted)]">{tx.creator_name}</span>
                         )}
                       </td>
-                      <td className="px-5 py-3.5 text-[#888888] text-xs max-w-[180px]">
+                      <td className="px-5 py-3.5 text-[var(--muted)] text-xs max-w-[180px]">
                         {tx.note ? (
                           <span
                             className="block truncate"
@@ -885,16 +885,16 @@ export default function TransactionsClient({
               return (
                 <div
                   key={tx.id}
-                  className="bg-[#111111] rounded-xl border border-[#1f1f1f] p-4"
+                  className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4"
                 >
                   <div className="flex items-center justify-between gap-2 mb-2.5">
                     <TypeBadge type={tx.type} />
-                    <span className="text-xs text-[#888888] tabular-nums">
+                    <span className="text-xs text-[var(--muted)] tabular-nums">
                       {fmtDate(tx.transaction_date)}
                     </span>
                   </div>
 
-                  <p className="font-semibold text-[#ededed] text-sm">
+                  <p className="font-semibold text-[var(--text)] text-sm">
                     {tx.material_name}
                   </p>
 
@@ -903,18 +903,18 @@ export default function TransactionsClient({
                   >
                     {cfg.sign}
                     {formatQuantity(tx.quantity)}{" "}
-                    <span className="text-sm font-normal text-[#888888]">
+                    <span className="text-sm font-normal text-[var(--muted)]">
                       {tx.material_unit}
                     </span>
                   </p>
 
                   {tx.note && (
-                    <p className="text-xs text-[#888888] mt-2 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-[var(--muted)] mt-2 line-clamp-2 leading-relaxed">
                       {tx.note}
                     </p>
                   )}
 
-                  <p className="text-xs text-[#888888] mt-2 pt-2 border-t border-[#1f1f1f] flex items-center gap-1.5">
+                  <p className="text-xs text-[var(--muted)] mt-2 pt-2 border-t border-[var(--border)] flex items-center gap-1.5">
                     {tx.source === "whatsapp" && (
                       <svg className="w-3 h-3 shrink-0 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>

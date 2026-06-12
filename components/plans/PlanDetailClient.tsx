@@ -53,8 +53,8 @@ const STATUS_CFG: Record<
   },
   cancelled: {
     label: "Отменён",
-    bg: "bg-[#1f1f1f]",
-    text: "text-[#888888]",
+    bg: "bg-[var(--bg3)]",
+    text: "text-[var(--muted)]",
     dot: "bg-gray-400",
   },
 };
@@ -99,15 +99,15 @@ function StatCard({
       ? "text-[#00f5c4]"
       : accent === "red"
       ? "text-red-400"
-      : "text-[#ededed]";
+      : "text-[var(--text)]";
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] p-4">
-      <p className="text-xs font-medium text-[#888888] uppercase tracking-wide mb-1">
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4">
+      <p className="text-xs font-medium text-[var(--muted)] uppercase tracking-wide mb-1">
         {label}
       </p>
       <p className={`text-xl font-bold tabular-nums ${valueColor}`}>{value}</p>
-      {sub && <p className="text-xs text-[#888888] mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-[var(--muted)] mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -120,8 +120,8 @@ function MaterialTableRow({ row }: { row: PlanMaterialRow }) {
   const pctClamped = Math.min(row.pct, 100);
 
   return (
-    <tr className="hover:bg-[#161616]/60 transition-colors">
-      <td className="px-5 py-3.5 font-medium text-[#ededed]">
+    <tr className="hover:bg-[var(--bg3)] transition-colors">
+      <td className="px-5 py-3.5 font-medium text-[var(--text)]">
         {row.material_name}
       </td>
       <td className="px-5 py-3.5">
@@ -129,11 +129,11 @@ function MaterialTableRow({ row }: { row: PlanMaterialRow }) {
           {row.material_unit}
         </span>
       </td>
-      <td className="px-5 py-3.5 text-right tabular-nums text-sm text-[#888888] font-mono">
+      <td className="px-5 py-3.5 text-right tabular-nums text-sm text-[var(--muted)] font-mono">
         {row.planned_quantity.toFixed(4)}
       </td>
       <td className="px-5 py-3.5 text-right tabular-nums text-sm font-mono font-semibold">
-        <span className={isOver ? "text-red-400" : "text-[#888888]"}>
+        <span className={isOver ? "text-red-400" : "text-[var(--muted)]"}>
           {row.actual_quantity.toFixed(4)}
         </span>
       </td>
@@ -141,7 +141,7 @@ function MaterialTableRow({ row }: { row: PlanMaterialRow }) {
         <span
           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold tabular-nums font-mono ${
             isZero
-              ? "bg-[#1f1f1f] text-[#888888]"
+              ? "bg-[var(--bg3)] text-[var(--muted)]"
               : isOver
               ? "bg-red-100 text-red-400"
               : "bg-green-500/15 border border-green-500/20 text-green-400"
@@ -153,7 +153,7 @@ function MaterialTableRow({ row }: { row: PlanMaterialRow }) {
       </td>
       <td className="px-5 py-3.5 min-w-[130px]">
         <div className="flex items-center gap-2">
-          <div className="flex-1 h-1.5 rounded-full bg-[#1f1f1f] overflow-hidden">
+          <div className="flex-1 h-1.5 rounded-full bg-[var(--bg3)] overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${
                 row.pct > 100
@@ -169,7 +169,7 @@ function MaterialTableRow({ row }: { row: PlanMaterialRow }) {
           </div>
           <span
             className={`text-xs tabular-nums font-medium w-10 text-right shrink-0 ${
-              row.pct > 100 ? "text-red-400" : "text-[#888888]"
+              row.pct > 100 ? "text-red-400" : "text-[var(--muted)]"
             }`}
           >
             {row.pct.toFixed(0)}%
@@ -186,9 +186,9 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
   const isOver = row.deviation > 0;
 
   return (
-    <div className="bg-[#111111] rounded-xl border border-[#1f1f1f] p-4">
+    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4">
       <div className="flex items-start justify-between gap-2 mb-3">
-        <p className="font-semibold text-[#ededed] text-sm leading-tight">
+        <p className="font-semibold text-[var(--text)] text-sm leading-tight">
           {row.material_name}
         </p>
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#00f5c4]/10 text-[#00f5c4] shrink-0">
@@ -198,16 +198,16 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
 
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
-          <p className="text-xs text-[#888888] mb-0.5">План</p>
-          <p className="text-sm font-semibold text-[#888888] tabular-nums font-mono">
+          <p className="text-xs text-[var(--muted)] mb-0.5">План</p>
+          <p className="text-sm font-semibold text-[var(--muted)] tabular-nums font-mono">
             {row.planned_quantity.toFixed(4)}
           </p>
         </div>
         <div>
-          <p className="text-xs text-[#888888] mb-0.5">Факт</p>
+          <p className="text-xs text-[var(--muted)] mb-0.5">Факт</p>
           <p
             className={`text-sm font-semibold tabular-nums font-mono ${
-              isOver ? "text-red-400" : "text-[#888888]"
+              isOver ? "text-red-400" : "text-[var(--muted)]"
             }`}
           >
             {row.actual_quantity.toFixed(4)}
@@ -217,11 +217,11 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-[#888888]">Отклонение:</span>
+          <span className="text-xs text-[var(--muted)]">Отклонение:</span>
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold tabular-nums font-mono ${
               row.deviation === 0
-                ? "bg-[#1f1f1f] text-[#888888]"
+                ? "bg-[var(--bg3)] text-[var(--muted)]"
                 : isOver
                 ? "bg-red-100 text-red-400"
                 : "bg-green-500/15 border border-green-500/20 text-green-400"
@@ -242,7 +242,7 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
       </div>
 
       {/* Progress bar */}
-      <div className="mt-2.5 h-1.5 rounded-full bg-[#1f1f1f] overflow-hidden">
+      <div className="mt-2.5 h-1.5 rounded-full bg-[var(--bg3)] overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${
             row.pct > 100
@@ -348,7 +348,7 @@ function StatusChangePanel({ plan }: { plan: PlanDetail }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm text-[#888888] mr-1">Изменить статус:</span>
+      <span className="text-sm text-[var(--muted)] mr-1">Изменить статус:</span>
       <button
         onClick={() => setConfirm("complete")}
         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-200 text-sm font-medium text-blue-400 hover:bg-blue-50 transition-colors"
@@ -395,7 +395,7 @@ export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
       {/* ── Back ────────────────────────────────────────── */}
       <Link
         href="/dashboard/plans"
-        className="inline-flex items-center gap-1.5 text-sm text-[#888888] hover:text-[#00f5c4] transition-colors mb-5"
+        className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[#00f5c4] transition-colors mb-5"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -407,11 +407,11 @@ export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
       <div className="mb-6">
         <div className="flex flex-wrap items-center gap-3 mb-2">
           <StatusBadge status={plan.status} />
-          <span className="text-sm text-[#888888]">
+          <span className="text-sm text-[var(--muted)]">
             {fmtDate(plan.start_date)} — {fmtDate(plan.end_date)}
           </span>
         </div>
-        <h1 className="text-2xl font-bold text-[#ededed]">{plan.name}</h1>
+        <h1 className="text-2xl font-bold text-[var(--text)]">{plan.name}</h1>
       </div>
 
       {/* ── Summary cards ───────────────────────────────── */}
@@ -471,12 +471,12 @@ export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
       )}
 
       {/* ── Materials section ───────────────────────────── */}
-      <div className="bg-[#111111] rounded-xl border border-[#1f1f1f]">
-        <div className="px-5 py-4 border-b border-[#1f1f1f]">
-          <h2 className="text-sm font-semibold text-[#ededed]">
+      <div className="bg-[var(--card)] rounded-xl border border-[var(--border)]">
+        <div className="px-5 py-4 border-b border-[var(--border)]">
+          <h2 className="text-sm font-semibold text-[var(--text)]">
             Материалы плана
           </h2>
-          <p className="text-xs text-[#888888] mt-0.5">
+          <p className="text-xs text-[var(--muted)] mt-0.5">
             Фактический расход рассчитан из транзакций типа «Расход» и «Брак»
             за период плана
           </p>
@@ -484,7 +484,7 @@ export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
 
         {plan.materials.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-sm text-[#888888]">Материалы не добавлены</p>
+            <p className="text-sm text-[var(--muted)]">Материалы не добавлены</p>
           </div>
         ) : (
           <>
@@ -492,7 +492,7 @@ export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
             <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-[#161616] border-b border-[#1f1f1f]">
+                  <tr className="bg-[var(--bg3)] border-b border-[var(--border)]">
                     {[
                       ["Материал", ""],
                       ["Ед. изм.", "w-24"],
@@ -503,14 +503,14 @@ export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
                     ].map(([label, cls]) => (
                       <th
                         key={label}
-                        className={`px-5 py-3 text-left text-xs font-semibold text-[#888888] uppercase tracking-wide ${cls}`}
+                        className={`px-5 py-3 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wide ${cls}`}
                       >
                         {label}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#1f1f1f]">
+                <tbody className="divide-y divide-[var(--border)]">
                   {plan.materials.map((row) => (
                     <MaterialTableRow key={row.id} row={row} />
                   ))}
@@ -518,14 +518,14 @@ export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
                 {/* Totals row */}
                 {plan.materials.length > 1 && (
                   <tfoot>
-                    <tr className="bg-[#161616] border-t-2 border-[#1f1f1f]">
+                    <tr className="bg-[var(--bg3)] border-t-2 border-[var(--border)]">
                       <td
                         colSpan={2}
-                        className="px-5 py-3 text-xs font-semibold text-[#888888] uppercase tracking-wide"
+                        className="px-5 py-3 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide"
                       >
                         Итого
                       </td>
-                      <td className="px-5 py-3 text-right tabular-nums font-bold text-[#ededed] font-mono text-sm">
+                      <td className="px-5 py-3 text-right tabular-nums font-bold text-[var(--text)] font-mono text-sm">
                         {totalPlanned.toFixed(4)}
                       </td>
                       <td className="px-5 py-3 text-right tabular-nums font-bold font-mono text-sm">
@@ -533,7 +533,7 @@ export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
                           className={
                             totalActual > totalPlanned
                               ? "text-red-400"
-                              : "text-[#ededed]"
+                              : "text-[var(--text)]"
                           }
                         >
                           {totalActual.toFixed(4)}
@@ -543,7 +543,7 @@ export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold tabular-nums font-mono ${
                             totalDeviation === 0
-                              ? "bg-[#1f1f1f] text-[#888888]"
+                              ? "bg-[var(--bg3)] text-[var(--muted)]"
                               : totalDeviation > 0
                               ? "bg-red-100 text-red-400"
                               : "bg-green-500/15 border border-green-500/20 text-green-400"
@@ -580,7 +580,7 @@ export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
       </div>
 
       {/* ── Legend ─────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-4 mt-4 text-xs text-[#888888]">
+      <div className="flex flex-wrap gap-4 mt-4 text-xs text-[var(--muted)]">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-full bg-green-500/15 border border-green-500/20 border border-green-200 inline-block" />
           Отклонение ≤ 0 — экономия / в норме
