@@ -310,7 +310,7 @@ async function processItem(item: unknown) {
   console.log("[wazzup/webhook] step: company lookup");
   const tokenPromise = service
     .from("wazzup_tokens")
-    .select("company_id")
+    .select("company_id, allowed_chat_ids")
     .contains("channel_ids", [channelId])
     .maybeSingle();
   const { data: token, error: tokenErr } = await supabaseWithTimeout(
@@ -326,14 +326,8 @@ async function processItem(item: unknown) {
   }
 
   // ── ALLOWED CHATS FILTER ───────────────────────────
-  console.log("[wazzup/webhook] step: allowed chats check");
-  const { data: wazzupCfg, error: cfgErr } = await supabaseWithTimeout(
-    service.from("wazzup_config").select("allowed_chat_ids").eq("company_id", token.company_id).maybeSingle(),
-    5000, "allowed chats"
-  );
-  console.log(`[wazzup/webhook] step: cfg loaded allowed_count=${(wazzupCfg?.allowed_chat_ids ?? []).length} err=${cfgErr?.message ?? "none"}`);
-
-  const allowedChats: string[] = wazzupCfg?.allowed_chat_ids ?? [];
+  const allowedChats: string[] = token.allowed_chat_ids ?? [];
+  console.log(`[wazzup/webhook] step: allowed_chat_ids count=${allowedChats.length}`);
   if (allowedChats.length > 0) {
     const incomingId = chatId || senderPhone;
     const isAllowed = !!incomingId && allowedChats.some(
