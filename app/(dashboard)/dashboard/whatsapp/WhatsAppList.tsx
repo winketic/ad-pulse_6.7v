@@ -570,7 +570,7 @@ export default function WhatsAppList({
               <thead>
                 <tr style={{ borderBottom: "1px solid #1f1f1f", background: "#0d0d0d" }}>
                   <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-36">Дата</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-36">Отправитель</th>
+                  <th id="tour-sender-col" className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-36">Отправитель</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-32">Chat ID</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-[#888888]">Сообщение</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-32">Статус</th>

@@ -44,6 +44,15 @@ const STEPS = [
     },
   },
   {
+    element: "#tour-sender-col",
+    popover: {
+      title: "Разрешённые чаты",
+      description: "Нажмите на отправителя чтобы скопировать Chat ID. Добавьте его в Разрешённые чаты чтобы обрабатывать сообщения только от нужных контактов или групп.",
+      side: "bottom" as const,
+      align: "start" as const,
+    },
+  },
+  {
     element: "#tour-nav-settings",
     popover: {
       title: "Настройки",
@@ -66,6 +75,12 @@ export default function OnboardingTour() {
     let driverInstance: { drive: () => void; destroy: () => void } | null = null;
 
     import("driver.js").then(({ driver }) => {
+      // Skip steps whose target element isn't in the DOM (e.g. table columns on other pages)
+      const availableSteps = STEPS.filter(
+        (s) => !s.element || !!document.querySelector(s.element)
+      );
+      if (availableSteps.length === 0) return;
+
       driverInstance = driver({
         popoverClass: "adpulse-tour",
         animate: true,
@@ -74,7 +89,7 @@ export default function OnboardingTour() {
         nextBtnText: "Далее →",
         prevBtnText: "← Назад",
         doneBtnText: "Готово",
-        steps: STEPS,
+        steps: availableSteps,
         onDestroyStarted: () => {
           localStorage.setItem(TOUR_KEY, "1");
           driverInstance?.destroy();
