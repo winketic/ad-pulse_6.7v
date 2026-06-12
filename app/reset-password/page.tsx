@@ -20,6 +20,18 @@ export default function ResetPasswordPage() {
       setReady(false);
       return;
     }
+    const token_hash = params.get("token_hash");
+    if (token_hash) {
+      // Remove token from URL so refresh doesn't re-trigger verification
+      window.history.replaceState({}, "", "/reset-password");
+      supabase.auth
+        .verifyOtp({ token_hash, type: "recovery" })
+        .then(({ error: otpError }) => {
+          setReady(!otpError);
+        });
+      return;
+    }
+    // No token: existing session check (e.g. page refresh after successful verification)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setReady(!!session);
     });

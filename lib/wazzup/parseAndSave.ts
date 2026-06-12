@@ -5,6 +5,19 @@ import { parseImageTransaction } from "./parseImage";
 import { sendTelegramAlert } from "@/lib/telegram/send";
 import { ensureFreshToken } from "./refreshToken";
 
+function convertUnits(qty: number, from: string, to: string): number | null {
+  const f = from.toLowerCase().trim();
+  const t = to.toLowerCase().trim();
+  if (f === t) return qty;
+  if ((f === "тонна" || f === "т") && t === "кг") return qty * 1000;
+  if (f === "кг" && (t === "тонна" || t === "т"))  return qty / 1000;
+  if (f === "кг"  && t === "г")                     return qty * 1000;
+  if (f === "г"   && t === "кг")                    return qty / 1000;
+  if ((f === "м3" || f === "куб") && t === "литр")  return qty * 1000;
+  if (f === "литр" && (t === "м3" || t === "куб"))  return qty / 1000;
+  return null; // unknown pair → needs_review
+}
+
 export async function parseAndSave(messageId: string): Promise<void> {
   const service = createServiceClient();
 
@@ -83,10 +96,33 @@ export async function parseAndSave(messageId: string): Promise<void> {
   const result = await parseMessage(textToParse, msg.company_id, context);
 
   const allFound = !!(result.type && result.quantity != null && result.material_id);
-  const autoCreate = result.confidence === "high" && allFound;
+
+  // Unit conversion: GPT may return "тонна" while material.unit is "кг"
+  let finalQuantity = result.quantity ?? 0;
+  let unitMismatch = false;
+  if (allFound) {
+    const { data: matInfo } = await service
+      .from("materials")
+      .select("unit")
+      .eq("id", result.material_id!)
+      .single();
+    const matUnit = matInfo?.unit ?? null;
+    const gptUnit = result.unit ?? null;
+    if (matUnit && gptUnit && matUnit.toLowerCase() !== gptUnit.toLowerCase()) {
+      const converted = convertUnits(finalQuantity, gptUnit, matUnit);
+      if (converted !== null) {
+        finalQuantity = converted;
+      } else {
+        console.warn(`[parseAndSave] unknown unit conversion: ${gptUnit} → ${matUnit}, setting needs_review`);
+        unitMismatch = true;
+      }
+    }
+  }
+
+  const autoCreate = result.confidence === "high" && allFound && !unitMismatch;
   // Only flag for review if SOMETHING was found but incomplete — not for irrelevant messages
   const hasAnyField = !!(result.type || result.material_id || result.quantity != null);
-  const needsReview = !autoCreate && hasAnyField;
+  const needsReview = (!autoCreate && hasAnyField) || unitMismatch;
 
   let transactionCreated = false;
 
@@ -95,7 +131,8 @@ export async function parseAndSave(messageId: string): Promise<void> {
       company_id: msg.company_id,
       material_id: result.material_id!,
       type: result.type!,
-      quantity: result.quantity!,
+      quantity: finalQuantity,
+      note: result.note ?? null,
       transaction_date: new Date().toISOString().split("T")[0],
       source: "whatsapp",
       wazzup_message_id: messageId,
@@ -108,7 +145,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
         companyId: msg.company_id,
         materialId: result.material_id!,
         type: result.type!,
-        quantity: result.quantity!,
+        quantity: finalQuantity,
         source: "whatsapp",
       }).catch((e) => console.error("[parseAndSave] alert error:", e));
     }

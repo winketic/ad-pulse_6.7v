@@ -10,6 +10,7 @@ export type ParseResult = {
   unit: string | null;
   material_id: string | null;
   material_name: string | null;
+  note: string | null;
   confidence: "high" | "low";
   transaction_created: boolean;
 };
@@ -161,6 +162,7 @@ interface GptParsed {
   material_name: string | null;
   quantity: number | null;
   unit: string | null;
+  note: string | null;
 }
 
 async function callGptParser(
@@ -179,21 +181,39 @@ async function callGptParser(
     ? `\n\nКонтекст предыдущих сообщений из этого чата (от старых к новым):\n${context.map((m, i) => `${i + 1}. ${m}`).join("\n")}\n\nЕсли текущее сообщение ссылается на предыдущее (например «ещё 200 кг», «и цемент тоже», «вернули то же»), используй контекст для определения материала/типа.`
     : "";
 
-  const systemPrompt = `Ты парсер складских сообщений строительного производства. Анализируй сообщения на русском, казахском, сленге, с опечатками — пойми суть.
+  const systemPrompt = `Ты парсер складских сообщений строительного производства. Анализируй на русском, казахском, сленге, с опечатками — пойми суть.
+
+ПРАВИЛО: Фиксируй только СВЕРШИВШИЙСЯ ФАКТ (прошедшее/настоящее время).
+Игнорируй планы и будущие действия ("завтра привезут", "после обеда заберут", "привезут потом", "будут отгружать") — они НЕ определяют тип операции.
+Всё что идёт после факта операции (место, назначение, план, контекст) — записывай в note.
 
 Доступные материалы компании (пронумерованный справочник):
 ${materialsList}${contextBlock}
 
-Если сообщение НЕ является складской операцией (приветствие, вопрос, эмодзи, случайный текст, "Когда", ".", "Ок" и т.д.) — верни все поля null.
+Если сообщение НЕ является свершившейся складской операцией (приветствие, вопрос, план на будущее, эмодзи, "Ок", "." и т.д.) — верни все поля null.
 
-Если это складская операция — определи:
-1. Тип операции: "income" (приход/завезли/поступило/получили/привезли), "expense" (расход/ушло/использовали/потратили/взяли), "defect" (брак/дефект/испорчено/поломка), "return" (возврат/вернули/обратно)
-2. Название материала — скопируй дословно ТОЧНОЕ название из пронумерованного списка выше, не придумывай новые
-3. Количество (число)
-4. Единица измерения
+Если свершившаяся операция — определи:
+1. type: "income" (пришёл/привезли/получили/поступило/завезли/доставили)
+         "expense" (взяли/ушло/отгрузили/использовали/выдали/потратили/списали)
+         "defect" (брак/дефект/испорчено/неликвид/поломка)
+         "return" (вернули/возврат/обратно)
+2. material_name — ТОЧНО из пронумерованного списка выше, не придумывай
+3. quantity — число
+4. unit — единица измерения
+5. note — остаток сообщения (место, назначение, план, контекст) или null
+
+Примеры:
+"пришел цемент м-400 10 кг. завтра заберут на склад"
+→ {"type":"income","material_name":"цемент м400","quantity":10,"unit":"кг","note":"завтра заберут на склад"}
+
+"отгрузили арматуру 500 кг на объект №3"
+→ {"type":"expense","material_name":"арматура d12","quantity":500,"unit":"кг","note":"на объект №3"}
+
+"завтра привезут цемент 20 тонн"
+→ {"type":null,"material_name":null,"quantity":null,"unit":null,"note":null}
 
 Ответь СТРОГО JSON без markdown:
-{"type":"income|expense|defect|return|null","material_name":"название из списка или null","quantity":число_или_null,"unit":"единица или null"}`;
+{"type":"income|expense|defect|return|null","material_name":"...или null","quantity":число_или_null,"unit":"...или null","note":"...или null"}`;
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -204,7 +224,7 @@ ${materialsList}${contextBlock}
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        max_tokens: 150,
+        max_tokens: 200,
         temperature: 0,
         messages: [
           { role: "system", content: systemPrompt },
@@ -260,6 +280,7 @@ export async function parseMessage(
       unit: qtyResult!.unit,
       material_id: material!.id,
       material_name: material!.name,
+      note: null,
       confidence: "high",
       transaction_created: false,
     };
@@ -307,6 +328,7 @@ export async function parseMessage(
       unit: resolvedUnit,
       material_id: resolvedMatId,
       material_name: resolvedMatName,
+      note: gpt.note ?? null,
       confidence: gptAllFound ? "high" : "low",
       transaction_created: false,
     };
@@ -319,6 +341,7 @@ export async function parseMessage(
     unit: qtyResult?.unit ?? null,
     material_id: material?.id ?? null,
     material_name: material?.name ?? null,
+    note: null,
     confidence: "low",
     transaction_created: false,
   };
