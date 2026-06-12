@@ -16,8 +16,10 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://pulse.altaidynamics.kz")
+      .replace(/﻿/g, "").trim().replace(/\/$/, "");
     const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/confirm?type=recovery&next=/reset-password`,
+      redirectTo: `${appUrl}/auth/confirm`,
     });
     setLoading(false);
     if (authError) { setError("Не удалось отправить письмо. Проверьте email."); return; }

@@ -14,6 +14,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=invalid_link', request.url))
   }
 
+  // For invite: don't consume the token server-side; pass it to /invite for client-side
+  // verifyOtp + password setup. Otherwise the token is spent before the form loads.
+  if (type === 'invite') {
+    const inviteUrl = new URL('/invite', origin)
+    inviteUrl.searchParams.set('token_hash', token_hash)
+    inviteUrl.searchParams.set('type', 'invite')
+    return NextResponse.redirect(inviteUrl)
+  }
+
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,9 +51,6 @@ export async function GET(request: NextRequest) {
     if (type === 'recovery') {
       return NextResponse.redirect(new URL('/reset-password?error=expired', origin))
     }
-    if (type === 'invite' || type === 'signup') {
-      return NextResponse.redirect(new URL('/invite?error=expired', origin))
-    }
     return NextResponse.redirect(new URL(`/login?error=invalid_link`, request.url))
   }
 
@@ -55,9 +61,6 @@ export async function GET(request: NextRequest) {
 
   if (type === 'recovery') {
     return NextResponse.redirect(new URL('/reset-password', origin))
-  }
-  if (type === 'invite' || type === 'signup') {
-    return NextResponse.redirect(new URL('/invite', origin))
   }
   return NextResponse.redirect(new URL('/dashboard', origin))
 }
