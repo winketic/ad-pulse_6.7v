@@ -26,7 +26,7 @@ export async function GET() {
 
   const service = createServiceClient();
   const { data } = await service
-    .from("wazzup_config")
+    .from("wazzup_tokens")
     .select("allowed_chat_ids")
     .eq("company_id", companyId)
     .maybeSingle();
@@ -45,19 +45,27 @@ export async function POST(request: NextRequest) {
 
   const service = createServiceClient();
 
-  // Get current list
-  const { data: cfg } = await service
-    .from("wazzup_config")
+  const { data: token } = await service
+    .from("wazzup_tokens")
     .select("allowed_chat_ids")
     .eq("company_id", companyId)
     .maybeSingle();
 
-  const current: string[] = cfg?.allowed_chat_ids ?? [];
+  if (!token) return NextResponse.json({ error: "WhatsApp не подключён" }, { status: 404 });
+
+  const current: string[] = token.allowed_chat_ids ?? [];
   if (current.includes(chatId)) return NextResponse.json({ allowed_chat_ids: current });
 
   const updated = [...current, chatId];
-  await service.from("wazzup_config")
-    .upsert({ company_id: companyId, allowed_chat_ids: updated }, { onConflict: "company_id" });
+  const { error } = await service
+    .from("wazzup_tokens")
+    .update({ allowed_chat_ids: updated })
+    .eq("company_id", companyId);
+
+  if (error) {
+    console.error("[allowed-chats] update error:", error.message);
+    return NextResponse.json({ error: "Ошибка сохранения" }, { status: 500 });
+  }
 
   return NextResponse.json({ allowed_chat_ids: updated });
 }
@@ -73,15 +81,22 @@ export async function DELETE(request: NextRequest) {
 
   const service = createServiceClient();
 
-  const { data: cfg } = await service
-    .from("wazzup_config")
+  const { data: token } = await service
+    .from("wazzup_tokens")
     .select("allowed_chat_ids")
     .eq("company_id", companyId)
     .maybeSingle();
 
-  const updated = (cfg?.allowed_chat_ids ?? []).filter((id: string) => id !== chatId);
-  await service.from("wazzup_config")
-    .upsert({ company_id: companyId, allowed_chat_ids: updated }, { onConflict: "company_id" });
+  const updated = (token?.allowed_chat_ids ?? []).filter((id: string) => id !== chatId);
+  const { error } = await service
+    .from("wazzup_tokens")
+    .update({ allowed_chat_ids: updated })
+    .eq("company_id", companyId);
+
+  if (error) {
+    console.error("[allowed-chats] delete error:", error.message);
+    return NextResponse.json({ error: "Ошибка сохранения" }, { status: 500 });
+  }
 
   return NextResponse.json({ allowed_chat_ids: updated });
 }

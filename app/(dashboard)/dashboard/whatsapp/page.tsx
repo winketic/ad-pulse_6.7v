@@ -50,7 +50,7 @@ export default async function WhatsAppPage() {
       .order("name"),
     service
       .from("wazzup_tokens")
-      .select("channel_ids, webhook_id")
+      .select("channel_ids, webhook_id, allowed_chat_ids")
       .eq("company_id", companyId)
       .maybeSingle(),
     // Profiles with phone for sender name lookup
@@ -63,6 +63,7 @@ export default async function WhatsAppPage() {
 
   const channelIds: string[] = tokenResult.data?.channel_ids ?? [];
   const webhookId: string | null = tokenResult.data?.webhook_id ?? null;
+  const allowedChatIds: string[] = tokenResult.data?.allowed_chat_ids ?? [];
 
   // phone → {name, position} for sender display
   const senderMap: Record<string, { name: string; position: string | null }> = {};
@@ -71,14 +72,6 @@ export default async function WhatsAppPage() {
       senderMap[p.phone] = { name: p.full_name, position: p.position ?? null };
     }
   }
-
-  // Allowed chats config
-  const { data: wazzupCfg } = await service
-    .from("wazzup_config")
-    .select("allowed_chat_ids")
-    .eq("company_id", companyId)
-    .maybeSingle();
-  const allowedChatIds: string[] = wazzupCfg?.allowed_chat_ids ?? [];
 
   return (
     <WhatsAppList
