@@ -171,7 +171,9 @@ async function callGptParser(
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
 
-  const materialsList = materials.map((m) => `- ${m.name} (${m.unit})`).join("\n");
+  const materialsList = materials
+    .map((m, i) => `${i + 1}. ${m.name} (${m.unit})`)
+    .join("\n");
 
   const contextBlock = context.length > 0
     ? `\n\nКонтекст предыдущих сообщений из этого чата (от старых к новым):\n${context.map((m, i) => `${i + 1}. ${m}`).join("\n")}\n\nЕсли текущее сообщение ссылается на предыдущее (например «ещё 200 кг», «и цемент тоже», «вернули то же»), используй контекст для определения материала/типа.`
@@ -179,14 +181,14 @@ async function callGptParser(
 
   const systemPrompt = `Ты парсер складских сообщений строительного производства. Анализируй сообщения на русском, казахском, сленге, с опечатками — пойми суть.
 
-Список материалов компании:
+Доступные материалы компании (пронумерованный справочник):
 ${materialsList}${contextBlock}
 
 Если сообщение НЕ является складской операцией (приветствие, вопрос, эмодзи, случайный текст, "Когда", ".", "Ок" и т.д.) — верни все поля null.
 
 Если это складская операция — определи:
 1. Тип операции: "income" (приход/завезли/поступило/получили/привезли), "expense" (расход/ушло/использовали/потратили/взяли), "defect" (брак/дефект/испорчено/поломка), "return" (возврат/вернули/обратно)
-2. Название материала — выбери ТОЧНО из списка выше (не придумывай новые)
+2. Название материала — скопируй дословно ТОЧНОЕ название из пронумерованного списка выше, не придумывай новые
 3. Количество (число)
 4. Единица измерения
 
@@ -268,13 +270,25 @@ export async function parseMessage(
   const gpt = await callGptParser(text, matList, context);
 
   if (gpt) {
-    // Map GPT's material_name back to a real material id (case-insensitive)
-    const matchedMat = gpt.material_name
-      ? matList.find((m) =>
-          m.name.toLowerCase() === gpt.material_name!.toLowerCase() ||
-          m.name.toLowerCase().includes(gpt.material_name!.toLowerCase()) ||
-          gpt.material_name!.toLowerCase().includes(m.name.toLowerCase())
-        ) ?? null
+    // Map GPT's material_name back to a real material id
+    const gptNameLower = gpt.material_name?.toLowerCase() ?? null;
+    const matchedMat = gptNameLower
+      ? (() => {
+          // Level 1: exact or substring match
+          const byIncludes = matList.find(
+            (m) =>
+              m.name.toLowerCase() === gptNameLower ||
+              m.name.toLowerCase().includes(gptNameLower) ||
+              gptNameLower.includes(m.name.toLowerCase())
+          );
+          if (byIncludes) return byIncludes;
+          // Level 2: Levenshtein fuzzy — catches "М-400" vs "м400", typos, etc.
+          const scored = matList
+            .map((m) => ({ m, score: fuzzyMaterialScore(gptNameLower, m.name) }))
+            .filter(({ score }) => score < 999)
+            .sort((a, b) => a.score - b.score);
+          return scored[0]?.m ?? null;
+        })()
       : null;
 
     const resolvedType   = gpt.type ?? type;
