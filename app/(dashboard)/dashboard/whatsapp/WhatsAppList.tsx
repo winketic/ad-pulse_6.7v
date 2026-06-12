@@ -417,7 +417,11 @@ export default function WhatsAppList({
 
   function handleCopyChatId(e: React.MouseEvent, msgId: string, chatId: string) {
     e.stopPropagation();
-    const done = () => { setCopiedId(msgId); setTimeout(() => setCopiedId(null), 1500); };
+    const done = () => {
+      setCopiedId(msgId);
+      setTimeout(() => setCopiedId(null), 1500);
+      showToast("Chat ID скопирован");
+    };
     if (navigator.clipboard) {
       navigator.clipboard.writeText(chatId).then(done).catch(() => { legacyCopy(chatId); done(); });
     } else { legacyCopy(chatId); done(); }
@@ -566,7 +570,8 @@ export default function WhatsAppList({
               <thead>
                 <tr style={{ borderBottom: "1px solid #1f1f1f", background: "#0d0d0d" }}>
                   <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-36">Дата</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-32">Отправитель</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-36">Отправитель</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-32">Chat ID</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-[#888888]">Сообщение</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-[#888888] w-32">Статус</th>
                   <th className="px-4 py-3 w-24" />
@@ -597,27 +602,51 @@ export default function WhatsAppList({
                         {msg.chat_id ? (
                           <button
                             onClick={(e) => handleCopyChatId(e, msg.id, msg.chat_id!)}
-                            title="Скопировать Chat ID"
-                            className="relative text-left transition-colors hover:text-[#00f5c4]"
+                            title="Нажмите чтобы скопировать Chat ID для раздела Разрешённые чаты"
+                            className="group relative flex items-center gap-1.5 text-left cursor-pointer"
                           >
-                            {sender ? (
-                              <span>
-                                <span className="text-[#ededed] font-medium">{sender.name}</span>
-                                {sender.position && <span className="block text-[#888888] text-[10px]">{sender.position}</span>}
-                              </span>
-                            ) : (
-                              <span className="text-[#888888] font-mono">{msg.sender_phone || "—"}</span>
-                            )}
-                            {copiedId === msg.id && (
-                              <span className="absolute -top-6 left-0 px-2 py-0.5 rounded bg-[#0a0a0a] text-[#00f5c4] text-[10px] whitespace-nowrap pointer-events-none z-10 border border-[#1f1f1f]">
-                                Скопировано!
-                              </span>
-                            )}
+                            <div>
+                              {sender ? (
+                                <>
+                                  <span className="text-[#ededed] font-medium group-hover:text-[#00f5c4] transition-colors">{sender.name}</span>
+                                  {sender.position && <span className="block text-[#888888] text-[10px]">{sender.position}</span>}
+                                </>
+                              ) : (
+                                <span className="text-[#888888] font-mono group-hover:text-[#00f5c4] transition-colors">{msg.sender_phone || "—"}</span>
+                              )}
+                            </div>
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-[#888888] group-hover:text-[#00f5c4]">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                              </svg>
+                            </span>
                           </button>
                         ) : (
-                          <span className="text-[#888888] font-mono">
+                          <span className="text-[#888888]">
                             {sender ? sender.name : (msg.sender_phone || "—")}
                           </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">
+                        {msg.chat_id ? (
+                          <button
+                            onClick={(e) => handleCopyChatId(e, msg.id, msg.chat_id!)}
+                            title="Скопировать Chat ID"
+                            className="group flex items-center gap-1.5 cursor-pointer font-mono text-[#888888] hover:text-[#00f5c4] transition-colors"
+                          >
+                            <span>
+                              {msg.chat_id.length > 12 ? msg.chat_id.slice(0, 12) + "…" : msg.chat_id}
+                            </span>
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                              </svg>
+                            </span>
+                          </button>
+                        ) : (
+                          <span className="text-[#555555]">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
