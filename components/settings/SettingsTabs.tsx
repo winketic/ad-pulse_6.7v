@@ -28,8 +28,8 @@ export default function SettingsTabs({
             onClick={() => onTabChange(tab.id)}
             className="flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold text-center transition-all"
             style={{
-              background: isActive ? "#00f5c4" : "transparent",
-              color: isActive ? "#05050a" : "rgba(255,255,255,0.7)",
+              background: isActive ? "var(--accent)" : "transparent",
+              color: isActive ? "var(--accent-text)" : "var(--muted)",
             }}
           >
             {tab.label}
