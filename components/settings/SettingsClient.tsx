@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import SettingsTabs, { type TabId } from "./SettingsTabs";
 import ProfileCard from "./ProfileCard";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -8,6 +9,7 @@ import CompanySettings from "./CompanySettings";
 import UserManagement from "./UserManagement";
 import WazzupCard from "./WazzupCard";
 import TelegramCard from "./TelegramCard";
+import { useToast } from "@/components/ui/Toast";
 import type { UserRow } from "@/app/(dashboard)/dashboard/settings/actions";
 
 interface SettingsClientProps {
@@ -51,6 +53,17 @@ export default function SettingsClient({
   initialTab, wazzupFlash, thresholdSection,
 }: SettingsClientProps) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+  const router = useRouter();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("wazzup") === "connected") {
+      toast("WhatsApp успешно подключён ✓", "success");
+      router.replace("/dashboard/settings", { scroll: false });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
