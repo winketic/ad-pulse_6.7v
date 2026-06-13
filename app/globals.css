@@ -11,17 +11,17 @@
 /* ── Dark theme (default) ─────────────────────────── */
 :root,
 [data-theme="dark"] {
-  --bg: #05050a;
-  --bg2: #0c1018;
-  --bg3: #141820;
+  --bg: #0a0a0a;
+  --bg2: #111111;
+  --bg3: #1a1a1a;
+  --card: #111111;
   --accent: #00f5c4;
-  --accent-15: color-mix(in srgb, #00f5c4 15%, transparent);
+  --accent-15: color-mix(in srgb, #00f5c4 12%, transparent);
   --accent-text: #0a0a0a;
   --purple: #7b5ea7;
-  --text: #eeeef5;
-  --muted: #5a6070;
-  --border: rgba(255, 255, 255, 0.07);
-  --card: #0c1018;
+  --text: #ededed;
+  --muted: #888888;
+  --border: rgba(255, 255, 255, 0.08);
   /* backward-compat aliases */
   --background: var(--bg);
   --foreground: var(--text);
@@ -29,17 +29,17 @@
 
 /* ── Light theme ──────────────────────────────────── */
 [data-theme="light"] {
-  --bg: #f0f2f5;
-  --bg2: #e8eaed;
-  --bg3: #dde0e5;
-  --accent: #00a884;
-  --accent-15: color-mix(in srgb, #00a884 15%, transparent);
-  --accent-text: #ffffff;
-  --purple: #5a3e8a;
-  --text: #111827;
-  --muted: #4b5563;
-  --border: rgba(0, 0, 0, 0.12);
+  --bg: #fafafa;
+  --bg2: #f4f4f5;
+  --bg3: #e4e4e7;
   --card: #ffffff;
+  --accent: #00a884;
+  --accent-15: color-mix(in srgb, #00a884 12%, transparent);
+  --accent-text: #ffffff;
+  --purple: #6b4e97;
+  --text: #18181b;
+  --muted: #71717a;
+  --border: rgba(0, 0, 0, 0.1);
   --background: var(--bg);
   --foreground: var(--text);
 }
