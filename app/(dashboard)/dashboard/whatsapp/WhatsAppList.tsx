@@ -406,7 +406,7 @@ export default function WhatsAppList({
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectPending, startRejectTransition] = useTransition();
-  const [_copiedId, setCopiedId] = useState<string | null>(null);
+
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -418,8 +418,6 @@ export default function WhatsAppList({
   function handleCopyChatId(e: React.MouseEvent, msgId: string, chatId: string) {
     e.stopPropagation();
     const done = () => {
-      setCopiedId(msgId);
-      setTimeout(() => setCopiedId(null), 1500);
       showToast("Chat ID скопирован");
     };
     if (navigator.clipboard) {
