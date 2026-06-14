@@ -64,9 +64,12 @@ export default function DashboardShell({
         className={[
           "group hidden lg:flex lg:flex-col shrink-0 overflow-hidden",
           "w-[60px] hover:w-[220px]",
-          "transition-[width] duration-200 ease-out",
         ].join(" ")}
-        style={{ background: "var(--bg)", borderRight: "1px solid var(--border)" }}
+        style={{
+          background: "var(--bg)",
+          borderRight: "1px solid var(--border)",
+          transition: "width 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
       >
 
         {/* Logo */}
