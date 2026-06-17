@@ -1,173 +1,162 @@
-# AD Pulse — Учёт материалов
+# AD Pulse
 
-Система учёта складских материалов с поддержкой WhatsApp-уведомлений через Wazzup.
+Мультитенантный B2B SaaS для учёта производственных материалов с автоматическим парсингом WhatsApp-сообщений.
 
-**Стек:** Next.js 14 · Supabase (Postgres + Auth + RLS) · Tailwind CSS · TypeScript
+Целевая аудитория — производственные компании (бетон, арматура, стройматериалы), которым нужно отслеживать движение материалов без громоздких ERP-систем.
 
 ---
 
-## Быстрый старт
+## Что умеет
 
-### Клонирование
+**Учёт материалов**
+- Справочник материалов с единицами измерения и нормами ГОСТ
+- Четыре типа транзакций: приход, расход, брак (с причиной), возврат
+- Остатки в реальном времени
+- Производственные планы с план/факт анализом и отклонениями
+- Экспорт отчётов в Excel
+
+**WhatsApp → транзакции автоматически**
+- Интеграция через Wazzup Partner API (Label, мультитенант OAuth)
+- Парсер входящих сообщений извлекает материал, количество, тип операции
+- Два уровня уверенности: `high` → авто-транзакция, `low` → ручное подтверждение
+
+**Уведомления**
+- Telegram-бот: алерты о браке, критическом остатке, перерасходе
+- Настраиваемые пороги остатков по каждому материалу
+
+**Администрирование**
+- Регистрация через заявку → одобрение администратором → invite-email
+- Четыре роли: `admin`, `manager`, `warehouse`, `workshop`
+- Управление командой внутри компании
+
+**Безопасность**
+- Изоляция данных по `company_id` на уровне RLS (Supabase Row Level Security)
+- URL-токен авторизация webhook endpoint
+- PKCE OAuth flow для Wazzup
+- Смена email только после подтверждения текущей почты 6-значным кодом
+
+---
+
+## Стек
+
+| Слой | Технология |
+|---|---|
+| Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS |
+| Backend | Next.js API Routes |
+| База данных | Supabase (PostgreSQL + Auth + RLS + Storage) |
+| Email | Resend |
+| Уведомления | Telegram Bot API |
+| WhatsApp | Wazzup Partner API v2 |
+| Деплой | Vercel |
+
+---
+
+## Архитектура мультитенантности
+
+Каждая компания — изолированный тенант. `company_id` всегда берётся из профиля через `auth.uid()`, а не из клиентского запроса. RLS политики на каждой таблице используют `SECURITY DEFINER` функцию `private.get_my_company_id()` как второй уровень защиты.
+
+```
+auth.uid() → profiles.company_id → RLS на всех таблицах
+```
+
+Webhook маршрутизирует входящие WhatsApp-сообщения к нужному тенанту через `channel_id → wazzup_tokens.channel_ids`.
+
+---
+
+## Роли
+
+| Роль | Доступ |
+|---|---|
+| `admin` | Полный доступ, управление командой и настройками |
+| `manager` | Планы, отчёты, все данные компании |
+| `warehouse` | Приход, расход, остатки |
+| `workshop` | Только расход и планы своего цеха |
+
+---
+
+## Локальный запуск
 
 ```bash
-git clone <repo-url>
-cd ad-pulse_6.7v
 npm install
 ```
 
-### Переменные окружения
-
-Скопируйте пример и заполните значения:
-
-```bash
-cp .env.local.example .env.local
+Создай `.env.local`:
 ```
-
-| Переменная | Где взять | Обязательная |
-|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard → Project Settings → API → Project URL | ✅ |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase Dashboard → Project Settings → API → Project API keys → `publishable` | ✅ |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Project Settings → API → Project API keys → `service_role` | ✅ |
-| `NEXT_PUBLIC_APP_URL` | URL вашего приложения (локально: `http://localhost:3000`, на Vercel: `https://your-app.vercel.app`) | ✅ |
-| `WAZZUP_CLIENT_ID` | Партнёрский кабинет Wazzup → OAuth Apps | WhatsApp only |
-| `WAZZUP_PARTNER_EMAIL` | Email партнёрского аккаунта Wazzup | WhatsApp only |
-| `WAZZUP_PARTNER_PASSWORD` | Пароль партнёрского аккаунта Wazzup | WhatsApp only |
-
-> ⚠️ `SUPABASE_SERVICE_ROLE_KEY` — секретный ключ. Никогда не добавляйте его в клиентский код и не публикуйте в репозитории.
-
-### База данных
-
-Выполните миграции в Supabase SQL Editor (в порядке нумерации):
-
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+RESEND_API_KEY=
+EMAIL_FROM=onboarding@resend.dev
+TELEGRAM_BOT_TOKEN=
+ADMIN_TELEGRAM_CHAT_ID=
+WAZZUP_WEBHOOK_TOKEN=
 ```
-supabase/migrations/001_initial.sql
-supabase/migrations/002_add_transaction_date.sql
-supabase/migrations/003_wazzup.sql
-supabase/migrations/004_whatsapp.sql
-```
-
-### Локальный запуск
 
 ```bash
 npm run dev
-# → http://localhost:3000
+```
+
+Миграции применяются через Supabase Dashboard → SQL Editor (`/supabase/migrations/` в порядке нумерации).
+
+---
+
+## Страницы
+
+| URL | Описание |
+|---|---|
+| `/dashboard` | Главная: остатки, последние транзакции, активные планы |
+| `/dashboard/materials` | Справочник материалов (CRUD) |
+| `/dashboard/transactions` | Движение: приход, расход, возврат, брак |
+| `/dashboard/plans` | Производственные планы |
+| `/dashboard/reports` | Отчёты с экспортом в Excel |
+| `/dashboard/whatsapp` | Входящие WhatsApp-сообщения и авто-транзакции |
+| `/dashboard/settings` | Профиль, компания, команда, интеграции |
+
+---
+
+## Структура проекта
+
+```
+/app
+  /(dashboard)       — защищённые страницы (middleware auth)
+  /api/wazzup        — Wazzup OAuth + webhook /[token]
+  /api/auth          — смена email, etc.
+  /api/telegram      — Telegram webhook
+/components
+  /settings          — Settings page components
+  /ui                — общие UI компоненты
+/lib
+  /supabase          — client, server, service clients
+  /wazzup            — auth, parser, parseAndSave, subscribe
+/supabase
+  /migrations        — SQL миграции (нумерованные, применять по порядку)
+/types               — TypeScript типы
 ```
 
 ---
 
-## Деплой на Vercel
+## Деплой
 
-### 1. Установите Vercel CLI
+Приложение задеплоено на Vercel. База данных — Supabase.
 
-```bash
-npm install -g vercel
-vercel login
+После каждого деплоя с новым `WAZZUP_WEBHOOK_TOKEN` нужно переподписаться на webhook через Settings → «Обновить webhook».
+
+**Supabase Auth Redirect URLs** должен содержать:
 ```
-
-### 2. Настройте переменные окружения в Vercel
-
-Через Dashboard: **vercel.com → Project → Settings → Environment Variables**
-
-Добавьте все переменные из таблицы выше. Для `NEXT_PUBLIC_APP_URL` используйте URL вашего Vercel-деплоя, например `https://ad-pulse.vercel.app`.
-
-Или через CLI (каждую переменную отдельно):
-
-```bash
-vercel env add NEXT_PUBLIC_SUPABASE_URL
-vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-vercel env add SUPABASE_SERVICE_ROLE_KEY
-vercel env add NEXT_PUBLIC_APP_URL
-```
-
-### 3. Деплой
-
-```bash
-vercel --prod
-```
-
-После деплоя обновите `NEXT_PUBLIC_APP_URL` на полученный URL и задеплойте повторно:
-
-```bash
-vercel env add NEXT_PUBLIC_APP_URL  # введите https://your-app.vercel.app
-vercel --prod
-```
-
-### 4. Настройте Supabase Auth Redirect
-
-В Supabase Dashboard → **Authentication → URL Configuration** добавьте в **Redirect URLs**:
-
-```
-https://your-app.vercel.app/**
+https://your-domain.com/**
 ```
 
 ---
 
 ## Создание первого пользователя
 
-### Через Supabase Dashboard
-
-1. Откройте **Supabase Dashboard → Authentication → Users**
-2. Нажмите **Add user → Create new user**
-3. Введите email и пароль
-4. Откройте **Table Editor → profiles** — там появится строка с новым пользователем
-5. Установите роль `admin` в поле `role`
-6. Войдите в приложение по адресу `/login`
-
-### Через SQL (массовое создание)
-
 ```sql
 -- Создать компанию
 INSERT INTO companies (name) VALUES ('Моя компания') RETURNING id;
 
--- Привязать существующего пользователя к компании (замените UUIDs)
+-- Привязать пользователя к компании (замените UUIDs)
 UPDATE profiles
 SET company_id = '<company-uuid>', role = 'admin'
 WHERE id = '<user-uuid>';
-```
-
----
-
-## Структура ролей
-
-| Роль | Описание |
-|---|---|
-| `admin` | Полный доступ, управление пользователями |
-| `manager` | Редактирование компании, транзакции, планы |
-| `warehouse` | Только движение материалов |
-| `workshop` | Просмотр планов |
-
----
-
-## Страницы приложения
-
-| URL | Описание |
-|---|---|
-| `/dashboard` | Главная: остатки, последние транзакции, активные планы |
-| `/dashboard/materials` | Справочник материалов |
-| `/dashboard/transactions` | Движение: приход, расход, возврат, брак |
-| `/dashboard/plans` | Производственные планы |
-| `/dashboard/reports` | Отчёты с экспортом в Excel |
-| `/dashboard/whatsapp` | Входящие WhatsApp-сообщения и авто-транзакции |
-| `/dashboard/settings` | Профиль, компания, пользователи, Wazzup |
-
----
-
-## Технические детали
-
-- **Auth:** Supabase Auth (email/password)
-- **База данных:** Supabase Postgres с Row Level Security (RLS)
-- **Файлы:** хранятся в Supabase Storage (если подключено)
-- **WhatsApp:** интеграция через Wazzup webhooks (`/api/wazzup/webhook`)
-- **Регион Vercel:** `fra1` (Frankfurt) — ближайший к СНГ
-
----
-
-## Команды
-
-```bash
-npm run dev      # разработка
-npm run build    # production сборка
-npm run start    # запуск production сборки локально
-npm run lint     # линтер
 ```

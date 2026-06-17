@@ -8,6 +8,171 @@ import {
   saveBannerColor,
 } from "@/app/(dashboard)/dashboard/settings/actions";
 
+// ── Email change sub-component ────────────────────────────
+
+type EmailChangeStep = "idle" | "input" | "code" | "done";
+
+function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
+  const [step, setStep] = useState<EmailChangeStep>("idle");
+  const [newEmail, setNewEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [maskedSentTo, setMaskedSentTo] = useState("");
+  const [confirmedEmail, setConfirmedEmail] = useState("");
+
+  async function handleRequestCode() {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/email-change/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_email: newEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Ошибка"); return; }
+      setMaskedSentTo(data.masked);
+      setStep("code");
+    } catch {
+      setError("Ошибка сети");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleVerifyCode() {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/email-change/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Ошибка"); return; }
+      setConfirmedEmail(data.new_email);
+      setStep("done");
+    } catch {
+      setError("Ошибка сети");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function reset() {
+    setStep("idle");
+    setNewEmail("");
+    setCode("");
+    setError("");
+    setMaskedSentTo("");
+  }
+
+  if (step === "idle") {
+    return (
+      <button
+        onClick={() => setStep("input")}
+        className="text-xs text-[#00f5c4] hover:underline font-medium mt-0.5 block"
+      >
+        Изменить email
+      </button>
+    );
+  }
+
+  if (step === "done") {
+    return (
+      <div className="mt-2 p-3 rounded-lg bg-green-50 border border-green-200">
+        <p className="text-xs text-green-800">
+          Письмо с подтверждением отправлено на <strong>{confirmedEmail}</strong>. Перейдите по ссылке в письме, чтобы завершить смену.
+        </p>
+        <button onClick={reset} className="text-xs text-[#00f5c4] hover:underline mt-1 block">
+          Закрыть
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 space-y-2">
+      {step === "input" && (
+        <>
+          <input
+            type="email"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            placeholder="новый@email.com"
+            autoFocus
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
+          />
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={reset}
+              disabled={loading}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 text-xs text-[var(--muted)] hover:bg-[var(--bg3)]"
+            >
+              Отмена
+            </button>
+            <button
+              onClick={handleRequestCode}
+              disabled={loading || !newEmail.trim()}
+              className="px-3 py-1.5 rounded-lg bg-[#00f5c4] text-white text-xs font-semibold hover:bg-[#163d24] disabled:opacity-50"
+            >
+              {loading ? "Отправка..." : "Отправить код"}
+            </button>
+          </div>
+          <p className="text-xs text-[var(--muted)]">
+            Код придёт на текущий email: {currentEmail}
+          </p>
+        </>
+      )}
+
+      {step === "code" && (
+        <>
+          <p className="text-xs text-[var(--muted)]">
+            Код отправлен на <strong>{maskedSentTo}</strong>. Введите его ниже.
+          </p>
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="000000"
+            autoFocus
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
+          />
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setStep("input"); setCode(""); setError(""); }}
+              disabled={loading}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 text-xs text-[var(--muted)] hover:bg-[var(--bg3)]"
+            >
+              Назад
+            </button>
+            <button
+              onClick={handleVerifyCode}
+              disabled={loading || code.length !== 6}
+              className="px-3 py-1.5 rounded-lg bg-[#00f5c4] text-white text-xs font-semibold hover:bg-[#163d24] disabled:opacity-50"
+            >
+              {loading ? "Проверка..." : "Подтвердить"}
+            </button>
+            <button
+              onClick={() => { setStep("input"); setCode(""); setError(""); }}
+              disabled={loading}
+              className="text-xs text-[var(--muted)] hover:text-[#00f5c4] ml-auto"
+            >
+              Другой email
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 const BANNER_COLORS = [
   "#00f5c4",
   "#7b5ea7",
@@ -290,6 +455,7 @@ export default function ProfileCard({
             <div>
               <p className="text-xs font-medium text-[var(--muted)] mb-0.5">Email</p>
               <p className="text-sm text-[var(--muted)] truncate">{email}</p>
+              <EmailChangeSection currentEmail={email} />
             </div>
             <div>
               <p className="text-xs font-medium text-[var(--muted)] mb-0.5">Роль</p>
