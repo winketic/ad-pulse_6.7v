@@ -62,7 +62,7 @@ export default async function SettingsPage({
 
     // Wazzup token
     company_id
-      ? supabase.from("wazzup_tokens").select("id, expires_at").eq("company_id", company_id).single()
+      ? supabase.from("wazzup_tokens").select("id, expires_at, channel_ids").eq("company_id", company_id).single()
       : Promise.resolve({ data: null }),
 
     // Wazzup config (service client)
@@ -99,6 +99,7 @@ export default async function SettingsPage({
 
   const isConnected = !!wazzupTokenResult.data;
   const tokenExpiresAt = wazzupTokenResult.data?.expires_at ?? null;
+  const hasChannels = ((wazzupTokenResult.data as { channel_ids?: string[] } | null)?.channel_ids ?? []).length > 0;
 
   const clean = (s: string | null | undefined) => s?.replace(/﻿/g, "").trim() ?? null;
   const configEmail = clean(wazzupConfigResult.data?.partner_email);
@@ -138,6 +139,7 @@ export default async function SettingsPage({
       // Wazzup
       isConnected={isConnected}
       tokenExpiresAt={tokenExpiresAt}
+      hasChannels={hasChannels}
       hasConfig={hasConfig}
       configEmail={configEmail}
       configClientId={configClientId}

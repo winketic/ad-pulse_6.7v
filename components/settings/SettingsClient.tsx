@@ -30,6 +30,7 @@ interface SettingsClientProps {
   // Wazzup
   isConnected: boolean;
   tokenExpiresAt: string | null;
+  hasChannels: boolean;
   hasConfig: boolean;
   configEmail: string | null;
   configClientId: string | null;
@@ -48,7 +49,7 @@ export default function SettingsClient({
   fullName, email, roleLabel, roleBg, roleText,
   position, userId, companyId, avatarUrl, bannerColor,
   companyName, telegramConnected,
-  isConnected, tokenExpiresAt, hasConfig, configEmail, configClientId,
+  isConnected, tokenExpiresAt, hasChannels, hasConfig, configEmail, configClientId,
   users, isAdmin, canEditCompany,
   initialTab, wazzupFlash, thresholdSection,
 }: SettingsClientProps) {
@@ -104,6 +105,7 @@ export default function SettingsClient({
           <WazzupCard
             isConnected={isConnected}
             expiresAt={tokenExpiresAt}
+            hasChannels={hasChannels}
             flash={wazzupFlash ?? null}
             hasConfig={hasConfig}
             configEmail={configEmail}

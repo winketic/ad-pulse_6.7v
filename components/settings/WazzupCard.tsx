@@ -7,6 +7,7 @@ import { disconnectWazzup, saveWazzupConfig } from "@/app/(dashboard)/dashboard/
 interface WazzupCardProps {
   isConnected: boolean;
   expiresAt: string | null;
+  hasChannels: boolean;
   flash: string | null;
   hasConfig: boolean;
   configEmail: string | null;
@@ -200,6 +201,7 @@ function ResubscribeButton() {
 export default function WazzupCard({
   isConnected,
   expiresAt,
+  hasChannels,
   flash,
   hasConfig,
   configEmail,
@@ -336,6 +338,18 @@ export default function WazzupCard({
                 )}
               </div>
             </div>
+
+            {/* No channels warning */}
+            {!hasChannels && isAdmin && (
+              <div className="flex items-start gap-2 mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <p className="text-xs text-amber-700">
+                  Каналы не найдены — получение сообщений не работает. Нажмите «Обновить webhook» или переподключите WhatsApp.
+                </p>
+              </div>
+            )}
 
             {/* Resubscribe webhook */}
             {isAdmin && <ResubscribeButton />}
