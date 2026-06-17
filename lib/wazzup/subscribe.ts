@@ -13,11 +13,15 @@ export async function subscribeToWebhooks(
   const service = createServiceClient();
 
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\uFEFF/g, "").replace(/\/$/, "").trim();
-  const webhookUrl = `${appUrl}/api/wazzup/webhook`;
+  const webhookToken = (process.env.WAZZUP_WEBHOOK_TOKEN ?? "").trim();
+  const webhookUrl = `${appUrl}/api/wazzup/webhook/${webhookToken}`;
 
   console.log("[wazzup/subscribe] registering webhook URL:", webhookUrl);
   if (!appUrl) {
     console.error("[wazzup/subscribe] ERROR: NEXT_PUBLIC_APP_URL is not set!");
+  }
+  if (!webhookToken) {
+    console.error("[wazzup/subscribe] ERROR: WAZZUP_WEBHOOK_TOKEN is not set \u2014 webhook will reject all requests!");
   }
   if (appUrl.includes("vercel.app")) {
     console.warn("[wazzup/subscribe] WARNING: NEXT_PUBLIC_APP_URL still points to vercel.app \u2014 should be the custom domain");
