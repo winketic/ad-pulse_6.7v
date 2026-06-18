@@ -139,9 +139,9 @@ function ConfirmModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="rounded-2xl w-full max-w-md" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
+      <div className="rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[92dvh] flex flex-col" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
           <h2 className="text-sm font-semibold text-[var(--text)]">Подтвердить транзакцию</h2>
           <button onClick={onClose} className="p-1 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg3)] transition-colors">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -150,58 +150,60 @@ function ConfirmModal({
           </button>
         </div>
 
-        <div className="px-5 pt-4">
-          <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Исходное сообщение</p>
-          <p className="text-sm text-[var(--text)] rounded-lg px-3 py-2.5 leading-relaxed"
-            style={{ background: "var(--bg3)", border: "1px solid var(--border)" }}>
-            {message.raw_text || "—"}
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Тип операции</label>
-            <select value={type} onChange={(e) => setType(e.target.value as TxType)}
-              className="dp-input text-sm">
-              {(Object.entries(TX_TYPE_LABELS) as [TxType, string][]).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Материал</label>
-            <select value={materialId} onChange={(e) => setMaterialId(e.target.value)}
-              className="dp-input text-sm">
-              <option value="">— выберите —</option>
-              {materials.map((m) => (
-                <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">
-              Количество{pr?.unit && <span className="ml-1 font-normal text-[var(--muted)]">({pr.unit})</span>}
-            </label>
-            <input type="text" inputMode="decimal" value={quantity}
-              onChange={(e) => setQuantity(e.target.value)} placeholder="0" className="dp-input text-sm" />
-          </div>
-
-          {error && (
-            <p className="text-xs text-red-400 rounded-lg px-3 py-2"
-              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
-              {error}
+        <div className="overflow-y-auto flex-1 min-h-0">
+          <div className="px-5 pt-4">
+            <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Исходное сообщение</p>
+            <p className="text-sm text-[var(--text)] rounded-lg px-3 py-2.5 leading-relaxed"
+              style={{ background: "var(--bg3)", border: "1px solid var(--border)" }}>
+              {message.raw_text || "—"}
             </p>
-          )}
-
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="dp-btn-secondary flex-1 py-2">Отмена</button>
-            <button type="submit" disabled={pending} className="dp-btn-primary flex-1 py-2">
-              {pending ? "Сохранение…" : "Сохранить"}
-            </button>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Тип операции</label>
+              <select value={type} onChange={(e) => setType(e.target.value as TxType)}
+                className="dp-input text-sm">
+                {(Object.entries(TX_TYPE_LABELS) as [TxType, string][]).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Материал</label>
+              <select value={materialId} onChange={(e) => setMaterialId(e.target.value)}
+                className="dp-input text-sm">
+                <option value="">— выберите —</option>
+                {materials.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">
+                Количество{pr?.unit && <span className="ml-1 font-normal text-[var(--muted)]">({pr.unit})</span>}
+              </label>
+              <input type="text" inputMode="decimal" value={quantity}
+                onChange={(e) => setQuantity(e.target.value)} placeholder="0" className="dp-input text-sm" />
+            </div>
+
+            {error && (
+              <p className="text-xs text-red-400 rounded-lg px-3 py-2"
+                style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                {error}
+              </p>
+            )}
+
+            <div className="flex gap-3 pt-1 pb-2">
+              <button type="button" onClick={onClose} className="dp-btn-secondary flex-1 py-2">Отмена</button>
+              <button type="submit" disabled={pending} className="dp-btn-primary flex-1 py-2">
+                {pending ? "Сохранение…" : "Сохранить"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
