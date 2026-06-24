@@ -244,7 +244,7 @@ export default function DashboardShell({
         {/* Page content */}
         <main
           className="flex-1 overflow-auto overflow-x-hidden lg:pb-0"
-          style={{ paddingBottom: "calc(68px + env(safe-area-inset-bottom, 0px))" }}
+          style={{ paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }}
         >
           {children}
         </main>
@@ -261,15 +261,15 @@ export default function DashboardShell({
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
       >
-        <div className="flex items-stretch h-[68px]">
-          {MOBILE_NAV.map(({ href, Icon }) => {
+        <div className="flex items-stretch min-h-[60px]">
+          {MOBILE_NAV.map(({ href, label, Icon }) => {
             const active = isActive(href);
             return (
               <Link
                 key={href}
                 href={href}
                 prefetch
-                className="flex-1 flex flex-col items-center justify-center relative"
+                className="flex-1 flex flex-col items-center justify-center gap-1 relative py-1.5"
                 style={{ WebkitTapHighlightColor: "transparent" }}
               >
                 {active && (
@@ -282,7 +282,13 @@ export default function DashboardShell({
                   className="transition-transform duration-100 active:scale-90"
                   style={{ color: active ? "var(--accent)" : "var(--muted)" }}
                 >
-                  <Icon size={24} strokeWidth={active ? 2 : 1.6} />
+                  <Icon size={22} strokeWidth={active ? 2.1 : 1.6} />
+                </span>
+                <span
+                  className="text-[10px] leading-none font-medium"
+                  style={{ color: active ? "var(--accent)" : "var(--muted)" }}
+                >
+                  {label}
                 </span>
               </Link>
             );

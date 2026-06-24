@@ -85,13 +85,14 @@ html, body {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
   }
 
-  /* Buttons */
+  /* Buttons — min-height 48px for comfortable mobile tap targets */
   .dp-btn-primary {
     @apply inline-flex items-center justify-center gap-2
            px-4 py-2.5 rounded-lg text-sm font-semibold
            bg-[#00f5c4] text-[#0a0a0a]
            hover:bg-[#00ddb3] active:bg-[#00c9a0]
            transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 48px;
   }
 
   .dp-btn-secondary {
@@ -100,6 +101,7 @@ html, body {
            transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
     border: 1px solid var(--border);
     color: var(--text);
+    min-height: 48px;
   }
   .dp-btn-secondary:hover { background: var(--bg3); }
 
@@ -109,6 +111,7 @@ html, body {
            bg-red-500/10 border border-red-500/30 text-red-400
            hover:bg-red-500/20 transition-colors
            disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 48px;
   }
 
   /* Auth page wrapper */
