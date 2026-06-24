@@ -41,6 +41,12 @@ export async function GET(request: NextRequest) {
     if (type === 'recovery') {
       return NextResponse.redirect(new URL('/reset-password', origin))
     }
+    // Invite: session is now set, but the user still needs to fill in their
+    // name/position and set a password — never let this fall through to
+    // /dashboard even if `next` got stripped along the way.
+    if (type === 'invite') {
+      return NextResponse.redirect(new URL('/invite', origin))
+    }
     if (next) return NextResponse.redirect(new URL(next, origin))
     return NextResponse.redirect(new URL('/dashboard', origin))
   }
