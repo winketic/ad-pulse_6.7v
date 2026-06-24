@@ -4,6 +4,15 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { Logo } from "@/components/Logo";
+import { updateMyProfile } from "@/app/(dashboard)/dashboard/settings/actions";
+
+type Step = "name" | "position" | "password";
+const STEPS: Step[] = ["name", "position", "password"];
+const STEP_LABELS: Record<Step, string> = {
+  name: "Ваше имя",
+  position: "Должность",
+  password: "Пароль",
+};
 
 function passwordStrength(pwd: string): { score: number; label: string; color: string } {
   if (pwd.length === 0) return { score: 0, label: "", color: "" };
@@ -20,6 +29,9 @@ function passwordStrength(pwd: string): { score: number; label: string; color: s
 }
 
 export default function InvitePage() {
+  const [step, setStep] = useState<Step>("name");
+  const [fullName, setFullName] = useState("");
+  const [position, setPosition] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -28,6 +40,7 @@ export default function InvitePage() {
   const router = useRouter();
   const supabase = createClient();
 
+  // ── Verify invite token / pick up existing session ───────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
 
@@ -52,7 +65,7 @@ export default function InvitePage() {
       return;
     }
 
-    // Fallback: token already processed (page reload) or hash-based flow
+    // Fallback: token already processed (PKCE code exchange) or hash-based flow
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "USER_UPDATED") setReady(true);
     });
@@ -62,7 +75,48 @@ export default function InvitePage() {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  const validate = (): string | null => {
+  // ── Pre-fill name/position from existing profile (if any) ─
+  useEffect(() => {
+    if (!ready) return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, position")
+        .eq("id", user.id)
+        .single();
+
+      // Team invites store the email as a placeholder full_name — treat that
+      // as "not set yet" rather than pre-filling the name field with an email.
+      const isPlaceholder = !profile?.full_name || profile.full_name === user.email;
+      if (!isPlaceholder) setFullName(profile!.full_name!);
+      if (profile?.position) setPosition(profile.position);
+    })();
+  }, [ready, supabase]);
+
+  const stepIndex = STEPS.indexOf(step);
+
+  function goNext() {
+    setError("");
+    if (step === "name") {
+      if (!fullName.trim()) { setError("Введите ваше имя"); return; }
+      setStep("position");
+      return;
+    }
+    if (step === "position") {
+      setStep("password");
+      return;
+    }
+  }
+
+  function goBack() {
+    setError("");
+    if (step === "position") setStep("name");
+    else if (step === "password") setStep("position");
+  }
+
+  const validatePassword = (): string | null => {
     if (password.length < 8) return "Пароль должен содержать минимум 8 символов";
     if (password !== confirm) return "Пароли не совпадают";
     return null;
@@ -70,11 +124,19 @@ export default function InvitePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const validationError = validate();
+    const validationError = validatePassword();
     if (validationError) { setError(validationError); return; }
 
     setError("");
     setLoading(true);
+
+    try {
+      await updateMyProfile(fullName, position);
+    } catch (e) {
+      setLoading(false);
+      setError(e instanceof Error ? e.message : "Не удалось сохранить профиль");
+      return;
+    }
 
     const { error: updateError } = await supabase.auth.updateUser({ password });
     setLoading(false);
@@ -102,7 +164,7 @@ export default function InvitePage() {
           <h1 className="text-2xl font-bold text-[#05050a] tracking-tight">
             Добро пожаловать в AD Pulse
           </h1>
-          <p className="text-sm text-gray-400 mt-1">Установите пароль для вашего аккаунта</p>
+          <p className="text-sm text-gray-400 mt-1">Настройте аккаунт перед началом работы</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
@@ -115,85 +177,196 @@ export default function InvitePage() {
               <span className="text-sm">Проверяем приглашение…</span>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Новый пароль
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Минимум 8 символов"
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#05050a]/20 focus:border-[#05050a] transition-colors"
-                />
-                {/* Strength indicator */}
-                {password.length > 0 && (
-                  <div className="mt-2">
-                    <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-300 ${strength.color}`}
-                        style={{ width: strengthWidth }}
-                      />
-                    </div>
-                    <p className={`text-xs mt-1 ${strength.score >= 4 ? "text-[#00a882]" : strength.score >= 3 ? "text-amber-500" : "text-red-500"}`}>
-                      {strength.label}
-                    </p>
+            <>
+              {/* Step progress */}
+              <div className="flex items-center gap-2 mb-6">
+                {STEPS.map((s, i) => (
+                  <div key={s} className="flex-1 flex items-center gap-2">
+                    <div
+                      className={`h-1.5 flex-1 rounded-full transition-colors ${
+                        i <= stepIndex ? "bg-[#05050a]" : "bg-gray-150 bg-gray-200"
+                      }`}
+                    />
                   </div>
-                )}
+                ))}
               </div>
+              <p className="text-xs font-medium text-gray-400 mb-5">
+                Шаг {stepIndex + 1} из {STEPS.length} — {STEP_LABELS[step]}
+              </p>
 
-              <div>
-                <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Подтвердите пароль
-                </label>
-                <input
-                  id="confirm"
-                  type="password"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  placeholder="Повторите пароль"
-                  required
-                  autoComplete="new-password"
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#05050a]/20 focus:border-[#05050a] transition-colors"
-                />
-                {confirm.length > 0 && password !== confirm && (
-                  <p className="text-xs text-red-500 mt-1">Пароли не совпадают</p>
-                )}
-                {confirm.length > 0 && password === confirm && password.length >= 8 && (
-                  <p className="text-xs text-[#00a882] mt-1">✓ Пароли совпадают</p>
-                )}
-              </div>
+              {/* ── Step: name ──────────────────────────── */}
+              {step === "name" && (
+                <form
+                  onSubmit={(e) => { e.preventDefault(); goNext(); }}
+                  className="space-y-5"
+                >
+                  <div>
+                    <label htmlFor="full-name" className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Как вас зовут?
+                    </label>
+                    <input
+                      id="full-name"
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Иван Иванов"
+                      required
+                      autoFocus
+                      maxLength={100}
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#05050a]/20 focus:border-[#05050a] transition-colors"
+                    />
+                  </div>
 
-              {error && (
-                <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-red-50 border border-red-200">
-                  <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-sm text-red-700">{error}</span>
-                </div>
+                  {error && (
+                    <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-red-50 border border-red-200">
+                      <span className="text-sm text-red-700">{error}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={!fullName.trim()}
+                    className="w-full py-2.5 px-4 bg-[#05050a] hover:bg-[#1a1a2e] text-[#00f5c4] text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                  >
+                    Далее
+                  </button>
+                </form>
               )}
 
-              <button
-                type="submit"
-                disabled={loading || password.length < 8 || password !== confirm}
-                className="w-full py-2.5 px-4 bg-[#05050a] hover:bg-[#1a1a2e] text-[#00f5c4] text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Сохранение…
-                  </span>
-                ) : "Войти в систему"}
-              </button>
-            </form>
+              {/* ── Step: position ──────────────────────── */}
+              {step === "position" && (
+                <form
+                  onSubmit={(e) => { e.preventDefault(); goNext(); }}
+                  className="space-y-5"
+                >
+                  <div>
+                    <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Должность
+                      <span className="ml-1.5 text-xs font-normal text-gray-400">(необязательно)</span>
+                    </label>
+                    <input
+                      id="position"
+                      type="text"
+                      value={position}
+                      onChange={(e) => setPosition(e.target.value)}
+                      placeholder="Начальник склада"
+                      autoFocus
+                      maxLength={100}
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#05050a]/20 focus:border-[#05050a] transition-colors"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={goBack}
+                      className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                    >
+                      Назад
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-2.5 px-4 bg-[#05050a] hover:bg-[#1a1a2e] text-[#00f5c4] text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                    >
+                      Далее
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* ── Step: password ──────────────────────── */}
+              {step === "password" && (
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Новый пароль
+                    </label>
+                    <input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Минимум 8 символов"
+                      required
+                      minLength={8}
+                      autoFocus
+                      autoComplete="new-password"
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#05050a]/20 focus:border-[#05050a] transition-colors"
+                    />
+                    {password.length > 0 && (
+                      <div className="mt-2">
+                        <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${strength.color}`}
+                            style={{ width: strengthWidth }}
+                          />
+                        </div>
+                        <p className={`text-xs mt-1 ${strength.score >= 4 ? "text-[#00a882]" : strength.score >= 3 ? "text-amber-500" : "text-red-500"}`}>
+                          {strength.label}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Подтвердите пароль
+                    </label>
+                    <input
+                      id="confirm"
+                      type="password"
+                      value={confirm}
+                      onChange={(e) => setConfirm(e.target.value)}
+                      placeholder="Повторите пароль"
+                      required
+                      autoComplete="new-password"
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#05050a]/20 focus:border-[#05050a] transition-colors"
+                    />
+                    {confirm.length > 0 && password !== confirm && (
+                      <p className="text-xs text-red-500 mt-1">Пароли не совпадают</p>
+                    )}
+                    {confirm.length > 0 && password === confirm && password.length >= 8 && (
+                      <p className="text-xs text-[#00a882] mt-1">✓ Пароли совпадают</p>
+                    )}
+                  </div>
+
+                  {error && (
+                    <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-red-50 border border-red-200">
+                      <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-sm text-red-700">{error}</span>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={goBack}
+                      disabled={loading}
+                      className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    >
+                      Назад
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading || password.length < 8 || password !== confirm}
+                      className="flex-1 py-2.5 px-4 bg-[#05050a] hover:bg-[#1a1a2e] text-[#00f5c4] text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                    >
+                      {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Сохранение…
+                        </span>
+                      ) : "Войти в систему"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </>
           )}
         </div>
       </div>
