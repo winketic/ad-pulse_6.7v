@@ -6,9 +6,9 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { Resend } from "resend";
 
 const CODE_TTL_MS = 15 * 60 * 1000; // 15 minutes
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: NextRequest) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
