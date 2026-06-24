@@ -32,11 +32,11 @@ export default function BalanceCard({ balances }: { balances: BalanceData[] }) {
           return (
             <div
               key={b.material_id}
-              className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4 min-w-[172px] max-w-[220px] flex-shrink-0 snap-start hover:shadow-sm transition-shadow"
+              className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-5 min-w-[180px] max-w-[230px] flex-shrink-0 snap-start hover:shadow-sm transition-shadow"
             >
               {/* Name */}
               <p
-                className="text-xs font-medium text-[var(--muted)] uppercase tracking-wide truncate mb-2"
+                className="text-xs font-medium text-[var(--muted)] uppercase tracking-wide truncate mb-2.5"
                 title={b.name}
               >
                 {b.name}
@@ -44,7 +44,7 @@ export default function BalanceCard({ balances }: { balances: BalanceData[] }) {
 
               {/* Balance */}
               <p
-                className={`text-2xl font-bold tabular-nums leading-none ${
+                className={`text-3xl font-bold tabular-nums leading-none tracking-tight ${
                   isZero
                     ? "text-[var(--muted)]"
                     : isNegative

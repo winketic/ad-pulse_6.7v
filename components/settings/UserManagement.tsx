@@ -177,14 +177,14 @@ export default function UserManagement({
             <button
               type="button"
               onClick={() => setShowInvite(false)}
-              className="flex-1 min-h-[44px] px-3 py-2 rounded-lg border border-[var(--border)] text-sm text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors"
+              className="flex-1 min-h-[48px] px-3 py-2 rounded-lg border border-[var(--border)] text-sm text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors"
             >
               Отмена
             </button>
             <button
               type="submit"
               disabled={isPending || !inviteEmail.trim()}
-              className="flex-1 min-h-[44px] px-3 py-2 rounded-lg bg-[#00f5c4] text-[#0a0a0a] text-sm font-medium hover:bg-[#00ddb3] disabled:opacity-50 transition-colors"
+              className="flex-1 min-h-[48px] px-3 py-2 rounded-lg bg-[#00f5c4] text-[#0a0a0a] text-sm font-medium hover:bg-[#00ddb3] disabled:opacity-50 transition-colors"
             >
               {isPending ? "Добавление…" : "Добавить"}
             </button>

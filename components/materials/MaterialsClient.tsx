@@ -232,20 +232,20 @@ function MaterialForm({
         </div>
       )}
 
-      {/* Buttons */}
-      <div className="flex gap-3 pt-1">
+      {/* Buttons — sticky to bottom of scroll area so they're always reachable without scrolling */}
+      <div className="flex gap-3 pt-3 pb-1 sticky bottom-0 -mx-6 -mb-6 px-6 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-[var(--card)] border-t border-[var(--border)]">
         <button
           type="button"
           onClick={onCancel}
           disabled={isPending}
-          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50"
+          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50 min-h-[48px]"
         >
           Отмена
         </button>
         <button
           type="submit"
           disabled={isPending || !form.name.trim()}
-          className="flex-1 py-2.5 px-4 rounded-lg bg-[#00f5c4] hover:bg-[#163d24] text-sm font-semibold text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[44px]"
+          className="flex-1 py-2.5 px-4 rounded-lg bg-[#00f5c4] hover:bg-[#163d24] text-sm font-semibold text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px]"
         >
           {isPending && (
             <svg
@@ -303,7 +303,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       </p>
       <button
         onClick={onAdd}
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm min-h-[44px]"
+        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm min-h-[48px]"
       >
         <svg
           className="w-4 h-4"
@@ -596,7 +596,7 @@ export default function MaterialsClient({
         </div>
         <button
           onClick={openCreate}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm self-start sm:self-auto min-h-[44px]"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm self-start sm:self-auto min-h-[48px]"
         >
           <svg
             className="w-4 h-4"

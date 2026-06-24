@@ -55,10 +55,10 @@ function StatCard({
   return (
     <div className="bg-[var(--card)] rounded-xl border border-[var(--border)]">
       {/* Mobile: compact, no icon */}
-      <div className="sm:hidden p-4">
-        <p className="text-xs text-[var(--muted)] mb-1">{mobileLabel ?? label}</p>
-        <p className={`text-2xl font-bold tabular-nums ${valueColor}`}>{value}</p>
-        <p className="text-xs text-[var(--muted)] mt-0.5">{sub}</p>
+      <div className="sm:hidden p-5">
+        <p className="text-xs text-[var(--muted)] mb-1.5">{mobileLabel ?? label}</p>
+        <p className={`text-3xl font-bold tabular-nums tracking-tight ${valueColor}`}>{value}</p>
+        <p className="text-xs text-[var(--muted)] mt-1">{sub}</p>
       </div>
       {/* Desktop: icon + text */}
       <div className="hidden sm:flex p-5 items-start gap-4">
@@ -67,7 +67,7 @@ function StatCard({
         </div>
         <div className="min-w-0 overflow-hidden">
           <p className="text-sm text-[var(--muted)] leading-tight truncate">{label}</p>
-          <p className={`text-2xl font-bold mt-0.5 tabular-nums ${valueColor}`}>{value}</p>
+          <p className={`text-3xl font-bold mt-0.5 tabular-nums tracking-tight ${valueColor}`}>{value}</p>
           <p className="text-xs text-[var(--muted)] mt-0.5">{sub}</p>
         </div>
       </div>

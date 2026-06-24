@@ -68,14 +68,14 @@ export default function CompanySettings({
               <button
                 onClick={() => { setEditing(false); setError(""); }}
                 disabled={isPending}
-                className="flex-1 min-h-[44px] px-4 py-2 rounded-lg border border-[var(--border)] text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors"
+                className="flex-1 min-h-[48px] px-4 py-2 rounded-lg border border-[var(--border)] text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors"
               >
                 Отмена
               </button>
               <button
                 onClick={handleSave}
                 disabled={isPending || !value.trim()}
-                className="flex-1 min-h-[44px] px-4 py-2 rounded-lg bg-[#00f5c4] text-white text-sm font-medium hover:bg-[#00f5c4]/90 disabled:opacity-50 transition-colors"
+                className="flex-1 min-h-[48px] px-4 py-2 rounded-lg bg-[#00f5c4] text-white text-sm font-medium hover:bg-[#00f5c4]/90 disabled:opacity-50 transition-colors"
               >
                 {isPending ? "Сохранение…" : "Сохранить"}
               </button>

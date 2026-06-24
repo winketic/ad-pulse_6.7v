@@ -196,9 +196,12 @@ function ConfirmModal({
               </p>
             )}
 
-            <div className="flex gap-3 pt-1 pb-2">
-              <button type="button" onClick={onClose} className="dp-btn-secondary flex-1 py-2">Отмена</button>
-              <button type="submit" disabled={pending} className="dp-btn-primary flex-1 py-2">
+            <div
+              className="flex gap-3 pt-3 sticky bottom-0 -mx-5 -mb-4 px-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t"
+              style={{ background: "var(--card)", borderColor: "var(--border)" }}
+            >
+              <button type="button" onClick={onClose} className="dp-btn-secondary flex-1">Отмена</button>
+              <button type="submit" disabled={pending} className="dp-btn-primary flex-1">
                 {pending ? "Сохранение…" : "Сохранить"}
               </button>
             </div>
