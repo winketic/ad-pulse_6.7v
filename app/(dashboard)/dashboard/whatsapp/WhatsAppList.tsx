@@ -197,7 +197,7 @@ function ConfirmModal({
             )}
 
             <div
-              className="flex gap-3 pt-3 sticky bottom-0 -mx-5 -mb-4 px-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t"
+              className="flex gap-3 pt-3 sticky bottom-0 -mx-5 -mb-4 px-5 pb-[calc(80px+env(safe-area-inset-bottom,0px))] sm:pb-4 border-t"
               style={{ background: "var(--card)", borderColor: "var(--border)" }}
             >
               <button type="button" onClick={onClose} className="dp-btn-secondary flex-1">Отмена</button>
