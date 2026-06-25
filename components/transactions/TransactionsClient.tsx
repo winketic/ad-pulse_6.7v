@@ -174,7 +174,7 @@ function Modal({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
@@ -413,7 +413,7 @@ function AddTransactionForm({
       )}
 
       {/* Buttons — sticky to bottom of scroll area so they're always reachable without scrolling */}
-      <div className="flex gap-3 pt-3 pb-1 sticky bottom-0 -mx-6 -mb-5 px-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] bg-[var(--card)] border-t border-[var(--border)]">
+      <div className="flex gap-3 pt-3 sticky bottom-0 -mx-6 -mb-5 px-6 pb-[calc(80px+env(safe-area-inset-bottom,0px))] sm:pb-5 bg-[var(--card)] border-t border-[var(--border)]">
         <button
           type="button"
           onClick={onCancel}
