@@ -326,7 +326,7 @@ function AddTransactionForm({
       className="space-y-4"
     >
       {/* Row: type + date */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
             Тип <span className="text-red-500">*</span>
