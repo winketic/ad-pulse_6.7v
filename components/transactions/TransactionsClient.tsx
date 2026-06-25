@@ -63,8 +63,14 @@ type FormState = {
 
 // ─── Config ───────────────────────────────────────────────
 
+// "production" is a UI-only pseudo-type for the modal's type selector —
+// the DB never stores a transaction with this type (see
+// createProductionTransaction, which decomposes it into real
+// income/expense rows). Kept out of Transaction/Filters' TxType on purpose.
+type UiTxType = TxType | "production";
+
 const TYPE_CONFIG: Record<
-  TxType,
+  UiTxType,
   { label: string; bg: string; text: string; sign: string; qColor: string }
 > = {
   income: {
@@ -95,9 +101,20 @@ const TYPE_CONFIG: Record<
     sign: "−",
     qColor: "text-amber-700",
   },
+  production: {
+    label: "Производство",
+    bg: "bg-blue-500/20",
+    text: "text-blue-400",
+    sign: "+",
+    qColor: "text-blue-400",
+  },
 };
 
-const TX_TYPES = Object.keys(TYPE_CONFIG) as TxType[];
+// Full set (incl. "production") — for the modal's type selector only.
+const TX_TYPES = Object.keys(TYPE_CONFIG) as UiTxType[];
+// Real, persisted DB types only — for the filter bar and any rendering keyed
+// off an actual saved Transaction.type (which is never "production").
+const DB_TX_TYPES = TX_TYPES.filter((t) => t !== "production") as TxType[];
 
 const DEFAULT_FILTERS: Filters = {
   type: "all",
@@ -320,7 +337,6 @@ function AddTransactionForm({
                 {TYPE_CONFIG[k].label}
               </option>
             ))}
-            <option value="production">Производство</option>
           </select>
         </div>
         <div>
@@ -539,7 +555,7 @@ function FilterBar({
             className={selectCls}
           >
             <option value="all">Все типы</option>
-            {TX_TYPES.map((k) => (
+            {DB_TX_TYPES.map((k) => (
               <option key={k} value={k}>
                 {TYPE_CONFIG[k].label}
               </option>
