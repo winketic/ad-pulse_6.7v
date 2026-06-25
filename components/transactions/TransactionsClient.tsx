@@ -173,11 +173,22 @@ function Modal({
     return () => document.removeEventListener("keydown", h);
   }, [onClose]);
 
+  // Lock body scroll while open — prevents the page behind from scrolling/
+  // bouncing (and the modal appearing to "jump") when the mobile keyboard opens.
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
+        onTouchMove={(e) => e.preventDefault()}
       />
       <div className="relative bg-[var(--card)] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg z-10 max-h-[94dvh] flex flex-col">
         <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0 border-b border-[var(--border)]">
@@ -246,8 +257,7 @@ function AddTransactionForm({
     !!form.date &&
     (!isDefect || !!form.defect_reason.trim());
 
-  const inputCls =
-    "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
+  const inputCls = "dp-field";
 
   return (
     <form
