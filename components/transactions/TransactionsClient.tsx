@@ -9,7 +9,11 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import BalanceCard, { type BalanceData } from "@/components/BalanceCard";
-import { createTransaction, type TxType } from "@/app/(dashboard)/dashboard/transactions/actions";
+import {
+  createTransaction,
+  createProductionTransaction,
+  type TxType,
+} from "@/app/(dashboard)/dashboard/transactions/actions";
 import { formatQuantity } from "@/lib/utils/format";
 
 export type { BalanceData };
@@ -37,6 +41,8 @@ export type Material = {
   id: string;
   name: string;
   unit: string;
+  norm_concrete?: number | null;
+  norm_rebar?: number | null;
 };
 
 type Filters = {
@@ -248,14 +254,49 @@ function AddTransactionForm({
     };
 
   const isDefect = form.type === "defect";
+  const isProduction = form.type === "production";
+
+  // "Производство" only makes sense for finished products (перемычки) —
+  // i.e. materials that have both consumption norms set.
+  const productionMaterials = useMemo(
+    () => materials.filter((m) => m.norm_concrete != null && m.norm_rebar != null),
+    [materials]
+  );
+  const visibleMaterials = isProduction ? productionMaterials : materials;
+
+  // Re-point material_id at the first option of whichever list is showing
+  // when the user switches into/out of "Производство" — otherwise it could
+  // keep pointing at a material that's no longer in the visible dropdown.
+  useEffect(() => {
+    if (!visibleMaterials.some((m) => m.id === form.material_id)) {
+      setForm((p) => ({ ...p, material_id: visibleMaterials[0]?.id ?? "" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isProduction]);
+
   const selectedMaterial = materials.find((m) => m.id === form.material_id);
+  const concreteMaterial = materials.find((m) => m.name === "Бетон");
+  const rebarMaterial = materials.find((m) => m.name === "Арматура");
+
+  const qtyNum = Number(form.quantity) || 0;
+  const concreteAmount =
+    isProduction && selectedMaterial?.norm_concrete != null
+      ? qtyNum * selectedMaterial.norm_concrete
+      : null;
+  const rebarAmount =
+    isProduction && selectedMaterial?.norm_rebar != null
+      ? qtyNum * selectedMaterial.norm_rebar
+      : null;
+
   const canSubmit =
     !!form.material_id &&
     !!form.quantity &&
     Number(form.quantity) > 0 &&
     Number(form.quantity) <= 999999999 &&
     !!form.date &&
-    (!isDefect || !!form.defect_reason.trim());
+    (!isDefect || !!form.defect_reason.trim()) &&
+    (!isProduction ||
+      (selectedMaterial?.norm_concrete != null && selectedMaterial?.norm_rebar != null));
 
   const inputCls = "dp-field";
 
@@ -279,6 +320,7 @@ function AddTransactionForm({
                 {TYPE_CONFIG[k].label}
               </option>
             ))}
+            <option value="production">Производство</option>
           </select>
         </div>
         <div>
@@ -301,7 +343,7 @@ function AddTransactionForm({
         <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
           Материал <span className="text-red-500">*</span>
         </label>
-        {materials.length === 0 ? (
+        {visibleMaterials.length === 0 ? (
           <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200">
             <svg
               className="w-4 h-4 text-amber-500 shrink-0"
@@ -315,7 +357,9 @@ function AddTransactionForm({
               />
             </svg>
             <p className="text-sm text-amber-700">
-              Сначала добавьте материалы в справочник
+              {isProduction
+                ? "Нет материалов с заданными нормами расхода. Укажите норму бетона и арматуры в карточке материала."
+                : "Сначала добавьте материалы в справочник"}
             </p>
           </div>
         ) : (
@@ -325,7 +369,7 @@ function AddTransactionForm({
             required
             className={inputCls}
           >
-            {materials.map((m) => (
+            {visibleMaterials.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name} ({m.unit})
               </option>
@@ -367,6 +411,18 @@ function AddTransactionForm({
           <p className="mt-1 text-xs text-red-600">{quantityError}</p>
         ) : (
           <p className="mt-1 text-xs text-[var(--muted)]">Макс. 999 999 999</p>
+        )}
+
+        {/* Production preview — live calc of what will be auto-deducted */}
+        {isProduction && qtyNum > 0 && concreteAmount != null && rebarAmount != null && (
+          <div className="mt-2 flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg bg-[#00f5c4]/8 border border-[#00f5c4]/20">
+            <svg className="w-4 h-4 text-[#00a884] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm text-[var(--text)]">
+              Спишется: бетон {concreteAmount.toFixed(2)} {concreteMaterial?.unit ?? "м³"}, арматура {rebarAmount.toFixed(2)} {rebarMaterial?.unit ?? "кг"}
+            </p>
+          </div>
         )}
       </div>
 
@@ -718,6 +774,17 @@ export default function TransactionsClient({
       setFormError("");
       startTransition(async () => {
         try {
+          if (form.type === "production") {
+            await createProductionTransaction({
+              material_id: form.material_id,
+              quantity: parseFloat(form.quantity),
+              transaction_date: form.date,
+            });
+            router.refresh();
+            closeModal();
+            return;
+          }
+
           const noteToSave =
             form.type === "defect"
               ? form.defect_reason.trim() +

@@ -59,7 +59,7 @@ export default async function TransactionsPage({
       // Materials lookup
       supabase
         .from("materials")
-        .select("id, name, unit")
+        .select("id, name, unit, norm_concrete, norm_rebar")
         .eq("company_id", company_id)
         .order("name"),
 
@@ -133,6 +133,8 @@ export default async function TransactionsPage({
     id: m.id,
     name: m.name,
     unit: m.unit,
+    norm_concrete: m.norm_concrete != null ? Number(m.norm_concrete) : null,
+    norm_rebar: m.norm_rebar != null ? Number(m.norm_rebar) : null,
   }));
 
   // Compute balances server-side from all transactions
