@@ -85,6 +85,23 @@ html, body {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
   }
 
+  /* Unified field style for modal forms (materials/transactions/plans) —
+     bigger tap target + consistent sizing across input/select/textarea. */
+  .dp-field {
+    @apply w-full min-h-[52px] px-4 rounded-xl text-base transition-colors;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .dp-field::placeholder { color: var(--muted); }
+  .dp-field:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+  .dp-field:disabled { opacity: 0.6; cursor: not-allowed; }
+  textarea.dp-field { min-height: 76px; padding-top: 0.625rem; padding-bottom: 0.625rem; }
+
   /* Buttons — min-height 48px for comfortable mobile tap targets */
   .dp-btn-primary {
     @apply inline-flex items-center justify-center gap-2

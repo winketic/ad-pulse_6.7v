@@ -138,9 +138,24 @@ function ConfirmModal({
     });
   };
 
+  // Lock body scroll while open — prevents the page behind from scrolling/
+  // bouncing (and the modal appearing to "jump") when the mobile keyboard opens.
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-      <div className="rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[92dvh] flex flex-col" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+        onTouchMove={(e) => e.preventDefault()}
+      />
+      <div className="relative rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[92dvh] flex flex-col" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
         <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
           <h2 className="text-sm font-semibold text-[var(--text)]">Подтвердить транзакцию</h2>
           <button onClick={onClose} className="p-1 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg3)] transition-colors">

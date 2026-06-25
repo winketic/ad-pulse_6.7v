@@ -37,6 +37,25 @@ function fmtQty(n: number) {
   return n === 0 ? "—" : n.toFixed(4);
 }
 
+function pluralCases(n: number) {
+  if (n % 10 === 1 && n % 100 !== 11) return "случай";
+  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100))
+    return "случая";
+  return "случаев";
+}
+
+// Defects can span materials with different units — sum per unit so the
+// total stays meaningful instead of adding kg to pieces.
+function sumDefectsByUnit(defects: DefectRow[]): string {
+  const totals = new Map<string, number>();
+  for (const d of defects) {
+    totals.set(d.material_unit, (totals.get(d.material_unit) ?? 0) + d.quantity);
+  }
+  return Array.from(totals.entries())
+    .map(([unit, qty]) => `${qty.toFixed(2)} ${unit}`)
+    .join(", ");
+}
+
 // ─── Export to Excel ──────────────────────────────────────
 
 async function exportExcel(
@@ -393,7 +412,7 @@ export default function ReportsClient({
     }
   };
 
-  const totalDefectQty = defects.reduce((s, d) => s + d.quantity, 0);
+  const defectTotalsLabel = sumDefectsByUnit(defects);
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -469,9 +488,15 @@ export default function ReportsClient({
           </div>
           {defects.length > 0 && (
             <div className="text-right">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 border border-amber-500/20 text-amber-400">
-                {defects.length} случ. · {totalDefectQty.toFixed(2)} ед.
-              </span>
+              <p className="text-2xl font-bold tabular-nums leading-none text-[var(--text)]">
+                {defects.length}
+              </p>
+              <p className="text-xs text-[var(--muted)] mt-0.5">
+                {pluralCases(defects.length)} брака
+              </p>
+              <p className="text-xs text-[var(--muted)] mt-1.5">
+                Итого: {defectTotalsLabel}
+              </p>
             </div>
           )}
         </div>
