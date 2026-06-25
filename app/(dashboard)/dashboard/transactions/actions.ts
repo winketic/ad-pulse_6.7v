@@ -36,6 +36,33 @@ async function getSupabaseAndUser() {
   return { supabase, user, company_id: profile.company_id as string };
 }
 
+export type ProductionTransactionInput = {
+  material_id: string; // готовая продукция (перемычка)
+  quantity: number;
+  transaction_date: string;
+};
+
+// Creates 3 transactions atomically via a Postgres function: income of the
+// product + expense of concrete/rebar by its norms. See migration
+// 023_create_production_transaction.sql.
+export async function createProductionTransaction(input: ProductionTransactionInput) {
+  const { supabase } = await getSupabaseAndUser();
+
+  if (input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
+  if (input.quantity > 999999999) throw new Error("Количество превышает максимально допустимое значение");
+
+  const { error } = await supabase.rpc("create_production_transaction", {
+    p_product_material_id: input.material_id,
+    p_quantity: input.quantity,
+    p_transaction_date: input.transaction_date,
+  });
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/transactions");
+  revalidatePath("/dashboard");
+}
+
 export async function createTransaction(input: TransactionInput) {
   const { supabase, user, company_id } = await getSupabaseAndUser();
 
