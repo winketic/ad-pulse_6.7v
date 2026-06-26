@@ -587,29 +587,30 @@ function FilterBar({
           </select>
         </div>
 
-        {/* Date from */}
-        <div className="flex-1 min-w-[130px]">
-          <label className={labelCls}>Дата с</label>
-          <input
-            type="date"
-            value={filters.dateFrom}
-            max={filters.dateTo || todayStr()}
-            onChange={(e) => onChange({ dateFrom: e.target.value })}
-            className={selectCls}
-          />
-        </div>
-
-        {/* Date to */}
-        <div className="flex-1 min-w-[130px]">
-          <label className={labelCls}>Дата по</label>
-          <input
-            type="date"
-            value={filters.dateTo}
-            min={filters.dateFrom}
-            max={todayStr()}
-            onChange={(e) => onChange({ dateTo: e.target.value })}
-            className={selectCls}
-          />
+        {/* Dates — paired together so they stack on mobile instead of
+            cramming side by side like Type/Material do. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full sm:w-auto sm:flex-1 sm:min-w-[270px]">
+          <div>
+            <label className={labelCls}>Дата с</label>
+            <input
+              type="date"
+              value={filters.dateFrom}
+              max={filters.dateTo || todayStr()}
+              onChange={(e) => onChange({ dateFrom: e.target.value })}
+              className="field-input"
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Дата по</label>
+            <input
+              type="date"
+              value={filters.dateTo}
+              min={filters.dateFrom}
+              max={todayStr()}
+              onChange={(e) => onChange({ dateTo: e.target.value })}
+              className="field-input"
+            />
+          </div>
         </div>
 
         {/* Clear */}
