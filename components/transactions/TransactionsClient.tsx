@@ -318,7 +318,7 @@ function AddTransactionForm({
     (!isProduction ||
       (selectedMaterial?.norm_concrete != null && selectedMaterial?.norm_rebar != null));
 
-  const inputCls = "dp-field";
+  const inputCls = "field-input";
 
   return (
     <form
@@ -460,7 +460,7 @@ function AddTransactionForm({
             placeholder="Опишите причину появления брака..."
             required
             rows={2}
-            className={`${inputCls} resize-none`}
+            className="field-textarea"
           />
         </div>
       )}
@@ -478,7 +478,7 @@ function AddTransactionForm({
           onChange={set("note")}
           placeholder="Дополнительная информация..."
           rows={2}
-          className={`${inputCls} resize-none`}
+          className="field-textarea"
         />
       </div>
 

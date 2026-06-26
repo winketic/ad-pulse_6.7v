@@ -259,7 +259,7 @@ function CreatePlanForm({
     });
   };
 
-  const inputCls = "dp-field";
+  const inputCls = "field-input";
 
   if (materials.length === 0) {
     return (
@@ -359,7 +359,7 @@ function CreatePlanForm({
                 <select
                   value={row.material_id}
                   onChange={(e) => updateRow(row.uid, "material_id", e.target.value)}
-                  className="dp-field flex-1 min-w-0"
+                  className="field-input flex-1 min-w-0"
                 >
                   {materials.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -377,7 +377,7 @@ function CreatePlanForm({
                     placeholder="0.00"
                     min="0.0001"
                     step="0.0001"
-                    className="dp-field w-28 text-right"
+                    className="field-input w-28 text-right"
                   />
                   <span className="text-xs text-[var(--muted)] w-10 truncate">
                     {materials.find((m) => m.id === row.material_id)?.unit ?? ""}
