@@ -176,7 +176,7 @@ function MaterialForm({
           required
           maxLength={200}
           autoFocus
-          className="dp-field"
+          className="field-input"
         />
       </div>
 
@@ -195,7 +195,7 @@ function MaterialForm({
           id="mat-unit"
           value={form.unit}
           onChange={set("unit")}
-          className="dp-field"
+          className="field-input"
         >
           {UNITS.map((u) => (
             <option key={u} value={u}>
@@ -224,7 +224,7 @@ function MaterialForm({
           placeholder="0.0000"
           min="0"
           step="0.0001"
-          className="dp-field"
+          className="field-input"
         />
         <p className="mt-1.5 text-xs text-[var(--muted)]">
           Нормативный расход согласно технической документации ГОСТа
