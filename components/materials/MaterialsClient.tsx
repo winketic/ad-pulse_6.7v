@@ -93,7 +93,7 @@ function Modal({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 h-[100dvh] z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
@@ -102,8 +102,8 @@ function Modal({
       <div className="relative bg-[var(--card)] w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-2xl shadow-2xl z-10 flex flex-col">
         {/* Modal header */}
         <div
-          className="flex items-center justify-between px-6 pb-4 shrink-0"
-          style={{ paddingTop: "calc(1.5rem + env(safe-area-inset-top, 0px))" }}
+          className="flex items-center justify-between px-4 shrink-0"
+          style={{ minHeight: "56px", paddingTop: "env(safe-area-inset-top, 0px)" }}
         >
           <h2 className="text-lg font-semibold text-[var(--text)]">{title}</h2>
           <button
@@ -115,7 +115,7 @@ function Modal({
             </svg>
           </button>
         </div>
-        <div className="px-6 pb-6 overflow-y-auto flex-1 min-h-0">{children}</div>
+        <div className="p-4 overflow-y-auto flex-1 min-h-0">{children}</div>
       </div>
     </div>
   );
@@ -251,7 +251,7 @@ function MaterialForm({
       </div>
 
       {/* Buttons — sticky to bottom of scroll area so they're always reachable without scrolling */}
-      <div className="flex gap-3 pt-3 sticky bottom-0 -mx-6 -mb-6 px-6 pb-[calc(80px+env(safe-area-inset-bottom,0px))] sm:pb-4 bg-[var(--card)] border-t border-[var(--border)]">
+      <div className="flex gap-3 pt-3 sticky bottom-0 -mx-4 -mb-4 px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-4 bg-[var(--card)] border-t border-[var(--border)]">
         <button
           type="button"
           onClick={onCancel}
