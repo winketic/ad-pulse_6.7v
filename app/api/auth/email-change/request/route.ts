@@ -35,17 +35,20 @@ export async function POST(request: NextRequest) {
 
   const service = createServiceClient();
 
-  // Rate-limit: max 3 requests per user per 15 minutes
+  // Rate-limit: max 3 requests per user per 10 minutes. Counts ALL codes
+  // created in the window — used or not — because the "invalidate previous
+  // unused codes" step below would otherwise let a request loop bypass this
+  // cap indefinitely (every new request frees up its own quota).
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const { count } = await service
     .from("email_change_codes")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
-    .gt("expires_at", new Date().toISOString())
-    .eq("used", false);
+    .gt("created_at", tenMinutesAgo);
 
   if ((count ?? 0) >= 3) {
     return NextResponse.json(
-      { error: "Слишком много попыток. Подождите 15 минут." },
+      { error: "Слишком много попыток. Подождите 10 минут." },
       { status: 429 }
     );
   }
