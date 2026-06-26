@@ -178,7 +178,7 @@ function ConfirmModal({
             <div>
               <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Тип операции</label>
               <select value={type} onChange={(e) => setType(e.target.value as TxType)}
-                className="dp-input text-sm">
+                className="field-input">
                 {(Object.entries(TX_TYPE_LABELS) as [TxType, string][]).map(([val, label]) => (
                   <option key={val} value={val}>{label}</option>
                 ))}
@@ -188,7 +188,7 @@ function ConfirmModal({
             <div>
               <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Материал</label>
               <select value={materialId} onChange={(e) => setMaterialId(e.target.value)}
-                className="dp-input text-sm">
+                className="field-input">
                 <option value="">— выберите —</option>
                 {materials.map((m) => (
                   <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
@@ -201,7 +201,7 @@ function ConfirmModal({
                 Количество{pr?.unit && <span className="ml-1 font-normal text-[var(--muted)]">({pr.unit})</span>}
               </label>
               <input type="text" inputMode="decimal" value={quantity}
-                onChange={(e) => setQuantity(e.target.value)} placeholder="0" className="dp-input text-sm" />
+                onChange={(e) => setQuantity(e.target.value)} placeholder="0" className="field-input" />
             </div>
 
             {error && (
