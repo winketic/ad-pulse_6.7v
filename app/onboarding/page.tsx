@@ -112,25 +112,23 @@ export default function OnboardingPage() {
   const progressPct = (step / TOTAL_STEPS) * 100;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: "#05050a" }}>
+    <div className="dp-auth-page">
       <div className="w-full max-w-md">
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <Logo size={48} />
-          <p className="text-sm mt-3" style={{ color: "#9ca3af" }}>AD Pulse</p>
+          <p className="text-sm mt-3 text-[var(--muted)]">AD Pulse</p>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border overflow-hidden"
-          style={{ background: "#0d0d14", borderColor: "#1f1f2e" }}>
+        <div className="rounded-2xl border overflow-hidden bg-[var(--card)] border-[var(--border)]">
 
           {/* Progress bar */}
-          <div className="h-1 w-full" style={{ background: "#1f1f2e" }}>
+          <div className="h-1 w-full bg-[var(--border)]">
             <div
-              className="h-full transition-all duration-500"
-              style={{ width: `${progressPct}%`, background: "#00f5c4" }}
+              className="h-full transition-all duration-500 bg-[var(--accent)]"
+              style={{ width: `${progressPct}%` }}
             />
           </div>
 
@@ -142,30 +140,30 @@ export default function OnboardingPage() {
                   key={i}
                   className="w-2 h-2 rounded-full transition-all duration-300"
                   style={{
-                    background: i + 1 <= step ? "#00f5c4" : "#2a2a3d",
+                    background: i + 1 <= step ? "var(--accent)" : "var(--border)",
                   }}
                 />
               ))}
             </div>
-            <span className="text-xs" style={{ color: "#6b7280" }}>
+            <span className="text-xs text-[var(--muted)]">
               Шаг {step} из {TOTAL_STEPS}
             </span>
           </div>
 
           {/* Content */}
           <div className="px-6 pb-6 pt-4">
-            <h1 className="text-xl font-bold mb-1" style={{ color: "#f9fafb" }}>
+            <h1 className="text-xl font-bold mb-1 text-[var(--text)]">
               {STEP_TITLES[step - 1]}
             </h1>
-            <p className="text-sm mb-6" style={{ color: "#6b7280" }}>
+            <p className="text-sm mb-6 text-[var(--muted)]">
               {STEP_SUBTITLES[step - 1]}
             </p>
 
             {/* Step 1 — Name */}
             {step === 1 && (
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: "#d1d5db" }}>
-                  Полное имя <span style={{ color: "#00f5c4" }}>*</span>
+                <label className="block text-sm font-medium mb-2 text-[var(--text)]">
+                  Полное имя <span className="text-[var(--accent)]">*</span>
                 </label>
                 <input
                   type="text"
@@ -174,14 +172,7 @@ export default function OnboardingPage() {
                   onKeyDown={(e) => e.key === "Enter" && nextStep()}
                   placeholder="Иван Иванов"
                   autoFocus
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                  style={{
-                    background: "#1a1a2e",
-                    border: "1px solid #2a2a3d",
-                    color: "#f9fafb",
-                  }}
-                  onFocus={(e) => { e.target.style.borderColor = "#00f5c4"; }}
-                  onBlur={(e) => { e.target.style.borderColor = "#2a2a3d"; }}
+                  className="field-input"
                 />
               </div>
             )}
@@ -189,9 +180,9 @@ export default function OnboardingPage() {
             {/* Step 2 — Position */}
             {step === 2 && (
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: "#d1d5db" }}>
+                <label className="block text-sm font-medium mb-2 text-[var(--text)]">
                   Должность
-                  <span className="ml-2 text-xs font-normal" style={{ color: "#6b7280" }}>(необязательно)</span>
+                  <span className="ml-2 text-xs font-normal text-[var(--muted)]">(необязательно)</span>
                 </label>
                 <input
                   type="text"
@@ -200,14 +191,7 @@ export default function OnboardingPage() {
                   onKeyDown={(e) => e.key === "Enter" && nextStep()}
                   placeholder="Начальник склада"
                   autoFocus
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                  style={{
-                    background: "#1a1a2e",
-                    border: "1px solid #2a2a3d",
-                    color: "#f9fafb",
-                  }}
-                  onFocus={(e) => { e.target.style.borderColor = "#00f5c4"; }}
-                  onBlur={(e) => { e.target.style.borderColor = "#2a2a3d"; }}
+                  className="field-input"
                 />
                 <div className="flex flex-wrap gap-2 mt-3">
                   {["Начальник склада", "Менеджер", "Директор", "Мастер цеха"].map((p) => (
@@ -217,9 +201,9 @@ export default function OnboardingPage() {
                       onClick={() => setPosition(p)}
                       className="px-3 py-1.5 rounded-lg text-xs transition-all"
                       style={{
-                        background: position === p ? "#00f5c4" : "#1a1a2e",
-                        color: position === p ? "#05050a" : "#9ca3af",
-                        border: `1px solid ${position === p ? "#00f5c4" : "#2a2a3d"}`,
+                        background: position === p ? "var(--accent)" : "var(--bg3)",
+                        color: position === p ? "var(--accent-text)" : "var(--muted)",
+                        border: `1px solid ${position === p ? "var(--accent)" : "var(--border)"}`,
                         fontWeight: position === p ? 600 : 400,
                       }}
                     >
@@ -234,8 +218,8 @@ export default function OnboardingPage() {
             {step === 3 && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: "#d1d5db" }}>
-                    Новый пароль <span style={{ color: "#00f5c4" }}>*</span>
+                  <label className="block text-sm font-medium mb-2 text-[var(--text)]">
+                    Новый пароль <span className="text-[var(--accent)]">*</span>
                   </label>
                   <input
                     type="password"
@@ -243,51 +227,33 @@ export default function OnboardingPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Минимум 8 символов"
                     autoFocus
-                    className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                    style={{
-                      background: "#1a1a2e",
-                      border: "1px solid #2a2a3d",
-                      color: "#f9fafb",
-                    }}
-                    onFocus={(e) => { e.target.style.borderColor = "#00f5c4"; }}
-                    onBlur={(e) => { e.target.style.borderColor = "#2a2a3d"; }}
+                    className="field-input"
                   />
                   {password.length > 0 && (
-                    <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: "#1a1a2e" }}>
+                    <div className="mt-2 h-1 rounded-full overflow-hidden bg-[var(--border)]">
                       <div
                         className="h-full rounded-full transition-all"
                         style={{
                           width: `${Math.min((password.length / 12) * 100, 100)}%`,
-                          background: password.length < 8 ? "#ef4444" : password.length < 12 ? "#f59e0b" : "#00f5c4",
+                          background: password.length < 8 ? "#ef4444" : password.length < 12 ? "#f59e0b" : "var(--accent)",
                         }}
                       />
                     </div>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: "#d1d5db" }}>
-                    Подтвердите пароль <span style={{ color: "#00f5c4" }}>*</span>
+                  <label className="block text-sm font-medium mb-2 text-[var(--text)]">
+                    Подтвердите пароль <span className="text-[var(--accent)]">*</span>
                   </label>
                   <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Повторите пароль"
-                    className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
-                    style={{
-                      background: "#1a1a2e",
-                      border: `1px solid ${confirmPassword && confirmPassword !== password ? "#ef4444" : "#2a2a3d"}`,
-                      color: "#f9fafb",
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = confirmPassword && confirmPassword !== password ? "#ef4444" : "#00f5c4";
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = confirmPassword && confirmPassword !== password ? "#ef4444" : "#2a2a3d";
-                    }}
+                    className={`field-input ${confirmPassword && confirmPassword !== password ? "border-red-400 focus:ring-red-300 focus:border-red-400" : ""}`}
                   />
                   {confirmPassword && confirmPassword === password && password.length >= 8 && (
-                    <p className="text-xs mt-1.5" style={{ color: "#00f5c4" }}>✓ Пароли совпадают</p>
+                    <p className="text-xs mt-1.5 text-[var(--accent)]">✓ Пароли совпадают</p>
                   )}
                 </div>
               </div>
@@ -297,10 +263,9 @@ export default function OnboardingPage() {
             {step === 4 && (
               <div className="space-y-3">
                 {(ROLE_FEATURES[userRole] ?? ROLE_FEATURES.warehouse).map((feat, i) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                    style={{ background: "#1a1a2e", border: "1px solid #2a2a3d" }}>
+                  <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg3)] border border-[var(--border)]">
                     <span className="text-xl">{feat.icon}</span>
-                    <span className="text-sm" style={{ color: "#d1d5db" }}>{feat.text}</span>
+                    <span className="text-sm text-[var(--text)]">{feat.text}</span>
                   </div>
                 ))}
               </div>
@@ -308,7 +273,7 @@ export default function OnboardingPage() {
 
             {/* Error */}
             {error && (
-              <div className="mt-4 px-4 py-3 rounded-xl text-sm" style={{ background: "#2d1515", color: "#f87171", border: "1px solid #3d1f1f" }}>
+              <div className="mt-4 px-4 py-3 rounded-xl text-sm bg-red-500/10 text-red-400 border border-red-500/20">
                 {error}
               </div>
             )}
@@ -319,8 +284,7 @@ export default function OnboardingPage() {
                 <button
                   onClick={() => { setStep((s) => s - 1); setError(""); }}
                   disabled={loading}
-                  className="flex-1 py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
-                  style={{ background: "#1a1a2e", color: "#9ca3af", border: "1px solid #2a2a3d" }}
+                  className="flex-1 dp-btn-secondary"
                 >
                   ← Назад
                 </button>
@@ -328,8 +292,7 @@ export default function OnboardingPage() {
               {step < 3 ? (
                 <button
                   onClick={nextStep}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
-                  style={{ background: "#00f5c4", color: "#05050a" }}
+                  className="flex-1 dp-btn-primary"
                 >
                   Далее →
                 </button>
@@ -337,8 +300,7 @@ export default function OnboardingPage() {
                 <button
                   onClick={handleFinish}
                   disabled={loading}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-                  style={{ background: "#00f5c4", color: "#05050a" }}
+                  className="flex-1 dp-btn-primary"
                 >
                   {loading ? (
                     <>
@@ -353,8 +315,7 @@ export default function OnboardingPage() {
               ) : (
                 <button
                   onClick={() => router.replace("/dashboard")}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
-                  style={{ background: "#00f5c4", color: "#05050a" }}
+                  className="flex-1 dp-btn-primary"
                 >
                   Начать работу →
                 </button>
@@ -363,7 +324,7 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        <p className="text-center text-xs mt-4" style={{ color: "#374151" }}>
+        <p className="text-center text-xs mt-4 text-[var(--muted)]">
           Это займёт меньше минуты
         </p>
       </div>

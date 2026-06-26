@@ -136,7 +136,7 @@ function FilterBar({
       }}
       className="flex flex-wrap items-end gap-3"
     >
-      <div>
+      <div className="flex-1 min-w-[140px]">
         <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">
           Период с
         </label>
@@ -145,10 +145,10 @@ function FilterBar({
           name="from"
           defaultValue={from}
           required
-          className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg3)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors [color-scheme:dark]"
+          className="field-input w-full min-w-0"
         />
       </div>
-      <div>
+      <div className="flex-1 min-w-[140px]">
         <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">
           по
         </label>
@@ -157,13 +157,13 @@ function FilterBar({
           name="to"
           defaultValue={to}
           required
-          className="px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg3)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors [color-scheme:dark]"
+          className="field-input w-full min-w-0"
         />
       </div>
       <button
         type="submit"
         disabled={isPending}
-        className="px-5 py-2 rounded-lg bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold transition-colors disabled:opacity-60 flex items-center gap-2"
+        className="px-5 py-2 rounded-lg bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold transition-colors disabled:opacity-60 flex items-center gap-2 min-h-[48px]"
       >
         {isPending && (
           <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">

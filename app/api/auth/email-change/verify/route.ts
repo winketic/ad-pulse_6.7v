@@ -49,29 +49,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Неверный код" }, { status: 400 });
   }
 
-  // Mark code as used before calling updateUser (prevent double-use on retry)
-  await service
-    .from("email_change_codes")
-    .update({ used: true })
-    .eq("id", record.id);
-
-  // Initiate email change in Supabase Auth — sends confirmation link to new email
+  // Initiate email change in Supabase Auth FIRST — sends confirmation link
+  // to the new email. Only mark the code used once this actually succeeds:
+  // doing it the other way around meant a thrown/network exception here
+  // (with no try/catch) skipped the rollback and permanently burned the
+  // code without ever starting the email change.
   const { error: updateErr } = await supabase.auth.updateUser({
     email: record.new_email,
   });
 
   if (updateErr) {
     console.error("[email-change/verify] updateUser error:", updateErr);
-    // Restore code usability if Supabase call failed
-    await service
-      .from("email_change_codes")
-      .update({ used: false })
-      .eq("id", record.id);
     return NextResponse.json(
       { error: "Не удалось обновить email: " + updateErr.message },
       { status: 500 }
     );
   }
+
+  await service
+    .from("email_change_codes")
+    .update({ used: true })
+    .eq("id", record.id);
 
   return NextResponse.json({ ok: true, new_email: record.new_email });
 }

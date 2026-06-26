@@ -270,6 +270,14 @@ async function fireAlerts({
       .filter("production_plans.status", "eq", "active")
       .filter("production_plans.company_id", "eq", companyId);
 
+    type ActivePlan = {
+      planned: number;
+      name: string;
+      startDate: string;
+      endDate: string;
+    };
+
+    const activePlans: ActivePlan[] = [];
     for (const pm of planMaterials ?? []) {
       const plan = (pm as Record<string, unknown>).production_plans as Record<string, unknown>;
       if (!plan) continue;
@@ -278,30 +286,49 @@ async function fireAlerts({
       const endDate = plan.end_date as string;
       if (today < startDate || today > endDate) continue;
 
-      const planned = Number((pm as Record<string, unknown>).planned_quantity);
+      activePlans.push({
+        planned: Number((pm as Record<string, unknown>).planned_quantity),
+        name: plan.name as string,
+        startDate,
+        endDate,
+      });
+    }
+
+    if (activePlans.length > 0) {
+      // material_transactions has no plan_id FK (a plan's "actual" is
+      // matched by date-range overlap, not a direct relation), so we can't
+      // batch via .in(plan_id). Instead: one query bounded by the union of
+      // every active plan's date range, then sum per-plan in memory —
+      // turns what was previously 1 query per plan into exactly 1 query.
+      const minStart = activePlans.reduce((m, p) => (p.startDate < m ? p.startDate : m), activePlans[0].startDate);
+      const maxEnd = activePlans.reduce((m, p) => (p.endDate > m ? p.endDate : m), activePlans[0].endDate);
 
       const { data: expenses } = await service
         .from("material_transactions")
-        .select("quantity")
+        .select("quantity, transaction_date")
         .eq("company_id", companyId)
         .eq("material_id", materialId)
         .eq("type", "expense")
-        .gte("transaction_date", startDate)
-        .lte("transaction_date", endDate);
+        .gte("transaction_date", minStart)
+        .lte("transaction_date", maxEnd);
 
-      const actual = (expenses ?? []).reduce((sum, tx) => sum + Number(tx.quantity), 0);
+      for (const plan of activePlans) {
+        const actual = (expenses ?? [])
+          .filter((tx) => tx.transaction_date >= plan.startDate && tx.transaction_date <= plan.endDate)
+          .reduce((sum, tx) => sum + Number(tx.quantity), 0);
 
-      if (actual > planned * 1.1) {
-        const deviation = Math.round(((actual - planned) / planned) * 100);
-        await sendTelegramAlert(
-          companyId,
-          `⚠️ <b>Перерасход материала</b>\n\n` +
-            `Материал: ${materialName}\n` +
-            `План: ${planned} ${unit}\n` +
-            `Факт: ${actual.toFixed(2)} ${unit}\n` +
-            `Отклонение: +${deviation}%\n` +
-            `План: ${plan.name}`
-        );
+        if (actual > plan.planned * 1.1) {
+          const deviation = Math.round(((actual - plan.planned) / plan.planned) * 100);
+          await sendTelegramAlert(
+            companyId,
+            `⚠️ <b>Перерасход материала</b>\n\n` +
+              `Материал: ${materialName}\n` +
+              `План: ${plan.planned} ${unit}\n` +
+              `Факт: ${actual.toFixed(2)} ${unit}\n` +
+              `Отклонение: +${deviation}%\n` +
+              `План: ${plan.name}`
+          );
+        }
       }
     }
   }
