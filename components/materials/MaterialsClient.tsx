@@ -99,9 +99,12 @@ function Modal({
         onClick={onClose}
         onTouchMove={(e) => e.preventDefault()}
       />
-      <div className="relative bg-[var(--card)] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md z-10 max-h-[92dvh] sm:max-h-[90vh] flex flex-col">
+      <div className="relative bg-[var(--card)] w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-2xl shadow-2xl z-10 flex flex-col">
         {/* Modal header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
+        <div
+          className="flex items-center justify-between px-6 pb-4 shrink-0"
+          style={{ paddingTop: "calc(1.5rem + env(safe-area-inset-top, 0px))" }}
+        >
           <h2 className="text-lg font-semibold text-[var(--text)]">{title}</h2>
           <button
             onClick={onClose}
@@ -148,8 +151,11 @@ function MaterialForm({
         e.preventDefault();
         onSubmit(form);
       }}
-      className="space-y-4"
+      className="flex flex-col min-h-full"
     >
+      {/* Fields — flex-1 so the button row below is pushed flush to the
+          bottom of the modal even when there isn't enough content to scroll. */}
+      <div className="flex-1 space-y-4">
       {/* Name */}
       <div>
         <label
@@ -242,6 +248,7 @@ function MaterialForm({
           <span className="text-sm text-red-700">{error}</span>
         </div>
       )}
+      </div>
 
       {/* Buttons — sticky to bottom of scroll area so they're always reachable without scrolling */}
       <div className="flex gap-3 pt-3 sticky bottom-0 -mx-6 -mb-6 px-6 pb-[calc(80px+env(safe-area-inset-bottom,0px))] sm:pb-4 bg-[var(--card)] border-t border-[var(--border)]">

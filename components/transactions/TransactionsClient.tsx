@@ -213,8 +213,11 @@ function Modal({
         onClick={onClose}
         onTouchMove={(e) => e.preventDefault()}
       />
-      <div className="relative bg-[var(--card)] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg z-10 max-h-[94dvh] flex flex-col">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 shrink-0 border-b border-[var(--border)]">
+      <div className="relative bg-[var(--card)] w-full h-full sm:h-auto sm:max-h-[94dvh] sm:max-w-lg sm:rounded-2xl shadow-2xl z-10 flex flex-col">
+        <div
+          className="flex items-center justify-between px-6 pb-4 shrink-0 border-b border-[var(--border)]"
+          style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top, 0px))" }}
+        >
           <h2 className="text-lg font-semibold text-[var(--text)]">{title}</h2>
           <button
             onClick={onClose}
@@ -323,8 +326,11 @@ function AddTransactionForm({
         e.preventDefault();
         onSubmit(form);
       }}
-      className="space-y-4"
+      className="flex flex-col min-h-full"
     >
+      {/* Fields — flex-1 so the button row below is pushed flush to the
+          bottom of the modal even when there isn't enough content to scroll. */}
+      <div className="flex-1 space-y-4">
       {/* Row: type + date */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
@@ -493,6 +499,7 @@ function AddTransactionForm({
           <span className="text-sm text-red-700">{error}</span>
         </div>
       )}
+      </div>
 
       {/* Buttons — sticky to bottom of scroll area so they're always reachable without scrolling */}
       <div className="flex gap-3 pt-3 sticky bottom-0 -mx-6 -mb-5 px-6 pb-[calc(80px+env(safe-area-inset-bottom,0px))] sm:pb-5 bg-[var(--card)] border-t border-[var(--border)]">
