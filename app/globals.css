@@ -127,11 +127,23 @@ html, body {
   }
 
   input[type="date"].field-input {
-    padding: 0 12px;
+    padding: 0 16px;
+    line-height: 52px;
     color-scheme: dark;
   }
   [data-theme="light"] input[type="date"].field-input {
     color-scheme: light;
+  }
+
+  /* Native calendar icon — invert so it's visible on a dark field; on light
+     theme the unmodified icon is already dark and reads fine on its own. */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0.5;
+    filter: invert(1);
+    cursor: pointer;
+  }
+  [data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: none;
   }
 
   .field-textarea {
