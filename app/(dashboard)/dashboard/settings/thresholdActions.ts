@@ -28,6 +28,17 @@ export async function saveThreshold(
   try {
     const { companyId } = await getContext();
     const service = createServiceClient();
+
+    // Verify the material actually belongs to this company — otherwise a
+    // crafted materialId could write a cross-tenant threshold row.
+    const { data: material } = await service
+      .from("materials")
+      .select("id")
+      .eq("id", materialId)
+      .eq("company_id", companyId)
+      .maybeSingle();
+    if (!material) return { error: "Материал не найден" };
+
     const { error } = await service
       .from("material_thresholds")
       .upsert(

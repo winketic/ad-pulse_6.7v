@@ -44,6 +44,17 @@ export async function confirmWhatsAppTransaction(input: ConfirmInput) {
 
   if (!msg) throw new Error("Сообщение не найдено");
 
+  // Verify the chosen material actually belongs to this company — otherwise
+  // a crafted materialId could write a cross-tenant transaction row.
+  const { data: material } = await service
+    .from("materials")
+    .select("id")
+    .eq("id", input.materialId)
+    .eq("company_id", profile.company_id)
+    .maybeSingle();
+
+  if (!material) throw new Error("Материал не найден");
+
   const { error: txError } = await service.from("material_transactions").insert({
     company_id: profile.company_id,
     material_id: input.materialId,

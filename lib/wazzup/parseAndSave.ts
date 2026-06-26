@@ -127,27 +127,39 @@ export async function parseAndSave(messageId: string): Promise<void> {
   let transactionCreated = false;
 
   if (autoCreate) {
-    const { error } = await service.from("material_transactions").insert({
-      company_id: msg.company_id,
-      material_id: result.material_id!,
-      type: result.type!,
-      quantity: finalQuantity,
-      note: result.note ?? null,
-      transaction_date: new Date().toISOString().split("T")[0],
-      source: "whatsapp",
-      wazzup_message_id: messageId,
-    });
+    // Idempotency guard — a redelivered webhook (provider retry) must not
+    // create a second transaction for the same inbound message.
+    const { data: existingTx } = await service
+      .from("material_transactions")
+      .select("id")
+      .eq("wazzup_message_id", messageId)
+      .maybeSingle();
 
-    if (!error) {
+    if (existingTx) {
       transactionCreated = true;
-      // Fire-and-forget alerts — never block the main flow
-      void fireAlerts({
-        companyId: msg.company_id,
-        materialId: result.material_id!,
+    } else {
+      const { error } = await service.from("material_transactions").insert({
+        company_id: msg.company_id,
+        material_id: result.material_id!,
         type: result.type!,
         quantity: finalQuantity,
+        note: result.note ?? null,
+        transaction_date: new Date().toISOString().split("T")[0],
         source: "whatsapp",
-      }).catch((e) => console.error("[parseAndSave] alert error:", e));
+        wazzup_message_id: messageId,
+      });
+
+      if (!error) {
+        transactionCreated = true;
+        // Fire-and-forget alerts — never block the main flow
+        void fireAlerts({
+          companyId: msg.company_id,
+          materialId: result.material_id!,
+          type: result.type!,
+          quantity: finalQuantity,
+          source: "whatsapp",
+        }).catch((e) => console.error("[parseAndSave] alert error:", e));
+      }
     }
   }
 

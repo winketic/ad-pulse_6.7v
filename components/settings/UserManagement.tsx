@@ -158,7 +158,7 @@ export default function UserManagement({
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="user@example.com"
               required
-              className="w-full px-3 py-2.5 border border-[var(--border)] rounded-lg text-sm bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#00f5c4]"
+              className="field-input"
             />
           </div>
           <div>
@@ -166,7 +166,7 @@ export default function UserManagement({
             <select
               value={inviteRole}
               onChange={(e) => setInviteRole(e.target.value)}
-              className="w-full px-3 py-2.5 border border-[var(--border)] rounded-lg text-sm bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#1a472a]/30 focus:border-[#00f5c4]"
+              className="field-input"
             >
               {ROLES.map((r) => (
                 <option key={r.value} value={r.value}>{r.label}</option>
