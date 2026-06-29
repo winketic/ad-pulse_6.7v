@@ -26,8 +26,8 @@ async function getSupabaseAndCompany() {
     .eq("id", user.id)
     .single();
 
-  if (profileError || !profile?.company_id)
-    throw new Error("Профиль или компания не найдены");
+  if (profileError) throw new Error(`DB error: ${profileError.message}`);
+  if (!profile?.company_id) throw new Error("Компания не найдена");
 
   return { supabase, company_id: profile.company_id as string };
 }

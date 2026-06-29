@@ -25,12 +25,13 @@ async function getSupabaseAndUser() {
   } = await supabase.auth.getUser();
   if (authError || !user) throw new Error("Не авторизован");
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("company_id")
     .eq("id", user.id)
     .single();
 
+  if (profileError) throw new Error(`DB error: ${profileError.message}`);
   if (!profile?.company_id) throw new Error("Компания не найдена");
 
   return { supabase, user, company_id: profile.company_id as string };
@@ -100,12 +101,13 @@ async function fireAlerts({
   input: TransactionInput;
 }) {
   // Fetch material info
-  const { data: material } = await supabase
+  const { data: material, error: materialError } = await supabase
     .from("materials")
     .select("name, unit, gost_norm")
     .eq("id", input.material_id)
     .single();
 
+  if (materialError) throw new Error(`DB error: ${materialError.message}`);
   if (!material) return;
 
   // 1. Defect alert
