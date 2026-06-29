@@ -28,12 +28,13 @@ async function getCtx() {
   } = await supabase.auth.getUser();
   if (error || !user) throw new Error("Не авторизован");
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("company_id")
     .eq("id", user.id)
     .single();
 
+  if (profileError) throw new Error(`DB error: ${profileError.message}`);
   if (!profile?.company_id) throw new Error("Компания не найдена");
 
   return { supabase, user, company_id: profile.company_id as string };
