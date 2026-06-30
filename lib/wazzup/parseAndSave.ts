@@ -231,13 +231,21 @@ async function fireAlerts({
   if (mat.gost_norm && Number(mat.gost_norm) > 0) {
     const gostNorm = Number(mat.gost_norm);
     if (balance < gostNorm * 0.1) {
-      await sendTelegramAlert(
-        companyId,
-        `📦 <b>Критический остаток</b>\n\n` +
-          `Материал: ${materialName}\n` +
-          `Остаток: ${balance.toFixed(2)} ${unit}\n` +
-          `Норма ГОСТ: ${gostNorm} ${unit}`
-      );
+      const { data: companySettings } = await service
+        .from("companies")
+        .select("stock_alerts_enabled")
+        .eq("id", companyId)
+        .single();
+
+      if (companySettings?.stock_alerts_enabled !== false) {
+        await sendTelegramAlert(
+          companyId,
+          `📦 <b>Критический остаток</b>\n\n` +
+            `Материал: ${materialName}\n` +
+            `Остаток: ${balance.toFixed(2)} ${unit}\n` +
+            `Норма ГОСТ: ${gostNorm} ${unit}`
+        );
+      }
     }
   }
 

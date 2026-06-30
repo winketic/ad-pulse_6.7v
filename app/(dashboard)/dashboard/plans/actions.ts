@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
+import { sendTelegramAlert } from "@/lib/telegram/send";
 
 export type PlanStatus = "active" | "completed" | "cancelled";
 
@@ -87,7 +88,46 @@ export async function createPlan(input: CreatePlanInput): Promise<string> {
   if (matErr) throw new Error(matErr.message);
 
   revalidatePath("/dashboard/plans");
+
+  void notifyPlanCreated({ supabase, company_id, endDate: input.end_date, materials: input.materials }).catch((e) =>
+    console.error("[createPlan] telegram notify error:", e)
+  );
+
   return plan.id;
+}
+
+async function notifyPlanCreated({
+  supabase,
+  company_id,
+  endDate,
+  materials,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  company_id: string;
+  endDate: string;
+  materials: PlanMaterialInput[];
+}) {
+  const { data: rows, error } = await supabase
+    .from("materials")
+    .select("id, name")
+    .in("id", materials.map((m) => m.material_id));
+
+  if (error) throw new Error(`DB error: ${error.message}`);
+
+  const nameById = new Map((rows ?? []).map((r) => [r.id, r.name]));
+
+  const [y, m, d] = endDate.split("-");
+  const formattedDate = `${d}.${m}.${y}`;
+
+  const lines = materials
+    .map((mi) => `- ${nameById.get(mi.material_id) ?? "?"} ${mi.planned_quantity} шт`)
+    .join("\n");
+
+  await sendTelegramAlert(
+    company_id,
+    `📋 <b>Новый производственный план</b>\n\n` +
+      `До ${formattedDate} нужно произвести:\n${lines}`
+  );
 }
 
 export async function updatePlanStatus(id: string, status: PlanStatus) {
