@@ -17,6 +17,7 @@ export type CreatePlanInput = {
   start_date: string;
   end_date: string;
   materials: PlanMaterialInput[];
+  assigned_to?: string | null;
 };
 
 async function getCtx() {
@@ -56,6 +57,22 @@ export async function createPlan(input: CreatePlanInput): Promise<string> {
   if (uniqueIds.size !== input.materials.length)
     throw new Error("Один и тот же материал указан несколько раз");
 
+  const assigned_to = input.assigned_to || null;
+
+  if (assigned_to) {
+    // assigned_to is client-supplied — verify it's a profile in this
+    // company before trusting it (production_plans' FK only checks the
+    // row exists in profiles *somewhere*, not that it's the same company).
+    const { data: assignee } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", assigned_to)
+      .eq("company_id", company_id)
+      .maybeSingle();
+
+    if (!assignee) throw new Error("Исполнитель не найден в вашей компании");
+  }
+
   const planned_quantity = input.materials.reduce(
     (s, m) => s + m.planned_quantity,
     0
@@ -71,6 +88,7 @@ export async function createPlan(input: CreatePlanInput): Promise<string> {
       end_date: input.end_date,
       status: "active",
       created_by: user.id,
+      assigned_to,
     })
     .select("id")
     .single();
@@ -89,9 +107,14 @@ export async function createPlan(input: CreatePlanInput): Promise<string> {
 
   revalidatePath("/dashboard/plans");
 
-  void notifyPlanCreated({ supabase, company_id, endDate: input.end_date, materials: input.materials }).catch((e) =>
-    console.error("[createPlan] telegram notify error:", e)
-  );
+  void notifyPlanCreated({
+    supabase,
+    company_id,
+    name: input.name.trim(),
+    endDate: input.end_date,
+    materials: input.materials,
+    assigned_to,
+  }).catch((e) => console.error("[createPlan] telegram notify error:", e));
 
   return plan.id;
 }
@@ -99,13 +122,17 @@ export async function createPlan(input: CreatePlanInput): Promise<string> {
 async function notifyPlanCreated({
   supabase,
   company_id,
+  name,
   endDate,
   materials,
+  assigned_to,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   company_id: string;
+  name: string;
   endDate: string;
   materials: PlanMaterialInput[];
+  assigned_to: string | null;
 }) {
   const { data: rows, error } = await supabase
     .from("materials")
@@ -128,6 +155,16 @@ async function notifyPlanCreated({
     `📋 <b>Новый производственный план</b>\n\n` +
       `До ${formattedDate} нужно произвести:\n${lines}`
   );
+
+  // This is a plain informational notice — no per-user accept/decline,
+  // matches the existing one-shared-chat-per-company Telegram model.
+  if (assigned_to) {
+    await sendTelegramAlert(
+      company_id,
+      `📋 <b>Вам назначен производственный план:</b> ${name}\n` +
+        `До ${formattedDate}`
+    );
+  }
 }
 
 export async function updatePlanStatus(id: string, status: PlanStatus) {

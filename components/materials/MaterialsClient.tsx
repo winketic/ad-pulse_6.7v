@@ -13,6 +13,8 @@ import {
   updateMaterial,
   deleteMaterial,
 } from "@/app/(dashboard)/dashboard/materials/actions";
+import { getLastChange, type LastChange } from "@/lib/audit/getLastChange";
+import ChangedFooter from "@/components/ui/ChangedFooter";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -125,6 +127,7 @@ function Modal({
 
 function MaterialForm({
   initialValues,
+  editingId,
   onSubmit,
   onCancel,
   isPending,
@@ -132,6 +135,7 @@ function MaterialForm({
   submitLabel,
 }: {
   initialValues: FormState;
+  editingId?: string;
   onSubmit: (form: FormState) => void;
   onCancel: () => void;
   isPending: boolean;
@@ -139,6 +143,12 @@ function MaterialForm({
   submitLabel: string;
 }) {
   const [form, setForm] = useState<FormState>(initialValues);
+  const [lastChange, setLastChange] = useState<LastChange | null>(null);
+
+  useEffect(() => {
+    if (!editingId) return;
+    getLastChange("materials", editingId).then(setLastChange);
+  }, [editingId]);
 
   const set =
     (field: keyof FormState) =>
@@ -248,6 +258,8 @@ function MaterialForm({
           <span className="text-sm text-red-700">{error}</span>
         </div>
       )}
+
+      {editingId && <ChangedFooter change={lastChange} />}
       </div>
 
       {/* Buttons — sticky to bottom of scroll area so they're always reachable without scrolling */}
@@ -784,6 +796,7 @@ export default function MaterialsClient({
         >
           <MaterialForm
             initialValues={toFormState(editingMaterial)}
+            editingId={editingMaterial?.id}
             onSubmit={modalMode === "create" ? handleCreate : handleUpdate}
             onCancel={closeModal}
             isPending={isPending}

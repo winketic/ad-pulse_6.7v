@@ -7,6 +7,8 @@ import {
   updatePlanStatus,
   type PlanStatus,
 } from "@/app/(dashboard)/dashboard/plans/actions";
+import ChangedFooter from "@/components/ui/ChangedFooter";
+import type { LastChange } from "@/lib/audit/getLastChange";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -30,6 +32,7 @@ export type PlanDetail = {
   end_date: string;
   status: PlanStatus;
   created_at: string;
+  assignee_name: string | null;
   materials: PlanMaterialRow[];
 };
 
@@ -374,7 +377,13 @@ function StatusChangePanel({ plan }: { plan: PlanDetail }) {
 
 // ─── Main Component ───────────────────────────────────────
 
-export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
+export default function PlanDetailClient({
+  plan,
+  lastChange,
+}: {
+  plan: PlanDetail;
+  lastChange: LastChange | null;
+}) {
   // Summary totals
   const totalPlanned = plan.materials.reduce(
     (s, m) => s + m.planned_quantity,
@@ -410,6 +419,11 @@ export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
           <span className="text-sm text-[var(--muted)]">
             {fmtDate(plan.start_date)} — {fmtDate(plan.end_date)}
           </span>
+          {plan.assignee_name && (
+            <span className="text-sm text-[var(--muted)]">
+              Исполнитель: <span className="text-[var(--text)] font-medium">{plan.assignee_name}</span>
+            </span>
+          )}
         </div>
         <h1 className="text-2xl font-bold text-[var(--text)]">{plan.name}</h1>
       </div>
@@ -590,6 +604,8 @@ export default function PlanDetailClient({ plan }: { plan: PlanDetail }) {
           Отклонение &gt; 0 — перерасход
         </span>
       </div>
+
+      <ChangedFooter change={lastChange} />
     </div>
   );
 }
