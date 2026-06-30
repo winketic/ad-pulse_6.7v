@@ -393,7 +393,7 @@ function AddTransactionForm({
           >
             {visibleMaterials.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.name} ({m.unit})
+                {isProduction ? m.name : `${m.name} (${m.unit})`}
               </option>
             ))}
           </select>
