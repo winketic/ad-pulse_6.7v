@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import PlanDetailClient from "@/components/plans/PlanDetailClient";
 import type { PlanDetail, PlanMaterialRow } from "@/components/plans/PlanDetailClient";
+import { getLastChange } from "@/lib/audit/getLastChange";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -41,7 +42,7 @@ export default async function PlanDetailPage({
     supabase
       .from("production_plans")
       .select(
-        "id, name, planned_quantity, actual_quantity, start_date, end_date, status, created_at"
+        "id, name, planned_quantity, actual_quantity, start_date, end_date, status, created_at, assigned_to, profiles!production_plans_assigned_to_fkey(full_name)"
       )
       .eq("id", params.id)
       .eq("company_id", company_id)
@@ -56,6 +57,9 @@ export default async function PlanDetailPage({
 
   if (planResult.error || !planResult.data) notFound();
   const plan = planResult.data;
+  const assignee = plan.profiles as unknown as { full_name: string } | null;
+
+  const lastChange = await getLastChange("production_plans", plan.id);
 
   // Batch 2: transactions in plan period (needs plan dates from batch 1)
   const { data: txData } = await supabase
@@ -111,8 +115,9 @@ export default async function PlanDetailPage({
     end_date: plan.end_date,
     status: plan.status as PlanStatus,
     created_at: plan.created_at,
+    assignee_name: assignee?.full_name ?? null,
     materials: rows,
   };
 
-  return <PlanDetailClient plan={detail} />;
+  return <PlanDetailClient plan={detail} lastChange={lastChange} />;
 }

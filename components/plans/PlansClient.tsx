@@ -18,6 +18,11 @@ export type PlanMaterial = {
   unit: string;
 };
 
+export type PlanUser = {
+  id: string;
+  full_name: string;
+};
+
 // ─── Types ────────────────────────────────────────────────
 
 export type Plan = {
@@ -29,6 +34,7 @@ export type Plan = {
   end_date: string;
   status: PlanStatus;
   created_at: string;
+  assigned_to: string | null;
 };
 
 type MatRow = {
@@ -41,6 +47,7 @@ type FormState = {
   name: string;
   start_date: string;
   end_date: string;
+  assigned_to: string;
 };
 
 // ─── Config ───────────────────────────────────────────────
@@ -187,10 +194,12 @@ function Modal({
 
 function CreatePlanForm({
   materials,
+  users,
   onSuccess,
   onCancel,
 }: {
   materials: PlanMaterial[];
+  users: PlanUser[];
   onSuccess: (id: string) => void;
   onCancel: () => void;
 }) {
@@ -199,6 +208,7 @@ function CreatePlanForm({
     name: "",
     start_date: "",
     end_date: "",
+    assigned_to: "",
   });
   const [rows, setRows] = useState<MatRow[]>([
     { uid: uid(), material_id: materials[0]?.id ?? "", quantity: "" },
@@ -207,7 +217,7 @@ function CreatePlanForm({
 
   const setField =
     (k: keyof FormState) =>
-    (e: React.ChangeEvent<HTMLInputElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((p) => ({ ...p, [k]: e.target.value }));
 
   const addRow = () =>
@@ -254,6 +264,7 @@ function CreatePlanForm({
             material_id: r.material_id,
             planned_quantity: parseFloat(r.quantity),
           })),
+          assigned_to: form.assigned_to || null,
         });
         onSuccess(id);
       } catch (e) {
@@ -332,6 +343,26 @@ function CreatePlanForm({
             className={inputCls}
           />
         </div>
+      </div>
+
+      {/* Assignee */}
+      <div>
+        <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
+          Исполнитель
+          <span className="ml-1.5 text-xs font-normal text-[var(--muted)]">(необязательно)</span>
+        </label>
+        <select
+          value={form.assigned_to}
+          onChange={setField("assigned_to")}
+          className={inputCls}
+        >
+          <option value="">Не назначен</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.full_name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Materials */}
@@ -506,9 +537,11 @@ function EmptyState({
 export default function PlansClient({
   plans,
   materials,
+  users,
 }: {
   plans: Plan[];
   materials: PlanMaterial[];
+  users: PlanUser[];
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<PlanStatus | "all">("all");
@@ -667,6 +700,7 @@ export default function PlansClient({
         <Modal title="Новый производственный план" onClose={() => setModalOpen(false)}>
           <CreatePlanForm
             materials={materials}
+            users={users}
             onSuccess={handleCreated}
             onCancel={() => setModalOpen(false)}
           />

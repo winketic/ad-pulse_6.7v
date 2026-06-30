@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import PlansClient from "@/components/plans/PlansClient";
-import type { Plan, PlanMaterial } from "@/components/plans/PlansClient";
+import type { Plan, PlanMaterial, PlanUser } from "@/components/plans/PlansClient";
 import type { PlanStatus } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -26,11 +26,11 @@ export default async function PlansPage() {
   const company_id = profile?.company_id as string | undefined;
   if (!company_id) return <NoCompanyState />;
 
-  const [plansResult, matsResult] = await Promise.all([
+  const [plansResult, matsResult, usersResult] = await Promise.all([
     supabase
       .from("production_plans")
       .select(
-        "id, name, planned_quantity, actual_quantity, start_date, end_date, status, created_at"
+        "id, name, planned_quantity, actual_quantity, start_date, end_date, status, created_at, assigned_to"
       )
       .eq("company_id", company_id)
       .order("created_at", { ascending: false }),
@@ -39,6 +39,11 @@ export default async function PlansPage() {
       .select("id, name, unit")
       .eq("company_id", company_id)
       .order("name"),
+    supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("company_id", company_id)
+      .order("full_name"),
   ]);
 
   const plans: Plan[] = (plansResult.data ?? []).map((p) => ({
@@ -50,6 +55,7 @@ export default async function PlansPage() {
     end_date: p.end_date,
     status: p.status as PlanStatus,
     created_at: p.created_at,
+    assigned_to: p.assigned_to,
   }));
 
   const materials: PlanMaterial[] = (matsResult.data ?? []).map((m) => ({
@@ -58,5 +64,10 @@ export default async function PlansPage() {
     unit: m.unit,
   }));
 
-  return <PlansClient plans={plans} materials={materials} />;
+  const users: PlanUser[] = (usersResult.data ?? []).map((u) => ({
+    id: u.id,
+    full_name: u.full_name,
+  }));
+
+  return <PlansClient plans={plans} materials={materials} users={users} />;
 }
