@@ -135,12 +135,20 @@ async function fireAlerts({
     }, 0) ?? 0;
 
   if (material.gost_norm && currentBalance < Number(material.gost_norm) * 0.1) {
-    await sendTelegramAlert(
-      company_id,
-      `📦 <b>Критический остаток</b>\n\n` +
-        `Материал: ${material.name}\n` +
-        `Остаток: ${currentBalance.toFixed(2)} ${material.unit}\n` +
-        `Норма: ${material.gost_norm} ${material.unit}`
-    );
+    const { data: companySettings } = await supabase
+      .from("companies")
+      .select("stock_alerts_enabled")
+      .eq("id", company_id)
+      .single();
+
+    if (companySettings?.stock_alerts_enabled !== false) {
+      await sendTelegramAlert(
+        company_id,
+        `📦 <b>Критический остаток</b>\n\n` +
+          `Материал: ${material.name}\n` +
+          `Остаток: ${currentBalance.toFixed(2)} ${material.unit}\n` +
+          `Норма: ${material.gost_norm} ${material.unit}`
+      );
+    }
   }
 }
