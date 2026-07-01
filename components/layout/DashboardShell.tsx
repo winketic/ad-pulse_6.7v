@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   LayoutDashboard,
   Package,
+  Warehouse,
   ArrowLeftRight,
   ClipboardList,
   BarChart2,
@@ -19,6 +20,7 @@ import OnboardingTour from "@/components/OnboardingTour";
 const NAV_ITEMS = [
   { href: "/dashboard",              label: "Обзор",      Icon: LayoutDashboard, tourId: "tour-nav-overview"     },
   { href: "/dashboard/materials",    label: "Материалы",  Icon: Package,         tourId: "tour-nav-materials"    },
+  { href: "/dashboard/warehouse",   label: "Склад",      Icon: Warehouse,       tourId: undefined               },
   { href: "/dashboard/transactions", label: "Движение",   Icon: ArrowLeftRight,  tourId: "tour-nav-transactions" },
   { href: "/dashboard/plans",        label: "Планы",      Icon: ClipboardList,   tourId: undefined               },
   { href: "/dashboard/reports",      label: "Отчёты",     Icon: BarChart2,       tourId: undefined               },
