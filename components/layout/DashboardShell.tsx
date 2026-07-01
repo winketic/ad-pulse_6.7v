@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -12,6 +13,7 @@ import {
   Settings,
   LogOut,
   MessageCircle,
+  MoreVertical,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Logo } from "@/components/Logo";
@@ -28,7 +30,20 @@ const NAV_ITEMS = [
   { href: "/dashboard/settings",     label: "Настройки",  Icon: Settings,        tourId: "tour-nav-settings"     },
 ];
 
-const MOBILE_NAV = NAV_ITEMS.filter((i) => i.href !== "/dashboard/whatsapp");
+// Mobile bottom nav — 4 primary items only
+const MOBILE_NAV = [
+  NAV_ITEMS[0], // Обзор
+  NAV_ITEMS[2], // Склад
+  NAV_ITEMS[3], // Движение
+  NAV_ITEMS[4], // Планы
+];
+
+// Items surfaced in the "More" bottom sheet on mobile
+const MORE_ITEMS = [
+  NAV_ITEMS[1], // Материалы
+  NAV_ITEMS[5], // Отчёты
+  NAV_ITEMS[7], // Настройки
+];
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -46,6 +61,18 @@ export default function DashboardShell({
   const pathname = usePathname();
   const router   = useRouter();
   const supabase = createClient();
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  // Close "more" sheet on navigation
+  useEffect(() => { setMoreOpen(false); }, [pathname]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!moreOpen) return;
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") setMoreOpen(false); };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, [moreOpen]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -227,21 +254,72 @@ export default function DashboardShell({
           <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>AD Pulse</span>
           <div className="flex-1" />
           <button
+            onClick={() => setMoreOpen(true)}
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: "var(--muted)" }}
+            title="Ещё"
+          >
+            <MoreVertical size={20} />
+          </button>
+          <button
             onClick={handleLogout}
             className="p-2 rounded-lg transition-colors"
             style={{ color: "var(--muted)" }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "var(--bg2)";
-              (e.currentTarget as HTMLElement).style.color = "var(--text)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "transparent";
-              (e.currentTarget as HTMLElement).style.color = "var(--muted)";
-            }}
+            title="Выйти"
           >
             <LogOut size={18} />
           </button>
         </header>
+
+        {/* ── "More" bottom sheet ─────────────────────────────── */}
+        {moreOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm lg:hidden"
+              onClick={() => setMoreOpen(false)}
+            />
+            {/* Sheet */}
+            <div
+              className="fixed bottom-0 left-0 right-0 z-[71] lg:hidden rounded-t-2xl overflow-hidden"
+              style={{
+                background: "var(--card)",
+                borderTop: "1px solid var(--border)",
+                paddingBottom: "env(safe-area-inset-bottom, 0px)",
+              }}
+            >
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-9 h-1 rounded-full" style={{ background: "var(--border)" }} />
+              </div>
+
+              {/* Links */}
+              <nav className="px-4 pb-5 pt-2 space-y-1">
+                {MORE_ITEMS.map(({ href, label, Icon }) => {
+                  const active = isActive(href);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      className="flex items-center gap-3.5 px-3 py-3 rounded-xl text-sm font-medium transition-colors"
+                      style={{
+                        background: active ? "var(--bg3)" : "transparent",
+                        color: active ? "var(--accent)" : "var(--text)",
+                      }}
+                    >
+                      <Icon
+                        size={20}
+                        strokeWidth={active ? 2 : 1.6}
+                        style={{ color: active ? "var(--accent)" : "var(--muted)" }}
+                      />
+                      {label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          </>
+        )}
 
         {/* Page content */}
         <main
