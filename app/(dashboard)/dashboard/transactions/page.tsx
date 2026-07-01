@@ -43,7 +43,7 @@ export default async function TransactionsPage({
       supabase
         .from("material_transactions")
         .select(
-          "id, type, quantity, note, transaction_date, created_at, material_id, created_by, source, wazzup_message_id"
+          "id, type, quantity, note, counterparty, transaction_date, created_at, material_id, created_by, source, wazzup_message_id"
         )
         .eq("company_id", company_id)
         .order("transaction_date", { ascending: false })
@@ -118,6 +118,7 @@ export default async function TransactionsPage({
       type: tx.type as TxType,
       quantity: Number(tx.quantity),
       note: tx.note ?? null,
+      counterparty: (tx.counterparty as string | null) ?? null,
       transaction_date: tx.transaction_date ?? (tx.created_at as string).split("T")[0],
       created_at: tx.created_at,
       material_id: tx.material_id,

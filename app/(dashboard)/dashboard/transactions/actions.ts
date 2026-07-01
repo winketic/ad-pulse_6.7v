@@ -13,6 +13,7 @@ export type TransactionInput = {
   quantity: number;
   note: string | null;
   transaction_date: string;
+  counterparty?: string | null;
 };
 
 async function getSupabaseAndUser() {
@@ -76,6 +77,7 @@ export async function createTransaction(input: TransactionInput) {
     type: input.type,
     quantity: input.quantity,
     note: input.note,
+    counterparty: input.counterparty ?? null,
     transaction_date: input.transaction_date,
     created_by: user.id,
   });

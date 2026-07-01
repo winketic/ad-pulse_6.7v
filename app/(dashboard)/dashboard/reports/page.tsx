@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import ReportsClient from "@/components/reports/ReportsClient";
-import type { SummaryRow, DefectRow } from "@/components/reports/ReportsClient";
+import type { SummaryRow, DefectRow, AllTxRow } from "@/components/reports/ReportsClient";
 import NoCompanyState from "@/components/ui/NoCompanyState";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ export default async function ReportsPage({
       .order("name"),
     supabase
       .from("material_transactions")
-      .select("id, material_id, type, quantity, note, transaction_date, created_by")
+      .select("id, material_id, type, quantity, note, counterparty, transaction_date, created_by")
       .eq("company_id", company_id)
       .gte("transaction_date", from)
       .lte("transaction_date", to)
@@ -134,10 +134,27 @@ export default async function ReportsPage({
     };
   });
 
+  // ── Build all-transactions rows (for Sheet 3 Excel export) ───
+  const allTransactions: AllTxRow[] = txs.map((tx) => {
+    const mat = matMap.get(tx.material_id);
+    return {
+      id: tx.id,
+      transaction_date: tx.transaction_date ?? "",
+      type: tx.type,
+      material_name: mat?.name ?? "—",
+      material_unit: mat?.unit ?? "",
+      quantity: Number(tx.quantity),
+      note: tx.note ?? null,
+      counterparty: (tx as Record<string, unknown>).counterparty as string | null ?? null,
+      creator_name: profileMap.get(tx.created_by) ?? "—",
+    };
+  });
+
   return (
     <ReportsClient
       summary={summary}
       defects={defects}
+      allTransactions={allTransactions}
       from={from}
       to={to}
     />
