@@ -26,6 +26,18 @@ export type DefectRow = {
   creator_name: string;
 };
 
+export type AllTxRow = {
+  id: string;
+  transaction_date: string;
+  type: string;
+  material_name: string;
+  material_unit: string;
+  quantity: number;
+  note: string | null;
+  counterparty: string | null;
+  creator_name: string;
+};
+
 // ─── Helpers ──────────────────────────────────────────────
 
 function fmtDate(s: string) {
@@ -61,10 +73,18 @@ function sumDefectsByUnit(defects: DefectRow[]): string {
 async function exportExcel(
   summary: SummaryRow[],
   defects: DefectRow[],
+  allTransactions: AllTxRow[],
   from: string,
   to: string
 ) {
   const XLSX = await import("xlsx");
+
+  const TYPE_LABELS: Record<string, string> = {
+    income: "Приход",
+    expense: "Расход",
+    return: "Возврат",
+    defect: "Брак",
+  };
 
   const wb = XLSX.utils.book_new();
 
@@ -80,13 +100,8 @@ async function exportExcel(
   }));
   const ws1 = XLSX.utils.json_to_sheet(s1Data);
   ws1["!cols"] = [
-    { wch: 30 }, // Материал
-    { wch: 10 }, // Ед.изм.
-    { wch: 14 }, // Приход
-    { wch: 14 }, // Возврат
-    { wch: 14 }, // Расход
-    { wch: 14 }, // Брак
-    { wch: 14 }, // Остаток
+    { wch: 30 }, { wch: 10 }, { wch: 14 },
+    { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
   ];
   XLSX.utils.book_append_sheet(wb, ws1, "Сводная таблица");
 
@@ -107,6 +122,31 @@ async function exportExcel(
     { wch: 14 }, { wch: 40 }, { wch: 20 },
   ];
   XLSX.utils.book_append_sheet(wb, ws2, "Случаи брака");
+
+  // Sheet 3: All transactions — include Контрагент only when at least one row has it
+  const hasCounterparty = allTransactions.some((tx) => !!tx.counterparty);
+  const s3Data = allTransactions.map((tx) => {
+    const row: Record<string, string | number> = {
+      "Дата": fmtDate(tx.transaction_date),
+      "Тип": TYPE_LABELS[tx.type] ?? tx.type,
+      "Материал": tx.material_name,
+      "Ед. изм.": tx.material_unit,
+      "Количество": tx.quantity,
+      "Примечание": tx.note ?? "",
+      "Добавил": tx.creator_name,
+    };
+    if (hasCounterparty) row["Контрагент"] = tx.counterparty ?? "";
+    return row;
+  });
+  const ws3 = XLSX.utils.json_to_sheet(
+    s3Data.length ? s3Data : [{ "Дата": "Нет данных" }]
+  );
+  ws3["!cols"] = [
+    { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 10 },
+    { wch: 14 }, { wch: 35 }, { wch: 20 },
+    ...(hasCounterparty ? [{ wch: 25 }] : []),
+  ];
+  XLSX.utils.book_append_sheet(wb, ws3, "Движение");
 
   const filename = `AD_Pulse_${from}_${to}.xlsx`;
   XLSX.writeFile(wb, filename);
@@ -379,11 +419,13 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
 export default function ReportsClient({
   summary,
   defects,
+  allTransactions,
   from,
   to,
 }: {
   summary: SummaryRow[];
   defects: DefectRow[];
+  allTransactions: AllTxRow[];
   from: string;
   to: string;
 }) {
@@ -406,7 +448,7 @@ export default function ReportsClient({
   const handleExport = async () => {
     setExporting(true);
     try {
-      await exportExcel(summary, defects, from, to);
+      await exportExcel(summary, defects, allTransactions, from, to);
     } finally {
       setExporting(false);
     }

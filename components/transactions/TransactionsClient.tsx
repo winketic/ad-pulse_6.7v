@@ -27,6 +27,7 @@ export type Transaction = {
   type: TxType;
   quantity: number;
   note: string | null;
+  counterparty: string | null;
   transaction_date: string;
   created_at: string;
   material_id: string;
@@ -58,6 +59,7 @@ type FormState = {
   quantity: string;
   defect_reason: string;
   note: string;
+  counterparty: string;
   date: string;
 };
 
@@ -255,6 +257,7 @@ function AddTransactionForm({
     quantity: "",
     defect_reason: "",
     note: "",
+    counterparty: "",
     date: todayStr(),
   });
   const [quantityError, setQuantityError] = useState("");
@@ -481,6 +484,26 @@ function AddTransactionForm({
           className="field-textarea"
         />
       </div>
+
+      {/* Counterparty */}
+      {!isProduction && (
+        <div>
+          <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
+            Контрагент
+            <span className="ml-1.5 text-xs font-normal text-[var(--muted)]">
+              (необязательно)
+            </span>
+          </label>
+          <input
+            type="text"
+            value={form.counterparty}
+            onChange={set("counterparty")}
+            placeholder="Название компании"
+            maxLength={200}
+            className="field-input"
+          />
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -820,6 +843,7 @@ export default function TransactionsClient({
             material_id: form.material_id,
             quantity: parseFloat(form.quantity),
             note: noteToSave,
+            counterparty: form.counterparty.trim() || null,
             transaction_date: form.date,
           });
           router.refresh();
@@ -929,8 +953,11 @@ export default function TransactionsClient({
                       <td className="px-5 py-3.5 text-[var(--muted)] text-xs tabular-nums whitespace-nowrap">
                         {fmtDate(tx.transaction_date)}
                       </td>
-                      <td className="px-5 py-3.5 font-medium text-[var(--text)]">
-                        {tx.material_name}
+                      <td className="px-5 py-3.5">
+                        <span className="font-medium text-[var(--text)]">{tx.material_name}</span>
+                        {tx.counterparty && (
+                          <p className="text-xs text-[var(--muted)] mt-0.5">{tx.counterparty}</p>
+                        )}
                       </td>
                       <td className="px-5 py-3.5">
                         <TypeBadge type={tx.type} />
@@ -998,6 +1025,9 @@ export default function TransactionsClient({
                   <p className="font-semibold text-[var(--text)] text-sm">
                     {tx.material_name}
                   </p>
+                  {tx.counterparty && (
+                    <p className="text-xs text-[var(--muted)] mt-0.5">{tx.counterparty}</p>
+                  )}
 
                   <p
                     className={`text-xl font-bold tabular-nums mt-1 ${cfg.qColor}`}
