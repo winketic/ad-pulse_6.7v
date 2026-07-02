@@ -15,6 +15,37 @@ import {
   type TxType,
 } from "@/app/(dashboard)/dashboard/transactions/actions";
 import { formatQuantity } from "@/lib/utils/format";
+import { isNetworkError, savePending, clearPending } from "@/lib/hooks/useOfflineRetry";
+import { useToast } from "@/components/ui/Toast";
+import { OfflineRetryBanner } from "@/components/ui/OfflineRetryBanner";
+
+type PendingTx = { form: FormState; type: "regular" | "production" };
+
+const TX_PENDING_KEY = "tx_form";
+
+async function retryTx(payload: PendingTx) {
+  if (payload.type === "production") {
+    await createProductionTransaction({
+      material_id: payload.form.material_id,
+      quantity: parseFloat(payload.form.quantity),
+      transaction_date: payload.form.date,
+    });
+  } else {
+    const noteToSave =
+      payload.form.type === "defect"
+        ? payload.form.defect_reason.trim() +
+          (payload.form.note.trim() ? `\n\n${payload.form.note.trim()}` : "")
+        : payload.form.note.trim() || null;
+    await createTransaction({
+      type: payload.form.type as TxType,
+      material_id: payload.form.material_id,
+      quantity: parseFloat(payload.form.quantity),
+      note: noteToSave,
+      counterparty: payload.form.counterparty.trim() || null,
+      transaction_date: payload.form.date,
+    });
+  }
+}
 
 export type { BalanceData };
 
@@ -774,6 +805,7 @@ export default function TransactionsClient({
   initialMaterialId?: string;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [modalOpen, setModalOpen] = useState(false);
   const [filters, setFilters] = useState<Filters>({
@@ -834,6 +866,7 @@ export default function TransactionsClient({
               quantity: parseFloat(form.quantity),
               transaction_date: form.date,
             });
+            clearPending(TX_PENDING_KEY);
             router.refresh();
             closeModal();
             return;
@@ -853,20 +886,33 @@ export default function TransactionsClient({
             counterparty: form.counterparty.trim() || null,
             transaction_date: form.date,
           });
+          clearPending(TX_PENDING_KEY);
           router.refresh();
           closeModal();
         } catch (e) {
-          setFormError(
-            e instanceof Error ? e.message : "Ошибка добавления записи"
-          );
+          if (isNetworkError(e)) {
+            const mat = materials.find((m) => m.id === form.material_id);
+            const label = `${form.type} — ${mat?.name ?? "материал"}, ${form.quantity} ${mat?.unit ?? ""}`;
+            savePending<PendingTx>(TX_PENDING_KEY, { form, type: form.type === "production" ? "production" : "regular" }, label);
+            toast("Нет связи — данные сохранены локально", "info");
+            closeModal();
+          } else {
+            setFormError(
+              e instanceof Error ? e.message : "Ошибка добавления записи"
+            );
+          }
         }
       });
     },
-    [router, closeModal]
+    [router, closeModal, toast, materials]
   );
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <OfflineRetryBanner<PendingTx>
+        pendingKey={TX_PENDING_KEY}
+        onRetry={retryTx}
+      />
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
