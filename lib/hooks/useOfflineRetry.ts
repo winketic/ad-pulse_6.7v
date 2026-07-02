@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 // Detects network errors (fetch failure, no connection) vs server errors.
 // Returns true if the error looks like a network issue.
