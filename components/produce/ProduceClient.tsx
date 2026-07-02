@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import { createProductionTransaction } from "@/app/(dashboard)/dashboard/transactions/actions";
 import { useToast } from "@/components/ui/Toast";
 import { formatQuantity } from "@/lib/utils/format";
-import { isNetworkError, savePending, clearPending, loadPending } from "@/lib/hooks/useOfflineRetry";
+import { isNetworkError, savePending, clearPending } from "@/lib/hooks/useOfflineRetry";
 import { OfflineRetryBanner } from "@/components/ui/OfflineRetryBanner";
 
 type PendingProduction = { material_id: string; quantity: number; transaction_date: string; label: string };
