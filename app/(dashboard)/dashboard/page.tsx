@@ -140,13 +140,10 @@ export default async function DashboardPage() {
       .select("type, quantity")
       .eq("company_id", company_id)
       .eq("transaction_date", today),
-    // Limit to last 100 for balance calculation (dashboard overview)
     supabase
       .from("material_transactions")
       .select("material_id, type, quantity")
-      .eq("company_id", company_id)
-      .order("created_at", { ascending: false })
-      .limit(100),
+      .eq("company_id", company_id),
     supabase
       .from("material_transactions")
       .select("id, type, quantity, note, transaction_date, material_id, created_by")
