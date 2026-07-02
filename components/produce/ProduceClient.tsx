@@ -4,6 +4,10 @@ import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import { createProductionTransaction } from "@/app/(dashboard)/dashboard/transactions/actions";
 import { useToast } from "@/components/ui/Toast";
 import { formatQuantity } from "@/lib/utils/format";
+import { isNetworkError, savePending, clearPending, loadPending } from "@/lib/hooks/useOfflineRetry";
+import { OfflineRetryBanner } from "@/components/ui/OfflineRetryBanner";
+
+type PendingProduction = { material_id: string; quantity: number; transaction_date: string; label: string };
 
 export type ProduceMaterial = {
   id: string;
@@ -18,6 +22,8 @@ export type ProduceMaterial = {
 };
 
 // ─── Quick Quantity Modal ─────────────────────────────────
+
+const PENDING_KEY = "quick_produce";
 
 function QuickQuantityModal({
   material,
@@ -73,17 +79,30 @@ function QuickQuantityModal({
     }
     setError("");
     startTransition(async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const label = `${formatQuantity(n)} ${material.unit} — ${material.name}`;
       try {
-        const today = new Date().toISOString().split("T")[0];
         await createProductionTransaction({
           material_id: material.id,
           quantity: n,
           transaction_date: today,
         });
-        toast(`✓ Записано: ${formatQuantity(n)} ${material.unit} — ${material.name}`, "success");
+        clearPending(PENDING_KEY);
+        toast(`✓ Записано: ${label}`, "success");
         onClose();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Ошибка сохранения");
+        if (isNetworkError(err)) {
+          savePending<PendingProduction>(PENDING_KEY, {
+            material_id: material.id,
+            quantity: n,
+            transaction_date: today,
+            label,
+          }, label);
+          toast("Нет связи — данные сохранены локально", "info");
+          onClose();
+        } else {
+          setError(err instanceof Error ? err.message : "Ошибка сохранения");
+        }
       }
     });
   };
@@ -256,6 +275,14 @@ function MaterialCard({
 
 // ─── Main Component ───────────────────────────────────────
 
+async function retryProduction(payload: PendingProduction) {
+  await createProductionTransaction({
+    material_id: payload.material_id,
+    quantity: payload.quantity,
+    transaction_date: payload.transaction_date,
+  });
+}
+
 export default function ProduceClient({ materials }: { materials: ProduceMaterial[] }) {
   const [active, setActive] = useState<ProduceMaterial | null>(null);
 
@@ -267,6 +294,10 @@ export default function ProduceClient({ materials }: { materials: ProduceMateria
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+      <OfflineRetryBanner<PendingProduction>
+        pendingKey={PENDING_KEY}
+        onRetry={retryProduction}
+      />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[var(--text)]">Быстрый выпуск</h1>
