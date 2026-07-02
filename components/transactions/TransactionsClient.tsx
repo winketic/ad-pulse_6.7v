@@ -44,6 +44,7 @@ export type Material = {
   unit: string;
   norm_concrete?: number | null;
   norm_rebar?: number | null;
+  rebar_material_name?: string | null;
 };
 
 type Filters = {
@@ -299,7 +300,8 @@ function AddTransactionForm({
 
   const selectedMaterial = materials.find((m) => m.id === form.material_id);
   const concreteMaterial = materials.find((m) => m.name === "Бетон");
-  const rebarMaterial = materials.find((m) => m.name === "Арматура");
+  const rebarMaterialName = selectedMaterial?.rebar_material_name ?? "Арматура";
+  const rebarMaterial = materials.find((m) => m.name === rebarMaterialName);
 
   const qtyNum = Number(form.quantity) || 0;
   const concreteAmount =
@@ -445,7 +447,7 @@ function AddTransactionForm({
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-sm text-[var(--text)]">
-              Спишется: бетон {concreteAmount.toFixed(2)} {concreteMaterial?.unit ?? "м³"}, арматура {rebarAmount.toFixed(2)} {rebarMaterial?.unit ?? "кг"}
+              Спишется: бетон {concreteAmount.toFixed(2)} {concreteMaterial?.unit ?? "м³"}, {rebarMaterialName.toLowerCase()} {rebarAmount.toFixed(2)} {rebarMaterial?.unit ?? "кг"}
             </p>
           </div>
         )}
