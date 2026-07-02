@@ -132,12 +132,12 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from("materials")
-      .select("id, name, unit")
+      .select("id, name, unit, norm_concrete, norm_rebar")
       .eq("company_id", company_id)
       .order("name"),
     supabase
       .from("material_transactions")
-      .select("type, quantity")
+      .select("type, quantity, material_id")
       .eq("company_id", company_id)
       .eq("transaction_date", today),
     supabase
@@ -187,6 +187,30 @@ export default async function DashboardPage() {
   const todayOutCount = todayTxs.filter((t) => t.type === "expense").length;
   const materialsCount = matsResult.data?.length ?? 0;
   const activePlansCount = activePlansResult.data?.length ?? 0;
+
+  // ── Today's production summary ──────────────────────────
+  // Production materials = those with both norms set (the finished products)
+  const productionMatIds = new Set(
+    (matsResult.data ?? [])
+      .filter((m) => m.norm_concrete != null && m.norm_rebar != null)
+      .map((m) => m.id)
+  );
+  type TodayProdRow = { name: string; unit: string; qty: number };
+  const todayProdMap = new Map<string, TodayProdRow>();
+  for (const tx of todayTxs) {
+    if (tx.type !== "income") continue;
+    if (!productionMatIds.has(tx.material_id)) continue;
+    const mat = txMatMap.get(tx.material_id);
+    if (!mat) continue;
+    const existing = todayProdMap.get(tx.material_id);
+    if (existing) {
+      existing.qty += Number(tx.quantity);
+    } else {
+      todayProdMap.set(tx.material_id, { name: mat.name, unit: mat.unit, qty: Number(tx.quantity) });
+    }
+  }
+  const todayProduction = Array.from(todayProdMap.values()).sort((a, b) => b.qty - a.qty);
+  const todayProdTotal = todayProduction.reduce((s, r) => s + r.qty, 0);
 
   // ── Material balances ───────────────────────────────────
   const balMap = new Map<
@@ -293,6 +317,39 @@ export default async function DashboardPage() {
           }
         />
       </div>
+
+      {/* ── Today's production summary ────────────────── */}
+      {todayProduction.length > 0 && (
+        <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] mb-4 overflow-hidden">
+          <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-[#00f5c4]/15 flex items-center justify-center shrink-0">
+                <svg className="w-4 h-4 text-[#00f5c4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+              </div>
+              <h2 className="text-sm font-semibold text-[var(--text)]">Выпущено сегодня</h2>
+            </div>
+            <span className="text-xs font-semibold text-[#00f5c4] tabular-nums">
+              {formatCompact(todayProdTotal)} шт. итого
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-3 px-5 py-4">
+            {todayProduction.map((row) => (
+              <div
+                key={row.name}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg3)]"
+              >
+                <span className="text-sm font-medium text-[var(--text)]">{row.name}</span>
+                <span className="text-sm font-bold text-[#00f5c4] tabular-nums font-mono">
+                  {formatCompact(row.qty)}
+                </span>
+                <span className="text-xs text-[var(--muted)]">{row.unit}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Main grid: balances + recent transactions ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
