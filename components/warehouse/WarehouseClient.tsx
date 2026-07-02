@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import Link from "next/link";
 import { setInitialStock } from "@/app/(dashboard)/dashboard/warehouse/actions";
 import type { WarehouseMaterial } from "@/app/(dashboard)/dashboard/warehouse/page";
 
@@ -214,8 +215,8 @@ export default function WarehouseClient({
                   <th className="px-5 py-3 text-right text-xs font-semibold text-[var(--muted)] uppercase tracking-wide w-40">
                     Остаток
                   </th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold text-[var(--muted)] uppercase tracking-wide w-44">
-                    Действие
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-[var(--muted)] uppercase tracking-wide w-60">
+                    Действия
                   </th>
                 </tr>
               </thead>
@@ -230,15 +231,26 @@ export default function WarehouseClient({
                       <BalanceBadge balance={m.balance} unit={m.unit} />
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <button
-                        onClick={() => setModalMaterial(m)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs font-medium text-[var(--muted)] hover:bg-[var(--bg3)] hover:border-[#00f5c4] hover:text-[#00f5c4] transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Ввести остаток
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/dashboard/transactions?material_id=${m.id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs font-medium text-[var(--muted)] hover:bg-[var(--bg3)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                          История
+                        </Link>
+                        <button
+                          onClick={() => setModalMaterial(m)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs font-medium text-[var(--muted)] hover:bg-[var(--bg3)] hover:border-[#00f5c4] hover:text-[#00f5c4] transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                          </svg>
+                          Ввести остаток
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -258,6 +270,15 @@ export default function WarehouseClient({
                   <p className="text-xs text-[var(--muted)] mt-0.5">{m.unit}</p>
                 </div>
                 <BalanceBadge balance={m.balance} unit={m.unit} />
+                <Link
+                  href={`/dashboard/transactions?material_id=${m.id}`}
+                  className="shrink-0 p-2 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
+                  title="История движения"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </Link>
                 <button
                   onClick={() => setModalMaterial(m)}
                   className="shrink-0 p-2 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:border-[#00f5c4] hover:text-[#00f5c4] transition-colors"

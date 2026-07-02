@@ -761,6 +761,7 @@ export default function TransactionsClient({
   page,
   totalPages,
   totalCount,
+  initialMaterialId,
 }: {
   transactions: Transaction[];
   materials: Material[];
@@ -768,11 +769,15 @@ export default function TransactionsClient({
   page?: number;
   totalPages?: number;
   totalCount?: number;
+  initialMaterialId?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [modalOpen, setModalOpen] = useState(false);
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<Filters>({
+    ...DEFAULT_FILTERS,
+    ...(initialMaterialId ? { material_id: initialMaterialId } : {}),
+  });
   const [formError, setFormError] = useState("");
 
   // Use server-computed balances (full dataset) if provided, otherwise

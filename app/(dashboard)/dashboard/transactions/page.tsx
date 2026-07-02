@@ -14,7 +14,7 @@ const PAGE_SIZE = 50;
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: { page?: string };
+  searchParams: { page?: string; material_id?: string };
 }) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -170,6 +170,7 @@ export default async function TransactionsPage({
       page={page}
       totalPages={totalPages}
       totalCount={totalCount}
+      initialMaterialId={searchParams.material_id}
     />
   );
 }
