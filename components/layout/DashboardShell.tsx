@@ -14,6 +14,7 @@ import {
   LogOut,
   MessageCircle,
   MoreVertical,
+  Factory,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Logo } from "@/components/Logo";
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/reports",      label: "Отчёты",     Icon: BarChart2,       tourId: undefined               },
   { href: "/dashboard/whatsapp",     label: "WhatsApp",   Icon: MessageCircle,   tourId: "tour-nav-whatsapp"     },
   { href: "/dashboard/settings",     label: "Настройки",  Icon: Settings,        tourId: "tour-nav-settings"     },
+  { href: "/dashboard/produce",      label: "Выпуск",     Icon: Factory,         tourId: undefined               },
 ];
 
 // Mobile bottom nav — 4 primary items only
@@ -40,6 +42,7 @@ const MOBILE_NAV = [
 
 // Items surfaced in the "More" bottom sheet on mobile
 const MORE_ITEMS = [
+  NAV_ITEMS[8], // Выпуск — первый, самый важный для Олега
   NAV_ITEMS[1], // Материалы
   NAV_ITEMS[5], // Отчёты
   NAV_ITEMS[7], // Настройки
