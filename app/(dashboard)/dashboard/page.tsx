@@ -123,12 +123,12 @@ function SectionHeader({
   linkLabel?: string;
 }) {
   return (
-    <div className="flex items-center justify-between mb-4">
-      <h2 className="text-sm font-semibold text-[var(--text)]">{title}</h2>
+    <div className="flex items-baseline justify-between mb-3">
+      <h2 className="text-label">{title}</h2>
       {href && (
         <Link
           href={href}
-          className="text-xs text-[#00f5c4] hover:underline font-medium"
+          className="text-xs text-[var(--accent)] hover:underline font-medium"
         >
           {linkLabel ?? "Смотреть все →"}
         </Link>
