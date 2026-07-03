@@ -112,25 +112,16 @@ function StatusBadge({ status }: { status: PlanStatus }) {
 
 function ProgressBar({ pct }: { pct: number }) {
   const clamped = Math.min(pct, 100);
-  const over = pct > 100;
+  const done = pct >= 100;
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full bg-[var(--bg3)] overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all ${
-            over ? "bg-red-500" : pct >= 75 ? "bg-[#00f5c4]" : "bg-[#00f5c4]"
-          }`}
-          style={{ width: `${clamped}%` }}
-        />
-      </div>
-      <span
-        className={`text-xs tabular-nums font-medium w-10 text-right ${
-          over ? "text-red-600" : "text-[var(--muted)]"
+    <div className="h-2 rounded-full bg-[var(--surface-3)] overflow-hidden">
+      <div
+        className={`h-full rounded-full transition-[width] duration-500 ${
+          done ? "bg-[var(--success)]" : "bg-[var(--accent)]"
         }`}
-      >
-        {pct.toFixed(0)}%
-      </span>
+        style={{ width: `${clamped}%` }}
+      />
     </div>
   );
 }
@@ -576,10 +567,10 @@ export default function PlansClient({
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">
+          <h1 className="text-display text-[var(--text)]">
             Производственные планы
           </h1>
-          <p className="text-sm text-[var(--muted)] mt-0.5">
+          <p className="text-label mt-1.5">
             {plans.length === 0
               ? "Планов нет"
               : `${plans.length} план${plans.length === 1 ? "" : plans.length < 5 ? "а" : "ов"}`}
@@ -634,62 +625,78 @@ export default function PlansClient({
 
       {/* ── Plans list ─────────────────────────────────── */}
       {filtered.length > 0 && (
-        <div className="space-y-3">
-          {filtered.map((plan) => {
+        <div className="space-y-2.5">
+          {filtered.map((plan, i) => {
             const pct =
               plan.planned_quantity > 0
                 ? (plan.actual_quantity / plan.planned_quantity) * 100
                 : 0;
 
+            // Deadline urgency — only active plans can "burn"
+            const msLeft = new Date(plan.end_date + "T23:59:59").getTime() - Date.now();
+            const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
+            const isActive = plan.status === "active";
+            const overdue = isActive && daysLeft < 0;
+            const burning = isActive && !overdue && daysLeft <= 3;
+
             return (
-              <div
+              <Link
                 key={plan.id}
-                className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-5 hover:shadow-sm transition-shadow"
+                href={`/dashboard/plans/${plan.id}`}
+                className={`block bg-[var(--surface-1)] rounded-xl border p-4 sm:p-5 transition-colors tap-scale fade-in-up hover:bg-[var(--surface-2)] ${
+                  overdue
+                    ? "border-[var(--danger)]/40"
+                    : burning
+                    ? "border-[var(--warning)]/40"
+                    : "border-[var(--border)]"
+                }`}
+                style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
               >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                  {/* Left */}
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       <StatusBadge status={plan.status} />
-                      <span className="text-xs text-[var(--muted)]">
-                        {fmtDate(plan.start_date)} — {fmtDate(plan.end_date)}
-                      </span>
+                      {overdue ? (
+                        <span className="text-xs font-bold text-[var(--danger)] uppercase tracking-wide">
+                          Просрочен {Math.abs(daysLeft)} дн
+                        </span>
+                      ) : burning ? (
+                        <span className="text-xs font-bold text-[var(--warning)] uppercase tracking-wide">
+                          {daysLeft === 0 ? "Сегодня дедлайн" : `Осталось ${daysLeft} дн`}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-[var(--muted)]">
+                          {fmtDate(plan.start_date)} — {fmtDate(plan.end_date)}
+                        </span>
+                      )}
                     </div>
                     <h3 className="text-base font-semibold text-[var(--text)] leading-tight">
                       {plan.name}
                     </h3>
-
-                    {/* Progress */}
-                    <div className="mt-3 max-w-xs">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-[var(--muted)]">Прогресс выполнения</span>
-                      </div>
-                      <ProgressBar pct={pct} />
-                      <p className="text-xs text-[var(--muted)] mt-1">
-                        Факт:{" "}
-                        <span className="text-[var(--muted)] font-medium">
-                          {formatCompact(plan.actual_quantity)}
-                        </span>{" "}
-                        / План:{" "}
-                        <span className="text-[var(--muted)] font-medium">
-                          {formatCompact(plan.planned_quantity)}
-                        </span>
-                      </p>
-                    </div>
                   </div>
 
-                  {/* Right: link */}
-                  <Link
-                    href={`/dashboard/plans/${plan.id}`}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] hover:border-[#1a472a] hover:text-[#00f5c4] transition-colors self-start shrink-0"
+                  {/* Big % — readable from across the shop floor */}
+                  <span
+                    className={`num-lg shrink-0 ${
+                      pct >= 100
+                        ? "text-[var(--success)]"
+                        : overdue
+                        ? "text-[var(--danger)]"
+                        : "text-[var(--accent)]"
+                    }`}
                   >
-                    Открыть
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
+                    {Math.min(pct, 999).toFixed(0)}%
+                  </span>
                 </div>
-              </div>
+
+                {/* Progress */}
+                <div className="mt-3">
+                  <ProgressBar pct={pct} />
+                  <p className="num text-xs text-[var(--muted)] mt-1.5">
+                    {formatCompact(plan.actual_quantity)} / {formatCompact(plan.planned_quantity)}
+                  </p>
+                </div>
+              </Link>
             );
           })}
         </div>
