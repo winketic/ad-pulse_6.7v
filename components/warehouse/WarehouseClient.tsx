@@ -146,17 +146,29 @@ function StockModal({
 }
 
 // ─── Balance badge ────────────────────────────────────────
+// Stock level vs threshold: critical ≤ min, low ≤ 2×min, else normal.
+// No threshold set → critical only at ≤0.
+type StockLevel = "normal" | "low" | "critical";
 
-function BalanceBadge({ balance, unit }: { balance: number; unit: string }) {
-  const isLow = balance <= 0;
+function stockLevel(balance: number, threshold: number | null): StockLevel {
+  if (threshold != null && threshold > 0) {
+    if (balance <= threshold) return "critical";
+    if (balance <= threshold * 2) return "low";
+    return "normal";
+  }
+  return balance <= 0 ? "critical" : "normal";
+}
+
+const LEVEL_STYLE: Record<StockLevel, { badge: string; dot: string; label: string | null }> = {
+  normal:   { badge: "bg-[var(--accent)]/10 text-[var(--accent)]",   dot: "bg-[var(--success)]", label: null },
+  low:      { badge: "bg-[var(--warning-bg)] text-[var(--warning)]", dot: "bg-[var(--warning)]", label: "мало" },
+  critical: { badge: "bg-[var(--danger-bg)] text-[var(--danger)]",   dot: "bg-[var(--danger)]",  label: "критично" },
+};
+
+function BalanceBadge({ balance, threshold, unit }: { balance: number; threshold: number | null; unit: string }) {
+  const s = LEVEL_STYLE[stockLevel(balance, threshold)];
   return (
-    <span
-      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-semibold tabular-nums font-mono ${
-        isLow
-          ? "bg-red-500/10 text-red-400"
-          : "bg-[#00f5c4]/10 text-[#00f5c4]"
-      }`}
-    >
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-semibold num ${s.badge}`}>
       {balance.toFixed(2)}
       <span className="text-xs font-normal opacity-70">{unit}</span>
     </span>
@@ -175,12 +187,12 @@ export default function WarehouseClient({
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text)]">Склад</h1>
-        <p className="text-sm text-[var(--muted)] mt-0.5">
+      <div className="mb-5">
+        <h1 className="text-display text-[var(--text)]">Склад</h1>
+        <p className="text-label mt-1.5">
           {materials.length === 0
             ? "Нет материалов"
-            : `${materials.length} позиц${materials.length === 1 ? "ия" : materials.length < 5 ? "ии" : "ий"} · остатки в реальном времени`}
+            : `${materials.length} позиц${materials.length === 1 ? "ия" : materials.length < 5 ? "ии" : "ий"} · live`}
         </p>
       </div>
 
@@ -224,11 +236,16 @@ export default function WarehouseClient({
                 {materials.map((m) => (
                   <tr key={m.id} className="hover:bg-[var(--bg3)] transition-colors">
                     <td className="px-5 py-3.5 font-medium text-[var(--text)]">
-                      {m.name}
+                      <span className="flex items-center gap-2">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${LEVEL_STYLE[stockLevel(m.balance, m.threshold)].dot}`}
+                        />
+                        {m.name}
+                      </span>
                     </td>
                     <td className="px-5 py-3.5 text-[var(--muted)]">{m.unit}</td>
                     <td className="px-5 py-3.5 text-right">
-                      <BalanceBadge balance={m.balance} unit={m.unit} />
+                      <BalanceBadge balance={m.balance} threshold={m.threshold} unit={m.unit} />
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -266,10 +283,22 @@ export default function WarehouseClient({
                 className="bg-[var(--card)] rounded-xl border border-[var(--border)] px-4 py-3.5 flex items-center gap-3"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-[var(--text)] truncate">{m.name}</p>
-                  <p className="text-xs text-[var(--muted)] mt-0.5">{m.unit}</p>
+                  <p className="font-medium text-[var(--text)] truncate flex items-center gap-1.5">
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${LEVEL_STYLE[stockLevel(m.balance, m.threshold)].dot}`}
+                    />
+                    {m.name}
+                  </p>
+                  <p className="text-xs text-[var(--muted)] mt-0.5 pl-3">
+                    {m.unit}
+                    {LEVEL_STYLE[stockLevel(m.balance, m.threshold)].label && (
+                      <span className={`ml-1.5 text-[10px] font-semibold uppercase tracking-wide ${stockLevel(m.balance, m.threshold) === "critical" ? "text-[var(--danger)]" : "text-[var(--warning)]"}`}>
+                        {LEVEL_STYLE[stockLevel(m.balance, m.threshold)].label}
+                      </span>
+                    )}
+                  </p>
                 </div>
-                <BalanceBadge balance={m.balance} unit={m.unit} />
+                <BalanceBadge balance={m.balance} threshold={m.threshold} unit={m.unit} />
                 <Link
                   href={`/dashboard/transactions?material_id=${m.id}`}
                   className="shrink-0 p-2 rounded-lg border border-[var(--border)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"

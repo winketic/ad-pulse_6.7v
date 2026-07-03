@@ -11,6 +11,7 @@ export type WarehouseMaterial = {
   name: string;
   unit: string;
   balance: number;
+  threshold: number | null;
 };
 
 export default async function WarehousePage() {
@@ -31,7 +32,7 @@ export default async function WarehousePage() {
   const company_id = profile?.company_id as string | undefined;
   if (!company_id) return <NoCompanyState />;
 
-  const [matsResult, txResult] = await Promise.all([
+  const [matsResult, txResult, thresholdsResult] = await Promise.all([
     supabase
       .from("materials")
       .select("id, name, unit")
@@ -41,7 +42,16 @@ export default async function WarehousePage() {
       .from("material_transactions")
       .select("material_id, type, quantity")
       .eq("company_id", company_id),
+    supabase
+      .from("material_thresholds")
+      .select("material_id, min_quantity")
+      .eq("company_id", company_id),
   ]);
+
+  const thresholdMap = new Map<string, number>();
+  for (const t of thresholdsResult.data ?? []) {
+    thresholdMap.set(t.material_id, Number(t.min_quantity));
+  }
 
   const balMap = new Map<string, number>();
   for (const mat of matsResult.data ?? []) balMap.set(mat.id, 0);
@@ -59,6 +69,7 @@ export default async function WarehousePage() {
     name: m.name,
     unit: m.unit,
     balance: balMap.get(m.id) ?? 0,
+    threshold: thresholdMap.get(m.id) ?? null,
   }));
 
   return <WarehouseClient materials={materials} />;
