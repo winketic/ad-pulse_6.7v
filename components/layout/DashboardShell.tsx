@@ -286,9 +286,10 @@ export default function DashboardShell({
             <div
               className="fixed bottom-0 left-0 right-0 z-[71] lg:hidden rounded-t-2xl overflow-hidden"
               style={{
-                background: "var(--card)",
-                borderTop: "1px solid var(--border)",
+                background: "var(--surface-2)",
+                borderTop: "1px solid var(--border-strong)",
                 paddingBottom: "env(safe-area-inset-bottom, 0px)",
+                animation: "slideUpSheet 240ms var(--ease-out) both",
               }}
             >
               {/* Handle */}
@@ -344,7 +345,7 @@ export default function DashboardShell({
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
       >
-        <div className="flex items-stretch min-h-[72px]">
+        <div className="flex items-stretch min-h-[72px] px-1">
           {MOBILE_NAV.map(({ href, label, Icon }) => {
             const active = isActive(href);
             return (
@@ -352,24 +353,26 @@ export default function DashboardShell({
                 key={href}
                 href={href}
                 prefetch
-                className="flex-1 min-h-[64px] flex flex-col items-center justify-center gap-1 relative py-1.5"
+                className="flex-1 min-h-[64px] flex flex-col items-center justify-center gap-1 relative py-1.5 tap-scale"
                 style={{ WebkitTapHighlightColor: "transparent" }}
               >
-                {active && (
-                  <span
-                    className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-b"
-                    style={{ background: "var(--accent)" }}
-                  />
-                )}
+                {/* Active pill behind the icon — unmistakable at a glance */}
                 <span
-                  className="transition-transform duration-100 active:scale-90"
-                  style={{ color: active ? "var(--accent)" : "var(--muted)" }}
+                  className="flex items-center justify-center w-14 h-8 rounded-full transition-all duration-200"
+                  style={{
+                    background: active ? "var(--accent-15)" : "transparent",
+                    color: active ? "var(--accent)" : "var(--muted)",
+                    transform: active ? "translateY(-1px)" : "none",
+                  }}
                 >
-                  <Icon className="w-7 h-7" strokeWidth={active ? 2.1 : 1.6} />
+                  <Icon className="w-6 h-6" strokeWidth={active ? 2.2 : 1.6} />
                 </span>
                 <span
-                  className="text-xs font-medium leading-none"
-                  style={{ color: active ? "var(--accent)" : "var(--muted)" }}
+                  className="text-[11px] leading-none transition-colors duration-200"
+                  style={{
+                    color: active ? "var(--accent)" : "var(--muted)",
+                    fontWeight: active ? 700 : 500,
+                  }}
                 >
                   {label}
                 </span>
