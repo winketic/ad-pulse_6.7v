@@ -155,7 +155,8 @@ function QuickQuantityModal({
               max="999999"
               step="1"
               inputMode="numeric"
-              className="field-input text-2xl font-bold text-center tabular-nums"
+              className="field-input num text-3xl font-bold text-center"
+              style={{ height: "64px" }}
             />
           </div>
 
@@ -237,34 +238,36 @@ function QuickQuantityModal({
 
 function MaterialCard({
   material,
+  index,
   onTap,
 }: {
   material: ProduceMaterial;
+  index: number;
   onTap: () => void;
 }) {
   return (
     <button
       onClick={onTap}
-      className="group relative flex flex-col justify-between p-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-[#00f5c4] hover:bg-[#00f5c4]/5 active:scale-[0.97] transition-all text-left min-h-[100px]"
-      style={{ WebkitTapHighlightColor: "transparent" }}
+      className="group relative flex flex-col justify-between p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] hover:border-[var(--accent)]/60 hover:bg-[var(--surface-2)] active:scale-[0.96] transition-all text-left min-h-[128px] fade-in-up"
+      style={{ WebkitTapHighlightColor: "transparent", animationDelay: `${Math.min(index * 35, 350)}ms` }}
     >
-      {/* Usage badge */}
+      {/* Usage badge — 14-day frequency, mono */}
       {material.freq14d > 0 && (
-        <span className="absolute top-3 right-3 text-[10px] font-semibold text-[var(--muted)] bg-[var(--bg3)] px-1.5 py-0.5 rounded-md tabular-nums">
+        <span className="num absolute top-3 right-3 text-[10px] font-semibold text-[var(--muted)] bg-[var(--surface-3)] px-1.5 py-0.5 rounded-md">
           ×{Math.round(material.freq14d)}
         </span>
       )}
 
-      {/* Material name */}
-      <p className="text-sm font-bold text-[var(--text)] leading-snug pr-8 group-hover:text-[#00f5c4] transition-colors">
+      {/* Material name — the tap target IS the name, make it big */}
+      <p className="text-base font-bold text-[var(--text)] leading-snug pr-8 group-hover:text-[var(--accent)] transition-colors">
         {material.name}
       </p>
 
       {/* Bottom row: unit + tap hint */}
       <div className="flex items-end justify-between mt-2">
-        <p className="text-xs text-[var(--muted)]">{material.unit}</p>
-        <div className="w-7 h-7 rounded-lg bg-[#00f5c4]/10 flex items-center justify-center group-hover:bg-[#00f5c4]/20 transition-colors shrink-0">
-          <svg className="w-4 h-4 text-[#00f5c4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <p className="text-label">{material.unit}</p>
+        <div className="w-9 h-9 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center group-hover:bg-[var(--accent)]/25 transition-colors shrink-0">
+          <svg className="w-5 h-5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
         </div>
@@ -299,9 +302,9 @@ export default function ProduceClient({ materials }: { materials: ProduceMateria
         onRetry={retryProduction}
       />
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text)]">Быстрый выпуск</h1>
-        <p className="text-sm text-[var(--muted)] mt-0.5 capitalize">{todayLabel}</p>
+      <div className="mb-5">
+        <h1 className="text-display text-[var(--text)]">Быстрый выпуск</h1>
+        <p className="text-label mt-1.5 capitalize">{todayLabel}</p>
       </div>
 
       {/* Hint */}
@@ -311,11 +314,12 @@ export default function ProduceClient({ materials }: { materials: ProduceMateria
       </p>
 
       {/* Material grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {materials.map((m) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        {materials.map((m, i) => (
           <MaterialCard
             key={m.id}
             material={m}
+            index={i}
             onTap={() => setActive(m)}
           />
         ))}
