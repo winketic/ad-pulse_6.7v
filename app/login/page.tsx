@@ -78,52 +78,58 @@ function LoginForm() {
 
   return (
     <div className="dp-auth-page">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4"><Logo size={48} /></div>
-          <h1 className="text-2xl font-bold text-[#ededed] tracking-tight">AD Pulse</h1>
-          <p className="text-sm text-[#888888] mt-1">Система учёта материалов</p>
+      <div className="w-full max-w-md relative z-[1]">
+        <div className="text-center mb-8 fade-in-up">
+          <div className="flex justify-center mb-5">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-2xl bg-[var(--accent)]/20 blur-xl" />
+              <div className="relative">
+                <Logo size={52} />
+              </div>
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-[var(--text)] tracking-tighter">AD Pulse</h1>
+          <p className="text-label mt-2">Учёт материалов · Производство</p>
         </div>
 
         {searchParams.get("message") === "password_updated" && (
-          <div className="mb-4 flex items-start gap-2.5 px-4 py-3 rounded-xl bg-[#00f5c4]/10 border border-[#00f5c4]/30">
-            <svg className="w-4 h-4 text-[#00f5c4] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="mb-4 flex items-start gap-2.5 px-4 py-3 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/30 fade-in-up">
+            <svg className="w-4 h-4 text-[var(--accent)] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
-            <span className="text-sm text-[#00f5c4] font-medium">Пароль успешно изменён. Войдите с новым паролем.</span>
+            <span className="text-sm text-[var(--accent)] font-medium">Пароль успешно изменён. Войдите с новым паролем.</span>
           </div>
         )}
 
-        <div className="dp-auth-card">
-          <h2 className="text-lg font-semibold text-[#ededed] mb-6">Вход в систему</h2>
+        <div className="dp-auth-card fade-in-up" style={{ animationDelay: "60ms" }}>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-[#888888] mb-1.5">Email</label>
+              <label className="text-label block mb-2">Email</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com" required autoComplete="email" className="dp-input" />
+                placeholder="you@company.com" required autoComplete="email" className="field-input" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#888888] mb-1.5">Пароль</label>
+              <label className="text-label block mb-2">Пароль</label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••" required autoComplete="current-password" className="dp-input" />
+                placeholder="••••••••" required autoComplete="current-password" className="field-input" />
             </div>
 
             {error && (
-              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                <svg className="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-[var(--danger-bg)] border border-[var(--danger)]/25">
+                <svg className="w-4 h-4 text-[var(--danger)] shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
-                <span className="text-sm text-red-400">{error}</span>
+                <span className="text-sm text-[var(--danger)]">{error}</span>
               </div>
             )}
 
             <div className="flex justify-end">
-              <a href="/forgot-password" className="text-xs text-[#888888] hover:text-[#00f5c4] transition-colors">
+              <a href="/forgot-password" className="text-xs text-[var(--muted)] hover:text-[var(--accent)] transition-colors">
                 Забыли пароль?
               </a>
             </div>
 
-            <button type="submit" disabled={loading} className="dp-btn-primary w-full py-2.5 mt-1">
+            <button type="submit" disabled={loading} className="dp-btn-primary w-full min-h-[52px] rounded-xl text-base">
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -136,9 +142,9 @@ function LoginForm() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-[#888888] mt-6">
+          <p className="text-center text-sm text-[var(--muted)] mt-6">
             Нет аккаунта?{" "}
-            <Link href="/register" className="font-medium text-[#ededed] hover:text-[#00f5c4] transition-colors">
+            <Link href="/register" className="font-medium text-[var(--text)] hover:text-[var(--accent)] transition-colors">
               Оставить заявку
             </Link>
           </p>
