@@ -23,6 +23,17 @@ AD Pulse — мультитенантный B2B SaaS для учёта мате�
 - Все миграции хранятся в /supabase/migrations/
 - Никогда не меняй схему напрямую — только через новый файл миграции
 - Формат имени: 00X_описание.sql
+- Миграции применяются ВРУЧНУЮ в Supabase Dashboard (SQL Editor) — ассистент только готовит SQL и выводит его на проверку
+- База ОБЩАЯ для staging и production — миграция применяется один раз и действует на оба окружения; код должен переживать окно до/после применения (select("*") вместо явного списка новых колонок, fail-open для опциональных настроек)
+
+### Схема БД — актуальные поля (сверх базовой схемы 001)
+- materials: norm_concrete, norm_rebar (нормы списания на 1 шт продукции), rebar_material_name (какой металл списывать: 'Арматура'/'Проволока', NULL = 'Арматура'), kg_per_meter (кг→м конвертация: если задано — ввод в кг, хранение в метрах)
+- production_plans: assigned_to (uuid → profiles, исполнитель плана)
+- material_transactions: counterparty (text), source ('manual'|'whatsapp'), wazzup_message_id
+- companies: whatsapp_enabled, stock_alerts_enabled (гейт алертов критического остатка), telegram_chat_id, telegram_connected, setup_completed
+- audit_log: журнал изменений (company_id, table_name, record_id, action, changed_by, old_data/new_data jsonb) — пишется SECURITY DEFINER триггерами на production_plans, materials, material_transactions; changed_by = auth.uid(), NULL для service role. ВАЖНО: записи, созданные до миграции 031, аудита не имеют
+- material_thresholds: min_quantity per material (пороги алертов остатка)
+- telegram_rate_limits: анти-brute-force кодов подключения
 
 ### API роуты Wazzup
 - /api/wazzup/webhook — публичный endpoint (без авторизации), отвечает 200 OK немедленно
@@ -112,6 +123,11 @@ EMAIL_FROM=onboarding@resend.dev
 - listCompanyUsers иногда крашит настройки
 - Кнопка одобрить в /admin/approve — ApproveButton компонент создан, тестирование pending
 - SMTP периодически не работает — fallback на встроенный Supabase email
+
+### Окружения и деплой
+- production: ветка main → pulse.altaidynamics.kz (vercel deploy --prod или git push ad-pulse main)
+- staging: ветка staging → preview-алиас ad-pulse-git-staging-*.vercel.app (git push ad-pulse staging, БЕЗ --prod)
+- Прод-фиксы делаются на main → деплой --prod → черри-пик на staging; фичи наоборот: staging → проверка → черри-пик на main
 
 ### Ждём от внешних сервисов
 - Wazzup: одобрение redirect_uri https://ad-pulse-eight.vercel.app/api/wazzup/callback
