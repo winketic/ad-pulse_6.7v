@@ -4,6 +4,7 @@ import Link from "next/link";
 import NoCompanyState from "@/components/ui/NoCompanyState";
 import { formatCompact } from "@/lib/utils/format";
 import { BalanceTableRealtime } from "@/components/dashboard/BalanceTableRealtime";
+import AnimatedNumber from "@/components/ui/AnimatedNumber";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -33,32 +34,71 @@ function fmtDate(s: string) {
 
 // ─── Sub-components ───────────────────────────────────────
 
+type Trend = { pct: number | null; dir: "up" | "down" | "flat"; good: boolean };
+
+// Compare today's value against yesterday's. `invert` — for expense-type
+// metrics where growth is bad news (red), not good (green).
+function computeTrend(today: number, yesterday: number, invert = false): Trend | null {
+  if (today === 0 && yesterday === 0) return null;
+  if (yesterday === 0) return { pct: null, dir: "up", good: !invert };
+  const pct = ((today - yesterday) / yesterday) * 100;
+  if (Math.abs(pct) < 0.5) return { pct: 0, dir: "flat", good: true };
+  const dir = pct > 0 ? "up" : "down";
+  const good = invert ? pct < 0 : pct > 0;
+  return { pct, dir, good };
+}
+
+function TrendBadge({ trend }: { trend: Trend }) {
+  const color = trend.dir === "flat" ? "text-[var(--muted)]" : trend.good ? "text-[var(--success)]" : "text-[var(--danger)]";
+  const arrow = trend.dir === "up" ? "↑" : trend.dir === "down" ? "↓" : "→";
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-semibold tabular-nums ${color}`}>
+      {arrow}
+      {trend.pct != null && trend.pct !== 0 && `${Math.abs(trend.pct).toFixed(0)}%`}
+      <span className="text-[var(--muted)] font-normal ml-0.5">vs вчера</span>
+    </span>
+  );
+}
+
 function StatCard({
   label,
   mobileLabel,
   value,
+  prefix = "",
   sub,
+  trend,
   valueColor = "text-[var(--text)]",
   iconBg,
   iconColor,
   icon,
+  delay = 0,
 }: {
   label: string;
   mobileLabel?: string;
-  value: string | number;
+  value: number;
+  prefix?: string;
   sub: string;
+  trend?: Trend | null;
   valueColor?: string;
   iconBg: string;
   iconColor: string;
   icon: React.ReactNode;
+  delay?: number;
 }) {
   return (
-    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)]">
+    <div
+      className="bg-[var(--card)] rounded-xl border border-[var(--border)] fade-in-up"
+      style={{ animationDelay: `${delay}ms` }}
+    >
       {/* Mobile: compact, no icon */}
-      <div className="sm:hidden p-5">
-        <p className="text-xs text-[var(--muted)] mb-1.5">{mobileLabel ?? label}</p>
-        <p className={`text-3xl font-bold tabular-nums tracking-tight ${valueColor}`}>{value}</p>
-        <p className="text-xs text-[var(--muted)] mt-1">{sub}</p>
+      <div className="sm:hidden p-4">
+        <p className="text-xs text-[var(--muted)] mb-1">{mobileLabel ?? label}</p>
+        <p className={`text-num-lg ${valueColor}`}>
+          <AnimatedNumber value={value} prefix={prefix} />
+        </p>
+        <p className="text-xs text-[var(--muted)] mt-0.5">
+          {trend ? <TrendBadge trend={trend} /> : sub}
+        </p>
       </div>
       {/* Desktop: icon + text */}
       <div className="hidden sm:flex p-5 items-start gap-4">
@@ -67,8 +107,13 @@ function StatCard({
         </div>
         <div className="min-w-0 overflow-hidden">
           <p className="text-sm text-[var(--muted)] leading-tight truncate">{label}</p>
-          <p className={`text-3xl font-bold mt-0.5 tabular-nums tracking-tight ${valueColor}`}>{value}</p>
-          <p className="text-xs text-[var(--muted)] mt-0.5">{sub}</p>
+          <p className={`text-num-lg mt-0.5 ${valueColor}`}>
+            <AnimatedNumber value={value} prefix={prefix} />
+          </p>
+          <p className="text-xs text-[var(--muted)] mt-0.5 flex items-center gap-2">
+            <span>{sub}</span>
+            {trend && <TrendBadge trend={trend} />}
+          </p>
         </div>
       </div>
     </div>
@@ -120,15 +165,20 @@ export default async function DashboardPage() {
   if (!company_id) return <NoCompanyState />;
 
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
 
-  // ── All 6 queries in parallel — no waterfall ───────────
+  // ── All 8 queries in parallel — no waterfall ───────────
   const [
     matsResult,
     todayTxResult,
+    yesterdayTxResult,
     allTxResult,
     recentTxResult,
     activePlansResult,
     profilesResult,
+    thresholdsResult,
   ] = await Promise.all([
     supabase
       .from("materials")
@@ -140,6 +190,11 @@ export default async function DashboardPage() {
       .select("type, quantity, material_id")
       .eq("company_id", company_id)
       .eq("transaction_date", today),
+    supabase
+      .from("material_transactions")
+      .select("type, quantity")
+      .eq("company_id", company_id)
+      .eq("transaction_date", yesterday),
     supabase
       .from("material_transactions")
       .select("material_id, type, quantity")
@@ -160,6 +215,10 @@ export default async function DashboardPage() {
     supabase
       .from("profiles")
       .select("id, full_name")
+      .eq("company_id", company_id),
+    supabase
+      .from("material_thresholds")
+      .select("material_id, min_quantity")
       .eq("company_id", company_id),
   ]);
 
@@ -187,6 +246,23 @@ export default async function DashboardPage() {
   const todayOutCount = todayTxs.filter((t) => t.type === "expense").length;
   const materialsCount = matsResult.data?.length ?? 0;
   const activePlansCount = activePlansResult.data?.length ?? 0;
+
+  // ── Yesterday comparison for trend badges ───────────────
+  const yesterdayTxs = yesterdayTxResult.data ?? [];
+  const yesterdayInQty = yesterdayTxs
+    .filter((t) => t.type === "income" || t.type === "return")
+    .reduce((s, t) => s + Number(t.quantity), 0);
+  const yesterdayOutQty = yesterdayTxs
+    .filter((t) => t.type === "expense" || t.type === "defect")
+    .reduce((s, t) => s + Number(t.quantity), 0);
+  const inTrend = computeTrend(todayInQty, yesterdayInQty);
+  const outTrend = computeTrend(todayOutQty, yesterdayOutQty, true);
+
+  // ── Stock thresholds for level indication ───────────────
+  const thresholds: Record<string, number> = {};
+  for (const t of thresholdsResult.data ?? []) {
+    thresholds[t.material_id] = Number(t.min_quantity);
+  }
 
   // ── Today's production summary ──────────────────────────
   // Production materials = those with both norms set (the finished products)
@@ -251,10 +327,10 @@ export default async function DashboardPage() {
   // ─────────────────────────────────────────────────────────
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-6 max-w-7xl mx-auto">
       {/* ── Header ─────────────────────────────────────── */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--text)]">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-display text-[var(--text)]">
           Добро пожаловать, {firstName}
         </h1>
         <p className="text-sm text-[var(--muted)] mt-1 capitalize">{todayLabel}</p>
@@ -282,12 +358,13 @@ export default async function DashboardPage() {
       )}
 
       {/* ── Stat cards ─────────────────────────────────── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6">
         <StatCard
           label="Материалов в справочнике"
           mobileLabel="Материалы"
-          value={formatCompact(materialsCount)}
+          value={materialsCount}
           sub={materialsCount === 1 ? "позиция" : "позиций"}
+          delay={0}
           iconBg="bg-[#00f5c4]/10"
           iconColor="text-[#00f5c4]"
           icon={
@@ -299,9 +376,12 @@ export default async function DashboardPage() {
         <StatCard
           label="Приход сегодня"
           mobileLabel="Приход"
-          value={`+${formatCompact(todayInQty)}`}
+          value={todayInQty}
+          prefix="+"
           sub={`${todayInCount} ${todayInCount === 1 ? "запись" : "записей"}`}
-          valueColor="text-green-600"
+          trend={inTrend}
+          delay={40}
+          valueColor="text-[var(--success)]"
           iconBg="bg-green-50"
           iconColor="text-green-600"
           icon={
@@ -313,9 +393,12 @@ export default async function DashboardPage() {
         <StatCard
           label="Расход сегодня"
           mobileLabel="Расход"
-          value={`-${formatCompact(todayOutQty)}`}
+          value={todayOutQty}
+          prefix="−"
           sub={`${todayOutCount} ${todayOutCount === 1 ? "запись" : "записей"}`}
-          valueColor="text-red-600"
+          trend={outTrend}
+          delay={80}
+          valueColor="text-[var(--danger)]"
           iconBg="bg-red-50"
           iconColor="text-red-600"
           icon={
@@ -327,8 +410,9 @@ export default async function DashboardPage() {
         <StatCard
           label="Активных планов"
           mobileLabel="Планы"
-          value={formatCompact(activePlansCount)}
-          sub={activePlansCount === 1 ? "в работе" : "в работе"}
+          value={activePlansCount}
+          sub="в работе"
+          delay={120}
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
           icon={
@@ -373,7 +457,7 @@ export default async function DashboardPage() {
       )}
 
       {/* ── Main grid: balances + recent transactions ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-2 sm:gap-4 mb-2 sm:mb-4">
         {/* Balance table (3/5) */}
         <div className="lg:col-span-3 bg-[var(--card)] rounded-xl border border-[var(--border)]">
           <div className="px-5 py-4 border-b border-[var(--border)]">
@@ -389,6 +473,7 @@ export default async function DashboardPage() {
               materials.map((mat) => [mat.id, balMap.get(mat.id) ?? { income: 0, expense: 0, balance: 0 }])
             )}
             companyId={company_id}
+            thresholds={thresholds}
           />
         </div>
 
