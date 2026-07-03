@@ -23,7 +23,43 @@ type PendingTx = { form: FormState; type: "regular" | "production" };
 
 const TX_PENDING_KEY = "tx_form";
 
-async function retryTx(payload: PendingTx) {
+// Builds the final payload for createTransaction from raw form state.
+// Applies the kg→m conversion when the material has kg_per_meter set:
+// the user typed kilograms, we store meters and keep the entered kg in
+// the note for traceability. Single source of truth — used by both the
+// submit path and the offline-retry path.
+function buildTxInput(
+  form: FormState,
+  materials: Material[]
+): { type: TxType; material_id: string; quantity: number; note: string | null; counterparty: string | null; transaction_date: string } {
+  const noteBase =
+    form.type === "defect"
+      ? form.defect_reason.trim() +
+        (form.note.trim() ? `\n\n${form.note.trim()}` : "")
+      : form.note.trim() || null;
+
+  const mat = materials.find((m) => m.id === form.material_id);
+  const kgPerMeter =
+    mat?.kg_per_meter != null && mat.kg_per_meter > 0 ? mat.kg_per_meter : null;
+
+  const rawQty = parseFloat(form.quantity);
+  const quantity = kgPerMeter
+    ? Math.round((rawQty / kgPerMeter) * 10000) / 10000
+    : rawQty;
+  const kgNote = kgPerMeter ? `(введено: ${rawQty} кг)` : null;
+  const note = kgNote ? (noteBase ? `${noteBase}\n${kgNote}` : kgNote) : noteBase;
+
+  return {
+    type: form.type as TxType,
+    material_id: form.material_id,
+    quantity,
+    note,
+    counterparty: form.counterparty.trim() || null,
+    transaction_date: form.date,
+  };
+}
+
+async function retryTx(payload: PendingTx, materials: Material[]) {
   if (payload.type === "production") {
     await createProductionTransaction({
       material_id: payload.form.material_id,
@@ -31,19 +67,7 @@ async function retryTx(payload: PendingTx) {
       transaction_date: payload.form.date,
     });
   } else {
-    const noteToSave =
-      payload.form.type === "defect"
-        ? payload.form.defect_reason.trim() +
-          (payload.form.note.trim() ? `\n\n${payload.form.note.trim()}` : "")
-        : payload.form.note.trim() || null;
-    await createTransaction({
-      type: payload.form.type as TxType,
-      material_id: payload.form.material_id,
-      quantity: parseFloat(payload.form.quantity),
-      note: noteToSave,
-      counterparty: payload.form.counterparty.trim() || null,
-      transaction_date: payload.form.date,
-    });
+    await createTransaction(buildTxInput(payload.form, materials));
   }
 }
 
@@ -76,6 +100,9 @@ export type Material = {
   norm_concrete?: number | null;
   norm_rebar?: number | null;
   rebar_material_name?: string | null;
+  // kg→m conversion: when set, the user enters kg in the form and the
+  // transaction is stored in meters (quantity = kg / kg_per_meter)
+  kg_per_meter?: number | null;
 };
 
 type Filters = {
@@ -364,6 +391,14 @@ function AddTransactionForm({
   const rebarMaterialName = selectedMaterial?.rebar_material_name ?? "Арматура";
   const rebarMaterial = materials.find((m) => m.name === rebarMaterialName);
 
+  // kg→m conversion: user enters kg, we store meters (regular types only)
+  const kgPerMeter =
+    !isProduction &&
+    selectedMaterial?.kg_per_meter != null &&
+    selectedMaterial.kg_per_meter > 0
+      ? selectedMaterial.kg_per_meter
+      : null;
+
   const qtyNum = Number(form.quantity) || 0;
   const concreteAmount =
     isProduction && selectedMaterial?.norm_concrete != null
@@ -470,10 +505,14 @@ function AddTransactionForm({
       <div>
         <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
           Количество{" "}
-          {selectedMaterial && (
-            <span className="text-[var(--muted)] font-normal">
-              ({selectedMaterial.unit})
-            </span>
+          {kgPerMeter ? (
+            <span className="text-[var(--muted)] font-normal">(кг)</span>
+          ) : (
+            selectedMaterial && (
+              <span className="text-[var(--muted)] font-normal">
+                ({selectedMaterial.unit})
+              </span>
+            )
           )}{" "}
           <span className="text-red-500">*</span>
         </label>
@@ -497,6 +536,10 @@ function AddTransactionForm({
         />
         {quantityError ? (
           <p className="mt-1 text-xs text-red-600">{quantityError}</p>
+        ) : kgPerMeter && qtyNum > 0 ? (
+          <p className="mt-1 text-xs font-medium text-[var(--accent)] tabular-nums">
+            = {(qtyNum / kgPerMeter).toFixed(2)} м
+          </p>
         ) : (
           <p className="mt-1 text-xs text-[var(--muted)]">Макс. 999 999 999</p>
         )}
@@ -933,23 +976,22 @@ export default function TransactionsClient({
         return;
       }
 
-      // Regular types: optimistic — instant row, modal closes immediately
-      const noteToSave =
-        form.type === "defect"
-          ? form.defect_reason.trim() +
-            (form.note.trim() ? `\n\n${form.note.trim()}` : "")
-          : form.note.trim() || null;
-
+      // Regular types: optimistic — instant row, modal closes immediately.
+      // buildTxInput applies the kg→m conversion when the material has
+      // kg_per_meter, so both the optimistic row and the server payload
+      // carry the converted (meters) quantity.
+      const input = buildTxInput(form, materials);
       const mat = materials.find((m) => m.id === form.material_id);
+      const hasConversion = mat?.kg_per_meter != null && mat.kg_per_meter > 0;
       const temp: Transaction = {
         id: `tmp-${Date.now()}`,
-        type: form.type as TxType,
-        quantity: parseFloat(form.quantity),
-        note: noteToSave,
-        counterparty: form.counterparty.trim() || null,
-        transaction_date: form.date,
+        type: input.type,
+        quantity: input.quantity,
+        note: input.note,
+        counterparty: input.counterparty,
+        transaction_date: input.transaction_date,
         created_at: new Date().toISOString(),
-        material_id: form.material_id,
+        material_id: input.material_id,
         created_by: null,
         material_name: mat?.name ?? "—",
         material_unit: mat?.unit ?? "",
@@ -962,20 +1004,16 @@ export default function TransactionsClient({
 
       startTransition(async () => {
         try {
-          await createTransaction({
-            type: form.type as TxType,
-            material_id: form.material_id,
-            quantity: parseFloat(form.quantity),
-            note: noteToSave,
-            counterparty: form.counterparty.trim() || null,
-            transaction_date: form.date,
-          });
+          await createTransaction(input);
           clearPending(TX_PENDING_KEY);
           router.refresh();
         } catch (e) {
           setOptimistic((prev) => prev.filter((t) => t.id !== temp.id));
           if (isNetworkError(e)) {
-            const label = `${TYPE_CONFIG[form.type as TxType].label} — ${mat?.name ?? "материал"}, ${form.quantity} ${mat?.unit ?? ""}`;
+            const enteredLabel = hasConversion
+              ? `${form.quantity} кг`
+              : `${form.quantity} ${mat?.unit ?? ""}`;
+            const label = `${TYPE_CONFIG[input.type].label} — ${mat?.name ?? "материал"}, ${enteredLabel}`;
             savePending<PendingTx>(TX_PENDING_KEY, { form, type: "regular" }, label);
             toast("Нет связи — данные сохранены локально", "info");
           } else {
@@ -994,7 +1032,7 @@ export default function TransactionsClient({
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <OfflineRetryBanner<PendingTx>
         pendingKey={TX_PENDING_KEY}
-        onRetry={retryTx}
+        onRetry={(payload) => retryTx(payload, materials)}
       />
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">

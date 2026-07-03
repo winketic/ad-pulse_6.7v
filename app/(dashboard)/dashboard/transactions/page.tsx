@@ -56,10 +56,11 @@ export default async function TransactionsPage({
         .select("id", { count: "exact", head: true })
         .eq("company_id", company_id),
 
-      // Materials lookup
+      // Materials lookup — select("*") so not-yet-migrated columns
+      // (kg_per_meter) don't fail the whole query before migration 033
       supabase
         .from("materials")
-        .select("id, name, unit, norm_concrete, norm_rebar, rebar_material_name")
+        .select("*")
         .eq("company_id", company_id)
         .order("name"),
 
@@ -130,14 +131,18 @@ export default async function TransactionsPage({
     };
   });
 
-  const materials: Material[] = (matResult.data ?? []).map((m) => ({
-    id: m.id,
-    name: m.name,
-    unit: m.unit,
-    norm_concrete: m.norm_concrete != null ? Number(m.norm_concrete) : null,
-    norm_rebar: m.norm_rebar != null ? Number(m.norm_rebar) : null,
-    rebar_material_name: (m as Record<string, unknown>).rebar_material_name as string | null ?? null,
-  }));
+  const materials: Material[] = (matResult.data ?? []).map((m) => {
+    const raw = m as Record<string, unknown>;
+    return {
+      id: m.id,
+      name: m.name,
+      unit: m.unit,
+      norm_concrete: m.norm_concrete != null ? Number(m.norm_concrete) : null,
+      norm_rebar: m.norm_rebar != null ? Number(m.norm_rebar) : null,
+      rebar_material_name: (raw.rebar_material_name as string | null) ?? null,
+      kg_per_meter: raw.kg_per_meter != null ? Number(raw.kg_per_meter) : null,
+    };
+  });
 
   // Compute balances server-side from all transactions
   const balMap = new Map<
