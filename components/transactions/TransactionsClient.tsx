@@ -844,6 +844,13 @@ export default function TransactionsClient({
   });
   const [formError, setFormError] = useState("");
 
+  // Optimistic rows shown instantly while the server call is in flight.
+  // Cleared as soon as fresh server data arrives via router.refresh().
+  const [optimistic, setOptimistic] = useState<Transaction[]>([]);
+  useEffect(() => {
+    setOptimistic([]);
+  }, [transactions]);
+
   // Use server-computed balances (full dataset) if provided, otherwise
   // fall back to client-side computation over current page's transactions.
   const balances = useMemo(
@@ -851,8 +858,17 @@ export default function TransactionsClient({
     [initialBalances, transactions]
   );
 
+  // Optimistic rows merged on top, re-sorted so a backdated entry lands in
+  // its own day group instead of floating above "Сегодня".
+  const displayTxs = useMemo(() => {
+    if (optimistic.length === 0) return transactions;
+    return [...optimistic, ...transactions].sort((a, b) =>
+      b.transaction_date.localeCompare(a.transaction_date)
+    );
+  }, [optimistic, transactions]);
+
   const filtered = useMemo(() => {
-    return transactions.filter((tx) => {
+    return displayTxs.filter((tx) => {
       if (filters.type !== "all" && tx.type !== filters.type) return false;
       if (
         filters.material_id !== "all" &&
@@ -864,7 +880,7 @@ export default function TransactionsClient({
       if (filters.dateTo && tx.transaction_date > filters.dateTo) return false;
       return true;
     });
-  }, [transactions, filters]);
+  }, [displayTxs, filters]);
 
   const hasFilters = useMemo(
     () =>
@@ -888,9 +904,12 @@ export default function TransactionsClient({
   const handleAdd = useCallback(
     (form: FormState) => {
       setFormError("");
-      startTransition(async () => {
-        try {
-          if (form.type === "production") {
+
+      // Production decomposes into several rows server-side — keep the
+      // modal open until the RPC confirms (no meaningful optimistic shape).
+      if (form.type === "production") {
+        startTransition(async () => {
+          try {
             await createProductionTransaction({
               material_id: form.material_id,
               quantity: parseFloat(form.quantity),
@@ -899,15 +918,50 @@ export default function TransactionsClient({
             clearPending(TX_PENDING_KEY);
             router.refresh();
             closeModal();
-            return;
+          } catch (e) {
+            if (isNetworkError(e)) {
+              const mat = materials.find((m) => m.id === form.material_id);
+              const label = `Производство — ${mat?.name ?? "материал"}, ${form.quantity} ${mat?.unit ?? ""}`;
+              savePending<PendingTx>(TX_PENDING_KEY, { form, type: "production" }, label);
+              toast("Нет связи — данные сохранены локально", "info");
+              closeModal();
+            } else {
+              setFormError(e instanceof Error ? e.message : "Ошибка добавления записи");
+            }
           }
+        });
+        return;
+      }
 
-          const noteToSave =
-            form.type === "defect"
-              ? form.defect_reason.trim() +
-                (form.note.trim() ? `\n\n${form.note.trim()}` : "")
-              : form.note.trim() || null;
+      // Regular types: optimistic — instant row, modal closes immediately
+      const noteToSave =
+        form.type === "defect"
+          ? form.defect_reason.trim() +
+            (form.note.trim() ? `\n\n${form.note.trim()}` : "")
+          : form.note.trim() || null;
 
+      const mat = materials.find((m) => m.id === form.material_id);
+      const temp: Transaction = {
+        id: `tmp-${Date.now()}`,
+        type: form.type as TxType,
+        quantity: parseFloat(form.quantity),
+        note: noteToSave,
+        counterparty: form.counterparty.trim() || null,
+        transaction_date: form.date,
+        created_at: new Date().toISOString(),
+        material_id: form.material_id,
+        created_by: null,
+        material_name: mat?.name ?? "—",
+        material_unit: mat?.unit ?? "",
+        creator_name: "Вы",
+        source: "manual",
+      };
+      setOptimistic((prev) => [temp, ...prev]);
+      closeModal();
+      toast("Запись добавлена");
+
+      startTransition(async () => {
+        try {
           await createTransaction({
             type: form.type as TxType,
             material_id: form.material_id,
@@ -918,17 +972,16 @@ export default function TransactionsClient({
           });
           clearPending(TX_PENDING_KEY);
           router.refresh();
-          closeModal();
         } catch (e) {
+          setOptimistic((prev) => prev.filter((t) => t.id !== temp.id));
           if (isNetworkError(e)) {
-            const mat = materials.find((m) => m.id === form.material_id);
-            const label = `${form.type} — ${mat?.name ?? "материал"}, ${form.quantity} ${mat?.unit ?? ""}`;
-            savePending<PendingTx>(TX_PENDING_KEY, { form, type: form.type === "production" ? "production" : "regular" }, label);
+            const label = `${TYPE_CONFIG[form.type as TxType].label} — ${mat?.name ?? "материал"}, ${form.quantity} ${mat?.unit ?? ""}`;
+            savePending<PendingTx>(TX_PENDING_KEY, { form, type: "regular" }, label);
             toast("Нет связи — данные сохранены локально", "info");
-            closeModal();
           } else {
-            setFormError(
-              e instanceof Error ? e.message : "Ошибка добавления записи"
+            toast(
+              e instanceof Error ? `Не сохранено: ${e.message}` : "Ошибка добавления записи",
+              "error"
             );
           }
         }
@@ -1000,11 +1053,7 @@ export default function TransactionsClient({
       {/* ── Desktop Table ───────────────────────────────── */}
       {filtered.length > 0 && (
         <>
-          <div
-            className={`hidden sm:block bg-[var(--card)] rounded-xl border border-[var(--border)] overflow-hidden transition-opacity ${
-              isPending ? "opacity-60 pointer-events-none" : ""
-            }`}
-          >
+          <div className="hidden sm:block bg-[var(--card)] rounded-xl border border-[var(--border)] overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[var(--bg3)] border-b border-[var(--border)]">
@@ -1039,10 +1088,11 @@ export default function TransactionsClient({
                   </tr>,
                   ...group.items.map((tx) => {
                   const cfg = TYPE_CONFIG[tx.type];
+                  const isTemp = tx.id.startsWith("tmp-");
                   return (
                     <tr
                       key={tx.id}
-                      className="hover:bg-[var(--bg3)] transition-colors"
+                      className={`hover:bg-[var(--bg3)] transition-colors ${isTemp ? "opacity-60 animate-pulse" : ""}`}
                     >
                       <td className="px-5 py-3.5">
                         <span className="font-medium text-[var(--text)]">{tx.material_name}</span>
@@ -1095,11 +1145,7 @@ export default function TransactionsClient({
           </div>
 
           {/* ── Mobile Cards — grouped by day ─────────────── */}
-          <div
-            className={`sm:hidden space-y-2 transition-opacity ${
-              isPending ? "opacity-60 pointer-events-none" : ""
-            }`}
-          >
+          <div className="sm:hidden space-y-2">
             {groupByDay(filtered).map((group) => (
               <div key={group.date}>
                 <div className="flex items-baseline gap-2 px-1 pt-3 pb-1.5">
@@ -1113,10 +1159,11 @@ export default function TransactionsClient({
                 <div className="space-y-2">
             {group.items.map((tx) => {
               const cfg = TYPE_CONFIG[tx.type];
+              const isTemp = tx.id.startsWith("tmp-");
               return (
                 <div
                   key={tx.id}
-                  className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-3.5"
+                  className={`bg-[var(--card)] rounded-xl border border-[var(--border)] p-3.5 ${isTemp ? "opacity-60 animate-pulse" : ""}`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <TypeBadge type={tx.type} />
