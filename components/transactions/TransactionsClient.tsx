@@ -166,6 +166,36 @@ function fmtDate(s: string) {
   return `${d}.${m}.${y}`;
 }
 
+const isoDay = (offset = 0) =>
+  new Date(Date.now() + offset * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+// "Сегодня" / "Вчера" / "24 июня" — human day headers for grouped lists
+function dayLabel(dateStr: string): string {
+  if (dateStr === isoDay(0)) return "Сегодня";
+  if (dateStr === isoDay(-1)) return "Вчера";
+  const d = new Date(dateStr + "T00:00:00");
+  const now = new Date();
+  return d.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}),
+  });
+}
+
+// Group transactions by transaction_date preserving incoming order
+function groupByDay(txs: Transaction[]): { date: string; items: Transaction[] }[] {
+  const groups: { date: string; items: Transaction[] }[] = [];
+  let current: { date: string; items: Transaction[] } | null = null;
+  for (const tx of txs) {
+    if (!current || current.date !== tx.transaction_date) {
+      current = { date: tx.transaction_date, items: [] };
+      groups.push(current);
+    }
+    current.items.push(tx);
+  }
+  return groups;
+}
+
 function pluralRecords(n: number) {
   if (n % 10 === 1 && n % 100 !== 11) return "запись";
   if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100))
@@ -979,7 +1009,6 @@ export default function TransactionsClient({
               <thead>
                 <tr className="bg-[var(--bg3)] border-b border-[var(--border)]">
                   {[
-                    ["Дата", "w-24"],
                     ["Материал", ""],
                     ["Тип", "w-24"],
                     ["Количество", "w-36 text-right"],
@@ -996,16 +1025,25 @@ export default function TransactionsClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
-                {filtered.map((tx) => {
+                {groupByDay(filtered).map((group) => [
+                  <tr key={`day-${group.date}`} className="bg-[var(--bg2)]">
+                    <td
+                      colSpan={5}
+                      className="px-5 py-2 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide"
+                    >
+                      {dayLabel(group.date)}
+                      <span className="ml-2 font-normal normal-case tabular-nums opacity-60">
+                        {fmtDate(group.date)}
+                      </span>
+                    </td>
+                  </tr>,
+                  ...group.items.map((tx) => {
                   const cfg = TYPE_CONFIG[tx.type];
                   return (
                     <tr
                       key={tx.id}
                       className="hover:bg-[var(--bg3)] transition-colors"
                     >
-                      <td className="px-5 py-3.5 text-[var(--muted)] text-xs tabular-nums whitespace-nowrap">
-                        {fmtDate(tx.transaction_date)}
-                      </td>
                       <td className="px-5 py-3.5">
                         <span className="font-medium text-[var(--text)]">{tx.material_name}</span>
                         {tx.counterparty && (
@@ -1050,29 +1088,38 @@ export default function TransactionsClient({
                       </td>
                     </tr>
                   );
-                })}
+                  }),
+                ])}
               </tbody>
             </table>
           </div>
 
-          {/* ── Mobile Cards ──────────────────────────────── */}
+          {/* ── Mobile Cards — grouped by day ─────────────── */}
           <div
-            className={`sm:hidden space-y-3 transition-opacity ${
+            className={`sm:hidden space-y-2 transition-opacity ${
               isPending ? "opacity-60 pointer-events-none" : ""
             }`}
           >
-            {filtered.map((tx) => {
+            {groupByDay(filtered).map((group) => (
+              <div key={group.date}>
+                <div className="flex items-baseline gap-2 px-1 pt-3 pb-1.5">
+                  <span className="text-xs font-semibold text-[var(--text)] uppercase tracking-wide">
+                    {dayLabel(group.date)}
+                  </span>
+                  <span className="text-[10px] text-[var(--muted)] tabular-nums">
+                    {fmtDate(group.date)}
+                  </span>
+                </div>
+                <div className="space-y-2">
+            {group.items.map((tx) => {
               const cfg = TYPE_CONFIG[tx.type];
               return (
                 <div
                   key={tx.id}
-                  className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4"
+                  className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-3.5"
                 >
-                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <div className="flex items-center justify-between gap-2 mb-2">
                     <TypeBadge type={tx.type} />
-                    <span className="text-xs text-[var(--muted)] tabular-nums">
-                      {fmtDate(tx.transaction_date)}
-                    </span>
                   </div>
 
                   <p className="font-semibold text-[var(--text)] text-sm">
@@ -1109,6 +1156,9 @@ export default function TransactionsClient({
                 </div>
               );
             })}
+                </div>
+              </div>
+            ))}
           </div>
         </>
       )}
