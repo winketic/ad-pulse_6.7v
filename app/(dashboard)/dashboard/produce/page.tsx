@@ -52,7 +52,7 @@ export default async function ProducePage() {
           </p>
           <Link
             href="/dashboard/materials"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#00f5c4] hover:bg-[#00ddb3] text-[#0a0a0a] text-sm font-semibold rounded-xl transition-colors"
+            className="dp-btn-primary rounded-xl"
           >
             Открыть справочник
           </Link>

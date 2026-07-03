@@ -117,7 +117,7 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
             <button
               onClick={handleRequestCode}
               disabled={loading || !newEmail.trim()}
-              className="px-3 py-1.5 rounded-lg bg-[#00f5c4] text-white text-xs font-semibold hover:bg-[#163d24] disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] text-xs font-semibold hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
             >
               {loading ? "Отправка..." : "Отправить код"}
             </button>
@@ -155,7 +155,7 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
             <button
               onClick={handleVerifyCode}
               disabled={loading || code.length !== 6}
-              className="px-3 py-1.5 rounded-lg bg-[#00f5c4] text-white text-xs font-semibold hover:bg-[#163d24] disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] text-xs font-semibold hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
             >
               {loading ? "Проверка..." : "Подтвердить"}
             </button>
@@ -440,7 +440,7 @@ export default function ProfileCard({
               <button
                 onClick={handleSave}
                 disabled={isPending}
-                className="flex-1 py-2 rounded-lg bg-[#00f5c4] text-white text-sm font-semibold hover:bg-[#163d24] transition-colors disabled:opacity-60"
+                className="flex-1 py-2 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] text-sm font-semibold hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-60"
               >
                 {isPending ? "Сохранение..." : "Сохранить"}
               </button>

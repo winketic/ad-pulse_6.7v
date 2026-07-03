@@ -600,7 +600,7 @@ function AddTransactionForm({
         <button
           type="submit"
           disabled={isPending || !canSubmit}
-          className="flex-1 py-2.5 px-4 rounded-lg bg-[#00f5c4] hover:bg-[#00ddb3] text-[#0a0a0a] text-sm font-semibold text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-2 min-h-[48px]"
+          className="dp-btn-primary flex-1 rounded-lg"
         >
           {isPending && (
             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -756,7 +756,7 @@ function EmptyState({
       </p>
       <button
         onClick={onAdd}
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#00ddb3] text-[#0a0a0a] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm min-h-[48px]"
+        className="dp-btn-primary rounded-xl"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -957,7 +957,7 @@ export default function TransactionsClient({
         </div>
         <button
           onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#00ddb3] text-[#0a0a0a] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm self-start sm:self-auto min-h-[48px]"
+          className="dp-btn-primary rounded-xl self-start sm:self-auto"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

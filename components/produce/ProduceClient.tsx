@@ -207,7 +207,7 @@ function QuickQuantityModal({
             <button
               type="submit"
               disabled={isPending || !canSubmit}
-              className="flex-1 min-h-[52px] px-4 rounded-xl bg-[#00f5c4] hover:bg-[#00ddb3] text-[#0a0a0a] text-sm font-semibold transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              className="dp-btn-primary flex-1 min-h-[52px] rounded-xl"
             >
               {isPending ? (
                 <>
