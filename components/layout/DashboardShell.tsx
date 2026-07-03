@@ -325,12 +325,16 @@ export default function DashboardShell({
           </>
         )}
 
-        {/* Page content */}
+        {/* Page content — keyed by pathname so route changes remount with a
+            fade-in (View Transitions API isn't available in Next 14 App
+            Router; opacity-only animation keeps this at 60fps). */}
         <main
           className="flex-1 overflow-auto overflow-x-hidden lg:pb-0"
           style={{ paddingBottom: "calc(72px + env(safe-area-inset-bottom, 0px))" }}
         >
-          {children}
+          <div key={pathname} style={{ animation: "fadeIn 160ms var(--ease) both" }}>
+            {children}
+          </div>
         </main>
       </div>
 
