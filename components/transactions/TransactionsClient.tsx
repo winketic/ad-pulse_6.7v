@@ -136,38 +136,38 @@ const TYPE_CONFIG: Record<
 > = {
   income: {
     label: "Приход",
-    bg: "bg-green-100",
-    text: "text-green-700",
+    bg: "bg-[var(--success-bg)]",
+    text: "text-[var(--success)]",
     sign: "+",
-    qColor: "text-green-700",
+    qColor: "text-[var(--success)]",
   },
   expense: {
     label: "Расход",
-    bg: "bg-red-100",
-    text: "text-red-700",
+    bg: "bg-[var(--danger-bg)]",
+    text: "text-[var(--danger)]",
     sign: "−",
-    qColor: "text-red-700",
+    qColor: "text-[var(--danger)]",
   },
   return: {
     label: "Возврат",
-    bg: "bg-blue-100",
-    text: "text-blue-700",
+    bg: "bg-[var(--info-bg)]",
+    text: "text-[var(--info)]",
     sign: "+",
-    qColor: "text-blue-700",
+    qColor: "text-[var(--info)]",
   },
   defect: {
     label: "Брак",
-    bg: "bg-amber-100",
-    text: "text-amber-700",
+    bg: "bg-[var(--warning-bg)]",
+    text: "text-[var(--warning)]",
     sign: "−",
-    qColor: "text-amber-700",
+    qColor: "text-[var(--warning)]",
   },
   production: {
     label: "Производство",
-    bg: "bg-blue-500/20",
-    text: "text-blue-400",
+    bg: "bg-[var(--info-bg)]",
+    text: "text-[var(--info)]",
     sign: "+",
-    qColor: "text-blue-400",
+    qColor: "text-[var(--info)]",
   },
 };
 
@@ -1037,13 +1037,13 @@ export default function TransactionsClient({
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">
+          <h1 className="text-display text-[var(--text)]">
             Движение материалов
           </h1>
-          <p className="text-sm text-[var(--muted)] mt-0.5">
+          <p className="text-label mt-1.5">
             {(totalCount ?? transactions.length) === 0
               ? "Записей нет"
-              : `${totalCount ?? transactions.length} ${pluralRecords(totalCount ?? transactions.length)} всего`}
+              : `${totalCount ?? transactions.length} ${pluralRecords(totalCount ?? transactions.length)}`}
           </p>
         </div>
         <button
@@ -1215,7 +1215,7 @@ export default function TransactionsClient({
                   )}
 
                   <p
-                    className={`text-xl font-bold tabular-nums mt-1 ${cfg.qColor}`}
+                    className={`num text-xl font-bold mt-1 ${cfg.qColor}`}
                   >
                     {cfg.sign}
                     {formatQuantity(tx.quantity)}{" "}
