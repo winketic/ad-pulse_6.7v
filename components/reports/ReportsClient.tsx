@@ -203,7 +203,7 @@ function FilterBar({
       <button
         type="submit"
         disabled={isPending}
-        className="px-5 py-2 rounded-lg bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold transition-colors disabled:opacity-60 flex items-center gap-2 min-h-[48px]"
+        className="dp-btn-primary rounded-lg"
       >
         {isPending && (
           <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
@@ -472,7 +472,7 @@ export default function ReportsClient({
         <button
           onClick={handleExport}
           disabled={exporting || summary.length === 0}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-[#1a472a] text-[#00f5c4] hover:bg-[#00f5c4] hover:text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--accent)]/40 text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--accent-text)] text-sm font-semibold transition-colors tap-scale disabled:opacity-40 disabled:cursor-not-allowed self-start sm:self-auto min-h-[48px]"
         >
           {exporting ? (
             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
