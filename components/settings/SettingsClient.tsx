@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import SettingsTabs, { type TabId } from "./SettingsTabs";
 import ProfileCard from "./ProfileCard";
-import ThemeToggle from "@/components/ThemeToggle";
 import CompanySettings from "./CompanySettings";
 import UserManagement from "./UserManagement";
 import WazzupCard from "./WazzupCard";
@@ -89,7 +88,6 @@ export default function SettingsClient({
             avatarUrl={avatarUrl}
             bannerColor={bannerColor}
           />
-          <ThemeToggle />
         </>
       )}
 
