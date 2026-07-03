@@ -2,8 +2,8 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import NoCompanyState from "@/components/ui/NoCompanyState";
-import { formatCompact } from "@/lib/utils/format";
-import { BalanceTableRealtime } from "@/components/dashboard/BalanceTableRealtime";
+import { formatCompact, formatQuantity } from "@/lib/utils/format";
+import BalanceCard, { type BalanceData } from "@/components/BalanceCard";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,13 +17,6 @@ const TYPE_LABELS: Record<TxType, string> = {
   expense: "Расход",
   return: "Возврат",
   defect: "Брак",
-};
-
-const TYPE_COLORS: Record<TxType, { bg: string; text: string }> = {
-  income: { bg: "bg-green-100", text: "text-green-700" },
-  expense: { bg: "bg-red-100", text: "text-red-700" },
-  return: { bg: "bg-blue-100", text: "text-blue-700" },
-  defect: { bg: "bg-amber-100", text: "text-amber-700" },
 };
 
 function fmtDate(s: string) {
@@ -140,13 +133,11 @@ export default async function DashboardPage() {
       .select("type, quantity")
       .eq("company_id", company_id)
       .eq("transaction_date", today),
-    // Limit to last 100 for balance calculation (dashboard overview)
+    // Full history — needed for accurate balances + 7-day activity filter
     supabase
       .from("material_transactions")
-      .select("material_id, type, quantity")
-      .eq("company_id", company_id)
-      .order("created_at", { ascending: false })
-      .limit(100),
+      .select("material_id, type, quantity, transaction_date")
+      .eq("company_id", company_id),
     supabase
       .from("material_transactions")
       .select("id, type, quantity, note, transaction_date, material_id, created_by")
@@ -191,7 +182,7 @@ export default async function DashboardPage() {
   const materialsCount = matsResult.data?.length ?? 0;
   const activePlansCount = activePlansResult.data?.length ?? 0;
 
-  // ── Material balances ───────────────────────────────────
+  // ── Material balances (full history) ────────────────────
   const balMap = new Map<
     string,
     { income: number; expense: number; balance: number }
@@ -213,6 +204,35 @@ export default async function DashboardPage() {
   }
 
   const materials = matsResult.data ?? [];
+
+  // ── Active materials: movement in last 7 days, max 10, most recent first
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
+  const lastActivity = new Map<string, string>();
+  for (const tx of allTxResult.data ?? []) {
+    const d = tx.transaction_date as string | null;
+    if (!d || d < sevenDaysAgo) continue;
+    const prev = lastActivity.get(tx.material_id);
+    if (!prev || d > prev) lastActivity.set(tx.material_id, d);
+  }
+  const matById = new Map(materials.map((m) => [m.id, m]));
+  const activeBalances: BalanceData[] = Array.from(lastActivity.entries())
+    .sort((a, b) => b[1].localeCompare(a[1]))
+    .slice(0, 10)
+    .flatMap(([id]) => {
+      const mat = matById.get(id);
+      if (!mat) return [];
+      const b = balMap.get(id) ?? { income: 0, expense: 0, balance: 0 };
+      return [{
+        material_id: id,
+        name: mat.name,
+        unit: mat.unit,
+        balance: b.balance,
+        totalIn: b.income,
+        totalOut: b.expense,
+      }];
+    });
   const activePlans = activePlansResult.data ?? [];
 
   const firstName =
@@ -297,79 +317,76 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* ── Main grid: balances + recent transactions ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
-        {/* Balance table (3/5) */}
-        <div className="lg:col-span-3 bg-[var(--card)] rounded-xl border border-[var(--border)]">
-          <div className="px-5 py-4 border-b border-[var(--border)]">
-            <SectionHeader
-              title="Остатки по материалам"
-              href="/dashboard/transactions"
-              linkLabel="Все транзакции →"
-            />
+      {/* ── Balances: materials with movement in last 7 days ─ */}
+      <div className="mb-4">
+        <SectionHeader
+          title="Остатки по материалам"
+          href="/dashboard/warehouse"
+          linkLabel="Все материалы →"
+        />
+        {activeBalances.length === 0 ? (
+          <div className="py-8 text-center bg-[var(--card)] rounded-xl border border-[var(--border)]">
+            <p className="text-sm text-[var(--muted)]">
+              Нет движения материалов за последние 7 дней
+            </p>
+            <Link
+              href="/dashboard/warehouse"
+              className="mt-2 inline-block text-sm text-[#00f5c4] hover:underline"
+            >
+              Открыть склад
+            </Link>
           </div>
-          <BalanceTableRealtime
-            materials={materials}
-            initialBalances={Object.fromEntries(
-              materials.map((mat) => [mat.id, balMap.get(mat.id) ?? { income: 0, expense: 0, balance: 0 }])
-            )}
-            companyId={company_id}
+        ) : (
+          <BalanceCard balances={activeBalances} showHeader={false} />
+        )}
+      </div>
+
+      {/* ── Recent transactions — compact chips ─────────── */}
+      <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] mb-4 overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--border)]">
+          <SectionHeader
+            title="Последние транзакции"
+            href="/dashboard/transactions"
           />
         </div>
-
-        {/* Recent transactions (2/5) */}
-        <div className="lg:col-span-2 bg-[var(--card)] rounded-xl border border-[var(--border)]">
-          <div className="px-5 py-4 border-b border-[var(--border)]">
-            <SectionHeader
-              title="Последние транзакции"
-              href="/dashboard/transactions"
-            />
+        {recentTxs.length === 0 ? (
+          <div className="py-8 text-center">
+            <p className="text-sm text-[var(--muted)]">Транзакций нет</p>
           </div>
-          {recentTxs.length === 0 ? (
-            <div className="py-12 text-center">
-              <p className="text-sm text-[var(--muted)]">Транзакций нет</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-[var(--border)]">
-              {recentTxs.map((tx) => {
-                const cfg = TYPE_COLORS[tx.type as TxType];
-                const sign =
-                  tx.type === "income" || tx.type === "return" ? "+" : "−";
-                return (
-                  <div
-                    key={tx.id}
-                    className="px-5 py-3 flex items-center gap-3 hover:bg-[var(--bg3)]"
-                  >
-                    <span
-                      className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${cfg.bg} ${cfg.text}`}
-                    >
-                      {TYPE_LABELS[tx.type as TxType]}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[var(--text)] truncate">
-                        {tx.material_name}
-                      </p>
-                      <p className="text-xs text-[var(--muted)]">
-                        {fmtDate(tx.transaction_date)}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-sm font-bold tabular-nums font-mono shrink-0 ${
-                        sign === "+" ? "text-green-700" : "text-red-600"
-                      }`}
-                    >
-                      {sign}
-                      {formatCompact(Number(tx.quantity))}
-                      <span className="text-xs font-normal text-[var(--muted)] ml-0.5">
-                        {tx.material_unit}
-                      </span>
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        ) : (
+          <div className="flex flex-wrap gap-2 px-5 py-4">
+            {recentTxs.map((tx) => {
+              // Number color by type: green income, red expense,
+              // amber defect, blue return
+              const qColor =
+                tx.type === "income"
+                  ? "text-green-600"
+                  : tx.type === "expense"
+                  ? "text-red-600"
+                  : tx.type === "defect"
+                  ? "text-amber-500"
+                  : "text-blue-500";
+              const sign = tx.type === "income" || tx.type === "return" ? "+" : "−";
+              return (
+                <Link
+                  key={tx.id}
+                  href="/dashboard/transactions"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg3)] hover:bg-[var(--bg2)] border border-transparent hover:border-[var(--border)] transition-colors"
+                  title={`${TYPE_LABELS[tx.type as TxType]} · ${fmtDate(tx.transaction_date)}`}
+                >
+                  <span className="text-sm font-medium text-[var(--text)] max-w-[160px] truncate">
+                    {tx.material_name}
+                  </span>
+                  <span className={`text-sm font-bold tabular-nums font-mono ${qColor}`}>
+                    {sign}
+                    {formatQuantity(Number(tx.quantity))}
+                  </span>
+                  <span className="text-xs text-[var(--muted)]">{tx.material_unit}</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Active Plans ────────────────────────────────── */}
