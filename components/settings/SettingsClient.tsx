@@ -68,7 +68,7 @@ export default function SettingsClient({
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="mb-5">
-        <h1 className="text-2xl font-bold text-[var(--text)]">Настройки</h1>
+        <h1 className="text-display text-[var(--text)]">Настройки</h1>
       </div>
 
       <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} />
