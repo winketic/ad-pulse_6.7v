@@ -12,17 +12,25 @@ export type BalanceData = {
 };
 
 
-export default function BalanceCard({ balances }: { balances: BalanceData[] }) {
+export default function BalanceCard({
+  balances,
+  showHeader = true,
+}: {
+  balances: BalanceData[];
+  showHeader?: boolean;
+}) {
   if (balances.length === 0) return null;
 
   return (
-    <div className="mb-6">
+    <div className={showHeader ? "mb-6" : ""}>
+      {showHeader && (
       <div className="flex items-center gap-2 mb-3">
         <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wide">
           Текущий остаток
         </h2>
         <span className="text-xs text-[var(--muted)]">{balances.length} материалов</span>
       </div>
+      )}
 
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 sm:mx-0 px-4 sm:px-0 snap-x">
         {balances.map((b) => {
