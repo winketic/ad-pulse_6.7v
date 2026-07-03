@@ -9,47 +9,51 @@
 }
 
 /* ════════════════════════════════════════════════════
-   DESIGN TOKENS — single source of truth
+   DESIGN TOKENS — «Индустриальный терминал»
+   Single dark theme. Depth via surface levels, not borders.
    ════════════════════════════════════════════════════ */
 
-/* ── Dark theme (default) ─────────────────────────── */
-:root,
-[data-theme="dark"] {
-  /* Surfaces */
-  --bg: #0a0a0a;
-  --bg2: #111111;
-  --bg3: #1a1a1a;
-  --card: #111111;
-  --card-hover: #161616;
+:root {
+  color-scheme: dark;
 
-  /* Brand */
+  /* Surfaces — 4 depth levels, cool-tinted near-black */
+  --bg: #050507;          /* page */
+  --surface-1: #0c0c10;   /* cards */
+  --surface-2: #131318;   /* nested / hover */
+  --surface-3: #1a1a21;   /* highest (menus, chips on cards) */
+
+  /* Brand — neon stays, used ONLY for data & actions */
   --accent: #00f5c4;
-  --accent-hover: #00ddb3;
-  --accent-active: #00c9a0;
+  --accent-hover: #00dcb0;
+  --accent-active: #00c39c;
   --accent-15: color-mix(in srgb, #00f5c4 12%, transparent);
-  --accent-text: #0a0a0a;
+  --accent-text: #04120e;
   --purple: #7b5ea7;
 
-  /* Text */
-  --text: #ededed;
-  --muted: #888888;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
+  /* Text — 3 levels */
+  --text: #f2f2f5;
+  --muted: #8b8b96;
+  --muted-2: #5c5c66;
 
-  /* Status */
-  --success: #34d399;
-  --success-bg: rgba(52, 211, 153, 0.12);
+  /* Hairlines — barely there; depth comes from surfaces */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
+
+  /* Status — muted so the neon accent stays dominant */
+  --success: #4ade80;
+  --success-bg: rgba(74, 222, 128, 0.1);
   --danger: #f87171;
-  --danger-bg: rgba(248, 113, 113, 0.12);
+  --danger-bg: rgba(248, 113, 113, 0.1);
   --warning: #fbbf24;
-  --warning-bg: rgba(251, 191, 36, 0.12);
+  --warning-bg: rgba(251, 191, 36, 0.1);
   --info: #60a5fa;
-  --info-bg: rgba(96, 165, 250, 0.12);
+  --info-bg: rgba(96, 165, 250, 0.1);
 
   /* Elevation */
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
-  --glow-accent: 0 2px 12px color-mix(in srgb, var(--accent) 18%, transparent);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.7);
+  --glow-accent: 0 2px 14px color-mix(in srgb, var(--accent) 16%, transparent);
 
   /* Geometry (4px base grid) */
   --radius-sm: 8px;
@@ -57,49 +61,23 @@
   --radius-lg: 16px;
   --radius-xl: 20px;
 
-  /* Motion */
-  --dur-fast: 150ms;
-  --dur-base: 200ms;
+  /* Z-layers */
+  --z-nav: 50;
+  --z-sheet: 70;
+  --z-modal: 60;
+  --z-toast: 100;
+
+  /* Motion — terminal-crisp */
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* backward-compat aliases */
-  --background: var(--bg);
-  --foreground: var(--text);
-}
-
-/* ── Light theme ──────────────────────────────────── */
-[data-theme="light"] {
-  --bg: #fafafa;
-  --bg2: #f4f4f5;
-  --bg3: #e4e4e7;
-  --card: #ffffff;
-  --card-hover: #f9f9fa;
-
-  --accent: #00a884;
-  --accent-hover: #009475;
-  --accent-active: #008066;
-  --accent-15: color-mix(in srgb, #00a884 12%, transparent);
-  --accent-text: #ffffff;
-  --purple: #6b4e97;
-
-  --text: #18181b;
-  --muted: #71717a;
-  --border: rgba(0, 0, 0, 0.1);
-  --border-strong: rgba(0, 0, 0, 0.18);
-
-  --success: #059669;
-  --success-bg: rgba(5, 150, 105, 0.1);
-  --danger: #dc2626;
-  --danger-bg: rgba(220, 38, 38, 0.08);
-  --warning: #d97706;
-  --warning-bg: rgba(217, 119, 6, 0.1);
-  --info: #2563eb;
-  --info-bg: rgba(37, 99, 235, 0.08);
-
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.07);
-  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.2);
-  --glow-accent: 0 2px 12px color-mix(in srgb, var(--accent) 15%, transparent);
-
+  /* backward-compat aliases (legacy var names used across components) */
+  --bg2: var(--surface-1);
+  --bg3: var(--surface-2);
+  --card: var(--surface-1);
+  --card-hover: var(--surface-2);
   --background: var(--bg);
   --foreground: var(--text);
 }
@@ -220,19 +198,12 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
     line-height: 52px;
     color-scheme: dark;
   }
-  [data-theme="light"] input[type="date"].field-input {
-    color-scheme: light;
-  }
 
-  /* Native calendar icon — invert so it's visible on a dark field; on light
-     theme the unmodified icon is already dark and reads fine on its own. */
+  /* Native calendar icon — invert so it's visible on a dark field */
   input[type="date"]::-webkit-calendar-picker-indicator {
     opacity: 0.5;
     filter: invert(1);
     cursor: pointer;
-  }
-  [data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: none;
   }
 
   .field-textarea {
@@ -424,11 +395,19 @@ select:-webkit-autofill:active {
   .text-balance { text-wrap: balance; }
 
   /* ── Typography scale ───────────────────────────── */
-  .text-display { font-size: 1.75rem; line-height: 2.125rem; font-weight: 700; letter-spacing: -0.02em; }
+  .text-display { font-size: 1.75rem; line-height: 2.125rem; font-weight: 700; letter-spacing: -0.03em; }
   .text-title   { font-size: 1.125rem; line-height: 1.5rem;  font-weight: 600; letter-spacing: -0.01em; }
   .text-body    { font-size: 0.875rem; line-height: 1.375rem; font-weight: 400; }
   .text-caption { font-size: 0.75rem;  line-height: 1rem;    font-weight: 500; color: var(--muted); }
-  .text-num-lg  { font-size: 1.875rem; line-height: 2.25rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  /* Section label — the terminal look: small caps, wide tracking */
+  .text-label   { font-size: 0.6875rem; line-height: 1rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+  /* ── Numbers — ALWAYS Geist Mono, ticker-style ──── */
+  .num     { font-family: var(--font-geist-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .num-lg  { font-family: var(--font-geist-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 1.75rem;  line-height: 2.125rem; font-weight: 700; letter-spacing: -0.03em; }
+  .num-xl  { font-family: var(--font-geist-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 2.25rem;  line-height: 2.5rem;  font-weight: 700; letter-spacing: -0.04em; }
+  /* legacy alias */
+  .text-num-lg { font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 1.75rem; line-height: 2.125rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 
   /* ── Interaction feedback ───────────────────────── */
   /* Haptic-like tap compression for any tappable element */
@@ -436,11 +415,11 @@ select:-webkit-autofill:active {
     transition: transform var(--dur-fast) var(--ease);
     -webkit-tap-highlight-color: transparent;
   }
-  .tap-scale:active { transform: scale(0.98); }
+  .tap-scale:active { transform: scale(0.97); }
 
   /* Card entrance — staggered via inline animation-delay */
   .fade-in-up {
-    animation: fadeInUp 300ms var(--ease) both;
+    animation: fadeInUp 280ms var(--ease-out) both;
   }
 
   /* Keyboard focus ring (mouse clicks don't trigger it) */
