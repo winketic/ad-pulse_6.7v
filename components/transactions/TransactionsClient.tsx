@@ -44,6 +44,9 @@ export type Material = {
   unit: string;
   norm_concrete?: number | null;
   norm_rebar?: number | null;
+  // kg→m conversion: when set, the user enters kg in the form and the
+  // transaction is stored in meters (quantity = kg / kg_per_meter)
+  kg_per_meter?: number | null;
 };
 
 type Filters = {
@@ -301,6 +304,14 @@ function AddTransactionForm({
   const concreteMaterial = materials.find((m) => m.name === "Бетон");
   const rebarMaterial = materials.find((m) => m.name === "Арматура");
 
+  // kg→m conversion: user enters kg, we store meters (regular types only)
+  const kgPerMeter =
+    !isProduction &&
+    selectedMaterial?.kg_per_meter != null &&
+    selectedMaterial.kg_per_meter > 0
+      ? selectedMaterial.kg_per_meter
+      : null;
+
   const qtyNum = Number(form.quantity) || 0;
   const concreteAmount =
     isProduction && selectedMaterial?.norm_concrete != null
@@ -407,10 +418,14 @@ function AddTransactionForm({
       <div>
         <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
           Количество{" "}
-          {selectedMaterial && (
-            <span className="text-[var(--muted)] font-normal">
-              ({selectedMaterial.unit})
-            </span>
+          {kgPerMeter ? (
+            <span className="text-[var(--muted)] font-normal">(кг)</span>
+          ) : (
+            selectedMaterial && (
+              <span className="text-[var(--muted)] font-normal">
+                ({selectedMaterial.unit})
+              </span>
+            )
           )}{" "}
           <span className="text-red-500">*</span>
         </label>
@@ -434,6 +449,10 @@ function AddTransactionForm({
         />
         {quantityError ? (
           <p className="mt-1 text-xs text-red-600">{quantityError}</p>
+        ) : kgPerMeter && qtyNum > 0 ? (
+          <p className="mt-1 text-xs font-medium text-[#00f5c4] tabular-nums">
+            = {(qtyNum / kgPerMeter).toFixed(2)} м
+          </p>
         ) : (
           <p className="mt-1 text-xs text-[var(--muted)]">Макс. 999 999 999</p>
         )}
@@ -832,16 +851,34 @@ export default function TransactionsClient({
             return;
           }
 
-          const noteToSave =
+          const noteBase =
             form.type === "defect"
               ? form.defect_reason.trim() +
                 (form.note.trim() ? `\n\n${form.note.trim()}` : "")
               : form.note.trim() || null;
 
+          // kg→m conversion: material with kg_per_meter takes kg input
+          // and stores meters; the entered kg goes into the note
+          const mat = materials.find((m) => m.id === form.material_id);
+          const kgPerMeter =
+            mat?.kg_per_meter != null && mat.kg_per_meter > 0
+              ? mat.kg_per_meter
+              : null;
+          const rawQty = parseFloat(form.quantity);
+          const quantity = kgPerMeter
+            ? Math.round((rawQty / kgPerMeter) * 10000) / 10000
+            : rawQty;
+          const kgNote = kgPerMeter ? `(введено: ${rawQty} кг)` : null;
+          const noteToSave = kgNote
+            ? noteBase
+              ? `${noteBase}\n${kgNote}`
+              : kgNote
+            : noteBase;
+
           await createTransaction({
             type: form.type as TxType,
             material_id: form.material_id,
-            quantity: parseFloat(form.quantity),
+            quantity,
             note: noteToSave,
             counterparty: form.counterparty.trim() || null,
             transaction_date: form.date,
@@ -855,7 +892,7 @@ export default function TransactionsClient({
         }
       });
     },
-    [router, closeModal]
+    [router, closeModal, materials]
   );
 
   return (
