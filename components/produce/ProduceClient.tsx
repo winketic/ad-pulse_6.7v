@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useTransition, useCallback } from "react";
 import { createProductionTransaction } from "@/app/(dashboard)/dashboard/transactions/actions";
 import { useToast } from "@/components/ui/Toast";
 import { formatQuantity } from "@/lib/utils/format";
 import { isNetworkError, savePending, clearPending } from "@/lib/hooks/useOfflineRetry";
 import { OfflineRetryBanner } from "@/components/ui/OfflineRetryBanner";
-
-type PendingProduction = { material_id: string; quantity: number; transaction_date: string; label: string };
 
 export type ProduceMaterial = {
   id: string;
@@ -21,262 +19,10 @@ export type ProduceMaterial = {
   freq14d: number;
 };
 
-// ─── Quick Quantity Modal ─────────────────────────────────
+type PendingProduction = { material_id: string; quantity: number; transaction_date: string; label: string };
 
 const PENDING_KEY = "quick_produce";
-
-function QuickQuantityModal({
-  material,
-  onClose,
-}: {
-  material: ProduceMaterial;
-  onClose: () => void;
-}) {
-  const { toast } = useToast();
-  const [qty, setQty] = useState("");
-  const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Focus input + lock scroll on open
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    // Small delay so keyboard doesn't fight the mount animation
-    const t = setTimeout(() => inputRef.current?.focus(), 80);
-    return () => {
-      clearTimeout(t);
-      document.body.style.overflow = prev;
-    };
-  }, []);
-
-  // Escape closes
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
-
-  const qtyNum = Number(qty) || 0;
-  const concreteAmount = qtyNum > 0 ? qtyNum * material.norm_concrete : null;
-  const rebarAmount = qtyNum > 0 ? qtyNum * material.norm_rebar : null;
-
-  const adjust = useCallback((delta: number) => {
-    setQty((prev) => {
-      const n = Math.max(0, (Number(prev) || 0) + delta);
-      return n === 0 ? "" : String(n);
-    });
-    setError("");
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const n = Number(qty);
-    if (!qty || isNaN(n) || n <= 0) {
-      setError("Введите количество");
-      inputRef.current?.focus();
-      return;
-    }
-    setError("");
-    startTransition(async () => {
-      const today = new Date().toISOString().split("T")[0];
-      const label = `${formatQuantity(n)} ${material.unit} — ${material.name}`;
-      try {
-        await createProductionTransaction({
-          material_id: material.id,
-          quantity: n,
-          transaction_date: today,
-        });
-        clearPending(PENDING_KEY);
-        toast(`✓ Записано: ${label}`, "success");
-        onClose();
-      } catch (err) {
-        if (isNetworkError(err)) {
-          savePending<PendingProduction>(PENDING_KEY, {
-            material_id: material.id,
-            quantity: n,
-            transaction_date: today,
-            label,
-          }, label);
-          toast("Нет связи — данные сохранены локально", "info");
-          onClose();
-        } else {
-          setError(err instanceof Error ? err.message : "Ошибка сохранения");
-        }
-      }
-    });
-  };
-
-  const canSubmit = qtyNum > 0 && qtyNum <= 999999;
-
-  return (
-    <div className="fixed inset-0 h-[100dvh] z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-        onTouchMove={(e) => e.preventDefault()}
-      />
-      <div className="relative bg-[var(--card)] w-full sm:max-w-sm sm:rounded-2xl shadow-2xl z-10 flex flex-col"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-4 shrink-0 border-b border-[var(--border)]"
-          style={{ minHeight: "56px", paddingTop: "env(safe-area-inset-top, 0px)" }}
-        >
-          <div className="min-w-0 flex-1 mr-3">
-            <h2 className="text-base font-semibold text-[var(--text)] truncate">{material.name}</h2>
-            <p className="text-xs text-[var(--muted)]">{material.unit}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-[var(--bg3)] text-[var(--muted)] transition-colors shrink-0"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Body */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {/* Quantity input */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
-              Количество <span className="font-normal">({material.unit})</span> <span className="text-red-500">*</span>
-            </label>
-            <input
-              ref={inputRef}
-              type="number"
-              value={qty}
-              onChange={(e) => { setQty(e.target.value); setError(""); }}
-              placeholder="0"
-              min="1"
-              max="999999"
-              step="1"
-              inputMode="numeric"
-              className="field-input num text-3xl font-bold text-center"
-              style={{ height: "64px" }}
-            />
-          </div>
-
-          {/* Quick-adjust buttons */}
-          <div className="grid grid-cols-5 gap-2">
-            {([-1, 1, 5, 10, 50] as const).map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => adjust(d)}
-                disabled={isPending}
-                className="py-3 rounded-xl border border-[var(--border)] text-sm font-semibold text-[var(--text)] hover:bg-[var(--bg3)] hover:border-[#00f5c4] transition-colors disabled:opacity-40 min-h-[48px]"
-              >
-                {d > 0 ? `+${d}` : d}
-              </button>
-            ))}
-          </div>
-
-          {/* Preview */}
-          {concreteAmount != null && rebarAmount != null && (
-            <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg bg-[#00f5c4]/8 border border-[#00f5c4]/20">
-              <svg className="w-4 h-4 text-[#00a884] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm text-[var(--text)]">
-                Спишется: бетон {concreteAmount.toFixed(2)} {material.concrete_unit},{" "}
-                {material.rebar_material_name.toLowerCase()} {rebarAmount.toFixed(2)} {material.rebar_unit}
-              </p>
-            </div>
-          )}
-
-          {/* Error */}
-          {error && (
-            <div className="px-3 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
-              {error}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isPending}
-              className="flex-1 min-h-[52px] px-4 rounded-xl border border-[var(--border)] text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50"
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              disabled={isPending || !canSubmit}
-              className="dp-btn-primary flex-1 min-h-[52px] rounded-xl"
-            >
-              {isPending ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Записываем...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  Записать
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// ─── Material Card ────────────────────────────────────────
-
-function MaterialCard({
-  material,
-  index,
-  onTap,
-}: {
-  material: ProduceMaterial;
-  index: number;
-  onTap: () => void;
-}) {
-  return (
-    <button
-      onClick={onTap}
-      className="group relative flex flex-col justify-between p-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] hover:border-[var(--accent)]/60 hover:bg-[var(--surface-2)] active:scale-[0.96] transition-all text-left min-h-[128px] fade-in-up"
-      style={{ WebkitTapHighlightColor: "transparent", animationDelay: `${Math.min(index * 35, 350)}ms` }}
-    >
-      {/* Usage badge — 14-day frequency, mono */}
-      {material.freq14d > 0 && (
-        <span className="num absolute top-3 right-3 text-[10px] font-semibold text-[var(--muted)] bg-[var(--surface-3)] px-1.5 py-0.5 rounded-md">
-          ×{Math.round(material.freq14d)}
-        </span>
-      )}
-
-      {/* Material name — the tap target IS the name, make it big */}
-      <p className="text-base font-bold text-[var(--text)] leading-snug pr-8 group-hover:text-[var(--accent)] transition-colors">
-        {material.name}
-      </p>
-
-      {/* Bottom row: unit + tap hint */}
-      <div className="flex items-end justify-between mt-2">
-        <p className="text-label">{material.unit}</p>
-        <div className="w-9 h-9 rounded-xl bg-[var(--accent)]/10 flex items-center justify-center group-hover:bg-[var(--accent)]/25 transition-colors shrink-0">
-          <svg className="w-5 h-5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-        </div>
-      </div>
-    </button>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────
+const MAX_DIGITS = 6;
 
 async function retryProduction(payload: PendingProduction) {
   await createProductionTransaction({
@@ -286,52 +32,239 @@ async function retryProduction(payload: PendingProduction) {
   });
 }
 
-export default function ProduceClient({ materials }: { materials: ProduceMaterial[] }) {
-  const [active, setActive] = useState<ProduceMaterial | null>(null);
+// Series prefix for anchor chips: "2ПБ-16-2п" → "2ПБ"
+function seriesOf(name: string): string {
+  const m = name.match(/^(\d+\s?ПБ)/i);
+  return m ? m[1].replace(/\s/g, "").toUpperCase() : "ДР";
+}
 
-  const todayLabel = new Date().toLocaleDateString("ru-RU", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+// ─── Numpad key ───────────────────────────────────────────
+
+function Key({
+  children,
+  onPress,
+  variant = "digit",
+  disabled = false,
+  ariaLabel,
+}: {
+  children: React.ReactNode;
+  onPress: () => void;
+  variant?: "digit" | "action" | "submit";
+  disabled?: boolean;
+  ariaLabel?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPress}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      className={`h-14 rounded-xl text-xl font-semibold select-none tap-scale transition-colors disabled:opacity-35 ${
+        variant === "submit"
+          ? "bg-[var(--accent)] text-[var(--accent-text)] shadow-[var(--glow-accent)]"
+          : variant === "action"
+          ? "bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]"
+          : "num bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-2)]"
+      }`}
+      style={{ WebkitTapHighlightColor: "transparent" }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────
+
+export default function ProduceClient({ materials }: { materials: ProduceMaterial[] }) {
+  const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
+  const [selectedId, setSelectedId] = useState<string | null>(materials[0]?.id ?? null);
+  const [qty, setQty] = useState("");
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Frequent (used in last 14d) on top, then everything alphabetically —
+  // alphabetical order keeps series contiguous so anchors work.
+  const { frequent, rest, seriesList } = useMemo(() => {
+    const frequent = materials.filter((m) => m.freq14d > 0).slice(0, 5);
+    const freqIds = new Set(frequent.map((m) => m.id));
+    const rest = [...materials]
+      .filter((m) => !freqIds.has(m.id))
+      .sort((a, b) => a.name.localeCompare(b.name, "ru", { numeric: true }));
+    const seriesList = Array.from(new Set(rest.map((m) => seriesOf(m.name))));
+    return { frequent, rest, seriesList };
+  }, [materials]);
+
+  const selected = materials.find((m) => m.id === selectedId) ?? null;
+  const qtyNum = parseInt(qty || "0", 10);
+
+  const concreteAmount = selected && qtyNum > 0 ? qtyNum * selected.norm_concrete : null;
+  const rebarAmount = selected && qtyNum > 0 ? qtyNum * selected.norm_rebar : null;
+
+  const jumpToSeries = (s: string) => {
+    listRef.current
+      ?.querySelector(`[data-series="${s}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const pressDigit = (d: string) => {
+    setQty((prev) => {
+      if (prev.length >= MAX_DIGITS) return prev;
+      if (prev === "" && d === "0") return prev; // no leading zeros
+      return prev + d;
+    });
+  };
+  const backspace = () => setQty((prev) => prev.slice(0, -1));
+
+  const submit = useCallback(() => {
+    if (!selected || qtyNum <= 0 || isPending) return;
+    const mat = selected;
+    const n = qtyNum;
+    const today = new Date().toISOString().split("T")[0];
+    const label = `${formatQuantity(n)} ${mat.unit} — ${mat.name}`;
+
+    // Optimistic: clear input immediately, material stays for serial entry
+    setQty("");
+    toast(`✓ Записано: ${label}`, "success");
+
+    startTransition(async () => {
+      try {
+        await createProductionTransaction({
+          material_id: mat.id,
+          quantity: n,
+          transaction_date: today,
+        });
+        clearPending(PENDING_KEY);
+      } catch (err) {
+        if (isNetworkError(err)) {
+          savePending<PendingProduction>(
+            PENDING_KEY,
+            { material_id: mat.id, quantity: n, transaction_date: today, label },
+            label
+          );
+          toast("Нет связи — данные сохранены локально", "info");
+        } else {
+          toast(
+            err instanceof Error ? `Не записано: ${err.message}` : "Ошибка записи",
+            "error"
+          );
+        }
+      }
+    });
+  }, [selected, qtyNum, isPending, toast]);
+
+  const todayLabel = new Date().toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "numeric" });
+
+  if (materials.length === 0) return null; // page handles the empty state
+
+  const renderItem = (m: ProduceMaterial, opts?: { series?: boolean }) => {
+    const active = m.id === selectedId;
+    return (
+      <button
+        key={m.id}
+        type="button"
+        onClick={() => setSelectedId(m.id)}
+        data-series={opts?.series ? seriesOf(m.name) : undefined}
+        className={`w-full min-h-[48px] px-3 py-2.5 rounded-xl text-left snap-start transition-colors tap-scale ${
+          active
+            ? "bg-[var(--accent-15)] border border-[var(--accent)]/50"
+            : "border border-transparent hover:bg-[var(--surface-2)]"
+        }`}
+        style={{ WebkitTapHighlightColor: "transparent" }}
+      >
+        <span className={`block text-sm font-bold leading-tight ${active ? "text-[var(--accent)]" : "text-[var(--text)]"}`}>
+          {m.name}
+        </span>
+        {m.freq14d > 0 && (
+          <span className="num text-[10px] text-[var(--muted)]">×{Math.round(m.freq14d)} за 14д</span>
+        )}
+      </button>
+    );
+  };
 
   return (
-    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
-      <OfflineRetryBanner<PendingProduction>
-        pendingKey={PENDING_KEY}
-        onRetry={retryProduction}
-      />
-      {/* Header */}
-      <div className="mb-5">
-        <h1 className="text-display text-[var(--text)]">Быстрый выпуск</h1>
-        <p className="text-label mt-1.5 capitalize">{todayLabel}</p>
+    <div className="max-w-lg mx-auto flex flex-col" style={{ height: "calc(100dvh - 56px - 72px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))" }}>
+      <OfflineRetryBanner<PendingProduction> pendingKey={PENDING_KEY} onRetry={retryProduction} />
+
+      {/* Compact header */}
+      <div className="flex items-baseline justify-between px-4 pt-3 pb-2 shrink-0">
+        <h1 className="text-label">Выпуск</h1>
+        <span className="num text-[11px] text-[var(--muted-2)] capitalize">{todayLabel}</span>
       </div>
 
-      {/* Hint */}
-      <p className="text-xs text-[var(--muted)] mb-4">
-        Нажмите на перемычку → введите количество → готово.{" "}
-        {materials.some((m) => m.freq14d > 0) && "×N — выпуск за 14 дней."}
-      </p>
-
-      {/* Material grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-        {materials.map((m, i) => (
-          <MaterialCard
-            key={m.id}
-            material={m}
-            index={i}
-            onTap={() => setActive(m)}
-          />
-        ))}
-      </div>
-
-      {/* Modal */}
-      {active && (
-        <QuickQuantityModal
-          material={active}
-          onClose={() => setActive(null)}
-        />
+      {/* Series anchor chips */}
+      {seriesList.length > 1 && (
+        <div className="flex gap-1.5 px-4 pb-2 overflow-x-auto shrink-0">
+          {seriesList.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => jumpToSeries(s)}
+              className="num px-3 py-1.5 rounded-lg bg-[var(--surface-2)] text-xs font-bold text-[var(--muted)] hover:text-[var(--accent)] whitespace-nowrap tap-scale"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
       )}
+
+      {/* Main: list | numpad */}
+      <div className="flex-1 min-h-0 grid grid-cols-[44%_1fr] gap-2 px-3">
+        {/* Left: scrollable material list */}
+        <div ref={listRef} className="overflow-y-auto snap-y pr-0.5 space-y-1 pb-2">
+          {frequent.length > 0 && (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-2)] px-3 pt-1">Частые</p>
+              {frequent.map((m) => renderItem(m))}
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-2)] px-3 pt-2">Все</p>
+            </>
+          )}
+          {rest.map((m) => renderItem(m, { series: true }))}
+        </div>
+
+        {/* Right: entered qty + numpad */}
+        <div className="flex flex-col min-h-0">
+          <div className="flex items-baseline justify-center gap-1.5 py-2 shrink-0">
+            <span className={`num text-5xl font-bold leading-none tracking-tighter ${qty ? "text-[var(--text)]" : "text-[var(--muted-2)]"}`}>
+              {qty || "0"}
+            </span>
+            <span className="text-sm text-[var(--muted)]">{selected?.unit ?? "шт"}</span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1.5 content-start">
+            {["7", "8", "9", "4", "5", "6", "1", "2", "3"].map((d) => (
+              <Key key={d} onPress={() => pressDigit(d)}>{d}</Key>
+            ))}
+            <Key onPress={backspace} variant="action" ariaLabel="Стереть">
+              <svg className="w-5 h-5 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" />
+              </svg>
+            </Key>
+            <Key onPress={() => pressDigit("0")}>0</Key>
+            <Key onPress={submit} variant="submit" disabled={!selected || qtyNum <= 0} ariaLabel="Записать">
+              <svg className="w-6 h-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.6}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </Key>
+          </div>
+        </div>
+      </div>
+
+      {/* Live result strip */}
+      <div className="shrink-0 border-t border-[var(--border)] bg-[var(--surface-1)] px-4 py-3">
+        {selected && qtyNum > 0 && concreteAmount != null && rebarAmount != null ? (
+          <p className="text-sm text-[var(--text)] leading-snug">
+            <span className="num font-bold text-[var(--accent)]">{qtyNum} {selected.unit}</span>{" "}
+            {selected.name} →{" "}
+            <span className="num">бетон {concreteAmount.toFixed(2)} {selected.concrete_unit}</span>
+            {" · "}
+            <span className="num">{selected.rebar_material_name.toLowerCase()} {rebarAmount.toFixed(2)} {selected.rebar_unit}</span>
+          </p>
+        ) : (
+          <p className="text-xs text-[var(--muted-2)]">
+            {selected ? `${selected.name} — наберите количество` : "Выберите перемычку"}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
