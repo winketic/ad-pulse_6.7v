@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   useState,
@@ -8,7 +8,7 @@ import {
   useEffect,
 } from "react";
 import { useRouter } from "next/navigation";
-import BalanceCard, { type BalanceData } from "@/components/BalanceCard";
+import { type BalanceData } from "@/components/BalanceCard";
 import {
   createTransaction,
   createProductionTransaction,
@@ -105,13 +105,6 @@ export type Material = {
   kg_per_meter?: number | null;
 };
 
-type Filters = {
-  type: TxType | "all";
-  material_id: string;
-  dateFrom: string;
-  dateTo: string;
-};
-
 type FormState = {
   type: string; // TxType at runtime
   material_id: string;
@@ -177,13 +170,6 @@ const TX_TYPES = Object.keys(TYPE_CONFIG) as UiTxType[];
 // off an actual saved Transaction.type (which is never "production").
 const DB_TX_TYPES = TX_TYPES.filter((t) => t !== "production") as TxType[];
 
-const DEFAULT_FILTERS: Filters = {
-  type: "all",
-  material_id: "all",
-  dateFrom: "",
-  dateTo: "",
-};
-
 const todayStr = () => new Date().toISOString().split("T")[0];
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -230,30 +216,34 @@ function pluralRecords(n: number) {
   return "записей";
 }
 
-function computeBalances(txs: Transaction[]): BalanceData[] {
-  const map = new Map<string, BalanceData>();
-  for (const tx of txs) {
-    if (!map.has(tx.material_id)) {
-      map.set(tx.material_id, {
-        material_id: tx.material_id,
-        name: tx.material_name,
-        unit: tx.material_unit,
-        balance: 0,
-        totalIn: 0,
-        totalOut: 0,
-      });
-    }
-    const b = map.get(tx.material_id)!;
-    if (tx.type === "income" || tx.type === "return") {
-      b.totalIn += tx.quantity;
-      b.balance += tx.quantity;
-    } else {
-      b.totalOut += tx.quantity;
-      b.balance -= tx.quantity;
-    }
-  }
-  return Array.from(map.values()).sort((a, b) =>
-    a.name.localeCompare(b.name, "ru")
+// ─── Period segments ──────────────────────────────────────
+
+type Period = "today" | "week" | "all";
+
+const PERIODS: { key: Period; label: string }[] = [
+  { key: "today", label: "Сегодня" },
+  { key: "week", label: "Неделя" },
+  { key: "all", label: "Всё" },
+];
+
+// ─── Delta bars — recent movement trend for a material ────
+// Bar per movement (oldest→newest), height ∝ |qty|, color = direction.
+// Deliberately shows deltas (not absolute balance): honest with only the
+// current page of transactions loaded.
+
+function DeltaBars({ deltas }: { deltas: number[] }) {
+  if (deltas.length < 2) return <span className="w-11 shrink-0" />;
+  const max = Math.max(...deltas.map(Math.abs), 1);
+  return (
+    <span className="flex items-end gap-[2px] h-4 w-11 shrink-0 justify-end" aria-hidden>
+      {deltas.map((d, i) => (
+        <span
+          key={i}
+          className={`w-[3px] rounded-[1px] ${d >= 0 ? "bg-[var(--success)]/70" : "bg-[var(--danger)]/70"}`}
+          style={{ height: `${Math.max(2, (Math.abs(d) / max) * 16)}px` }}
+        />
+      ))}
+    </span>
   );
 }
 
@@ -658,107 +648,6 @@ function AddTransactionForm({
   );
 }
 
-// ─── Filter Bar ───────────────────────────────────────────
-
-function FilterBar({
-  filters,
-  onChange,
-  materials,
-  hasActive,
-  onClear,
-}: {
-  filters: Filters;
-  onChange: (p: Partial<Filters>) => void;
-  materials: Material[];
-  hasActive: boolean;
-  onClear: () => void;
-}) {
-  const selectCls =
-    "w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
-  const labelCls = "block text-xs font-medium text-[var(--muted)] mb-1.5";
-
-  return (
-    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4 mb-5">
-      <div className="flex flex-wrap gap-3 items-end">
-        {/* Type */}
-        <div className="flex-1 min-w-[120px]">
-          <label className={labelCls}>Тип операции</label>
-          <select
-            value={filters.type}
-            onChange={(e) =>
-              onChange({ type: e.target.value as Filters["type"] })
-            }
-            className={selectCls}
-          >
-            <option value="all">Все типы</option>
-            {DB_TX_TYPES.map((k) => (
-              <option key={k} value={k}>
-                {TYPE_CONFIG[k].label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Material */}
-        <div className="flex-1 min-w-[150px]">
-          <label className={labelCls}>Материал</label>
-          <select
-            value={filters.material_id}
-            onChange={(e) => onChange({ material_id: e.target.value })}
-            className={selectCls}
-          >
-            <option value="all">Все материалы</option>
-            {materials.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Dates — paired together so they stack on mobile instead of
-            cramming side by side like Type/Material do. */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full sm:w-auto sm:flex-1 sm:min-w-[270px]">
-          <div>
-            <label className={labelCls}>Дата с</label>
-            <input
-              type="date"
-              value={filters.dateFrom}
-              max={filters.dateTo || todayStr()}
-              onChange={(e) => onChange({ dateFrom: e.target.value })}
-              className="field-input"
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Дата по</label>
-            <input
-              type="date"
-              value={filters.dateTo}
-              min={filters.dateFrom}
-              max={todayStr()}
-              onChange={(e) => onChange({ dateTo: e.target.value })}
-              className="field-input"
-            />
-          </div>
-        </div>
-
-        {/* Clear */}
-        {hasActive && (
-          <button
-            onClick={onClear}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[var(--muted)] hover:bg-gray-100 border border-gray-300 transition-colors whitespace-nowrap"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Сбросить
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── Empty state ──────────────────────────────────────────
 
 function EmptyState({
@@ -863,7 +752,6 @@ function Pagination({
 export default function TransactionsClient({
   transactions,
   materials,
-  initialBalances,
   page,
   totalPages,
   totalCount,
@@ -881,10 +769,10 @@ export default function TransactionsClient({
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [modalOpen, setModalOpen] = useState(false);
-  const [filters, setFilters] = useState<Filters>({
-    ...DEFAULT_FILTERS,
-    ...(initialMaterialId ? { material_id: initialMaterialId } : {}),
-  });
+  const [period, setPeriod] = useState<Period>("week");
+  const [typeFilter, setTypeFilter] = useState<TxType | "all">("all");
+  const [materialFilter, setMaterialFilter] = useState<string>(initialMaterialId ?? "all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
 
   // Optimistic rows shown instantly while the server call is in flight.
@@ -893,13 +781,6 @@ export default function TransactionsClient({
   useEffect(() => {
     setOptimistic([]);
   }, [transactions]);
-
-  // Use server-computed balances (full dataset) if provided, otherwise
-  // fall back to client-side computation over current page's transactions.
-  const balances = useMemo(
-    () => initialBalances ?? computeBalances(transactions),
-    [initialBalances, transactions]
-  );
 
   // Optimistic rows merged on top, re-sorted so a backdated entry lands in
   // its own day group instead of floating above "Сегодня".
@@ -910,34 +791,34 @@ export default function TransactionsClient({
     );
   }, [optimistic, transactions]);
 
+  // Delta history per material (oldest→newest within loaded page) for bars
+  const deltasByMaterial = useMemo(() => {
+    const map = new Map<string, number[]>();
+    for (let i = displayTxs.length - 1; i >= 0; i--) {
+      const tx = displayTxs[i];
+      const delta =
+        tx.type === "income" || tx.type === "return" ? tx.quantity : -tx.quantity;
+      const list = map.get(tx.material_id) ?? [];
+      list.push(delta);
+      map.set(tx.material_id, list);
+    }
+    map.forEach((v, k) => map.set(k, v.slice(-8)));
+    return map;
+  }, [displayTxs]);
+
   const filtered = useMemo(() => {
     return displayTxs.filter((tx) => {
-      if (filters.type !== "all" && tx.type !== filters.type) return false;
-      if (
-        filters.material_id !== "all" &&
-        tx.material_id !== filters.material_id
-      )
-        return false;
-      if (filters.dateFrom && tx.transaction_date < filters.dateFrom)
-        return false;
-      if (filters.dateTo && tx.transaction_date > filters.dateTo) return false;
+      if (period === "today" && tx.transaction_date !== isoDay(0)) return false;
+      if (period === "week" && tx.transaction_date < isoDay(-6)) return false;
+      if (typeFilter !== "all" && tx.type !== typeFilter) return false;
+      if (materialFilter !== "all" && tx.material_id !== materialFilter) return false;
       return true;
     });
-  }, [displayTxs, filters]);
+  }, [displayTxs, period, typeFilter, materialFilter]);
 
-  const hasFilters = useMemo(
-    () =>
-      filters.type !== "all" ||
-      filters.material_id !== "all" ||
-      !!filters.dateFrom ||
-      !!filters.dateTo,
-    [filters]
-  );
-
-  const updateFilters = useCallback(
-    (p: Partial<Filters>) => setFilters((prev) => ({ ...prev, ...p })),
-    []
-  );
+  const hasFilters = typeFilter !== "all" || materialFilter !== "all" || period !== "all";
+  const filterMaterialName =
+    materialFilter !== "all" ? materials.find((m) => m.id === materialFilter)?.name : null;
 
   const closeModal = useCallback(() => {
     setModalOpen(false);
@@ -1058,26 +939,63 @@ export default function TransactionsClient({
       </div>
 
       {/* ── Balance Cards ───────────────────────────────── */}
-      {balances.length > 0 && <BalanceCard balances={balances} />}
-
-      {/* ── Filters ─────────────────────────────────────── */}
+      {/* ── Period segments ─────────────────────────────── */}
       {transactions.length > 0 && (
-        <FilterBar
-          filters={filters}
-          onChange={updateFilters}
-          materials={materials}
-          hasActive={hasFilters}
-          onClear={() => setFilters(DEFAULT_FILTERS)}
-        />
-      )}
+        <>
+          <div className="flex items-center bg-[var(--surface-2)] rounded-xl p-1 mb-2.5 w-fit">
+            {PERIODS.map((p) => (
+              <button
+                key={p.key}
+                onClick={() => setPeriod(p.key)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors tap-scale ${
+                  period === p.key
+                    ? "bg-[var(--surface-3)] text-[var(--text)] shadow-sm"
+                    : "text-[var(--muted)]"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
 
-      {/* ── Count ───────────────────────────────────────── */}
-      {hasFilters && filtered.length !== transactions.length && (
-        <p className="text-sm text-[var(--muted)] mb-3">
-          Показано{" "}
-          <span className="font-semibold text-gray-800">{filtered.length}</span>{" "}
-          из {transactions.length}
-        </p>
+          {/* Type chips + material badge */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <button
+              onClick={() => setTypeFilter("all")}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap tap-scale transition-colors ${
+                typeFilter === "all"
+                  ? "bg-[var(--text)] text-[var(--bg)]"
+                  : "bg-[var(--surface-2)] text-[var(--muted)]"
+              }`}
+            >
+              Все
+            </button>
+            {DB_TX_TYPES.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(typeFilter === t ? "all" : t)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap tap-scale transition-colors ${
+                  typeFilter === t
+                    ? `${TYPE_CONFIG[t].bg} ${TYPE_CONFIG[t].text} ring-1 ring-current`
+                    : "bg-[var(--surface-2)] text-[var(--muted)]"
+                }`}
+              >
+                {TYPE_CONFIG[t].label}
+              </button>
+            ))}
+            {filterMaterialName && (
+              <button
+                onClick={() => setMaterialFilter("all")}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[var(--accent-15)] text-[var(--accent)] tap-scale"
+              >
+                {filterMaterialName}
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </>
       )}
 
       {/* ── Empty state ─────────────────────────────────── */}
@@ -1088,164 +1006,82 @@ export default function TransactionsClient({
         />
       )}
 
-      {/* ── Desktop Table ───────────────────────────────── */}
+      {/* ── Compact list — one pattern for all widths ───── */}
       {filtered.length > 0 && (
-        <>
-          <div className="hidden sm:block bg-[var(--card)] rounded-xl border border-[var(--border)] overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[var(--bg3)] border-b border-[var(--border)]">
-                  {[
-                    ["Материал", ""],
-                    ["Тип", "w-24"],
-                    ["Количество", "w-36 text-right"],
-                    ["Кто добавил", "w-36"],
-                    ["Примечание", ""],
-                  ].map(([label, cls]) => (
-                    <th
-                      key={label as string}
-                      className={`px-5 py-3.5 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wide ${cls}`}
-                    >
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border)]">
-                {groupByDay(filtered).map((group) => [
-                  <tr key={`day-${group.date}`} className="bg-[var(--bg2)]">
-                    <td
-                      colSpan={5}
-                      className="px-5 py-2 text-xs font-semibold text-[var(--muted)] uppercase tracking-wide"
-                    >
-                      {dayLabel(group.date)}
-                      <span className="ml-2 font-normal normal-case tabular-nums opacity-60">
-                        {fmtDate(group.date)}
-                      </span>
-                    </td>
-                  </tr>,
-                  ...group.items.map((tx) => {
-                  const cfg = TYPE_CONFIG[tx.type];
-                  const isTemp = tx.id.startsWith("tmp-");
-                  return (
-                    <tr
-                      key={tx.id}
-                      className={`hover:bg-[var(--bg3)] transition-colors ${isTemp ? "opacity-60 animate-pulse" : ""}`}
-                    >
-                      <td className="px-5 py-3.5">
-                        <span className="font-medium text-[var(--text)]">{tx.material_name}</span>
-                        {tx.counterparty && (
-                          <p className="text-xs text-[var(--muted)] mt-0.5">{tx.counterparty}</p>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <TypeBadge type={tx.type} />
-                      </td>
-                      <td
-                        className={`px-5 py-3.5 text-right font-bold tabular-nums font-mono text-sm ${cfg.qColor}`}
-                      >
-                        {cfg.sign}
-                        {formatQuantity(tx.quantity)}{" "}
-                        <span className="text-xs font-normal text-[var(--muted)]">
-                          {tx.material_unit}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-xs">
-                        {tx.source === "whatsapp" ? (
-                          <div className="flex items-center gap-1.5">
-                            <svg className="w-3 h-3 shrink-0 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                            </svg>
-                            <span className="text-[var(--muted)]">{tx.creator_name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[var(--muted)]">{tx.creator_name}</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5 text-[var(--muted)] text-xs max-w-[180px]">
-                        {tx.note ? (
-                          <span
-                            className="block truncate"
-                            title={tx.note}
-                          >
-                            {tx.note}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                  }),
-                ])}
-              </tbody>
-            </table>
-          </div>
-
-          {/* ── Mobile Cards — grouped by day ─────────────── */}
-          <div className="sm:hidden space-y-2">
-            {groupByDay(filtered).map((group) => (
-              <div key={group.date}>
-                <div className="flex items-baseline gap-2 px-1 pt-3 pb-1.5">
-                  <span className="text-xs font-semibold text-[var(--text)] uppercase tracking-wide">
+        <div className="bg-[var(--surface-1)] rounded-xl border border-[var(--border)] overflow-hidden">
+          {groupByDay(filtered).map((group) => (
+            <div key={group.date}>
+              {period !== "today" && (
+                <div className="flex items-baseline gap-2 px-3.5 py-1.5 bg-[var(--surface-2)]/60 border-b border-[var(--border)]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
                     {dayLabel(group.date)}
                   </span>
-                  <span className="text-[10px] text-[var(--muted)] tabular-nums">
-                    {fmtDate(group.date)}
-                  </span>
+                  <span className="num text-[10px] text-[var(--muted-2)]">{fmtDate(group.date)}</span>
                 </div>
-                <div className="space-y-2">
-            {group.items.map((tx) => {
-              const cfg = TYPE_CONFIG[tx.type];
-              const isTemp = tx.id.startsWith("tmp-");
-              return (
-                <div
-                  key={tx.id}
-                  className={`bg-[var(--card)] rounded-xl border border-[var(--border)] p-3.5 ${isTemp ? "opacity-60 animate-pulse" : ""}`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <TypeBadge type={tx.type} />
-                  </div>
+              )}
+              <div className="divide-y divide-[var(--border)]">
+                {group.items.map((tx) => {
+                  const cfg = TYPE_CONFIG[tx.type];
+                  const isTemp = tx.id.startsWith("tmp-");
+                  const expanded = expandedId === tx.id;
+                  return (
+                    <div key={tx.id} className={isTemp ? "opacity-60 animate-pulse" : ""}>
+                      {/* Compact row: dot · qty · name/creator · delta bars */}
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(expanded ? null : tx.id)}
+                        className="w-full flex items-center gap-2.5 min-h-[44px] px-3.5 py-1.5 text-left hover:bg-[var(--surface-2)] transition-colors"
+                        style={{ WebkitTapHighlightColor: "transparent" }}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{
+                            background: `var(--${
+                              tx.type === "income"
+                                ? "success"
+                                : tx.type === "expense"
+                                ? "danger"
+                                : tx.type === "defect"
+                                ? "warning"
+                                : "info"
+                            })`,
+                          }}
+                        />
+                        <span className={`num text-sm font-bold w-[72px] shrink-0 ${cfg.qColor}`}>
+                          {cfg.sign}
+                          {formatQuantity(tx.quantity)}
+                        </span>
+                        <span className="flex-1 min-w-0 text-sm text-[var(--text)] truncate">
+                          {tx.material_name}
+                          <span className="text-[var(--muted-2)] text-xs"> · {tx.creator_name}</span>
+                        </span>
+                        <DeltaBars deltas={deltasByMaterial.get(tx.material_id) ?? []} />
+                      </button>
 
-                  <p className="font-semibold text-[var(--text)] text-sm">
-                    {tx.material_name}
-                  </p>
-                  {tx.counterparty && (
-                    <p className="text-xs text-[var(--muted)] mt-0.5">{tx.counterparty}</p>
-                  )}
-
-                  <p
-                    className={`num text-xl font-bold mt-1 ${cfg.qColor}`}
-                  >
-                    {cfg.sign}
-                    {formatQuantity(tx.quantity)}{" "}
-                    <span className="text-sm font-normal text-[var(--muted)]">
-                      {tx.material_unit}
-                    </span>
-                  </p>
-
-                  {tx.note && (
-                    <p className="text-xs text-[var(--muted)] mt-2 line-clamp-2 leading-relaxed">
-                      {tx.note}
-                    </p>
-                  )}
-
-                  <p className="text-xs text-[var(--muted)] mt-2 pt-2 border-t border-[var(--border)] flex items-center gap-1.5">
-                    {tx.source === "whatsapp" && (
-                      <svg className="w-3 h-3 shrink-0 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                      </svg>
-                    )}
-                    {tx.creator_name}
-                  </p>
-                </div>
-              );
-            })}
-                </div>
+                      {/* Expanded detail */}
+                      {expanded && (
+                        <div className="px-3.5 pb-3 pt-0.5 pl-10 space-y-1" style={{ animation: "fadeIn 120ms var(--ease) both" }}>
+                          <p className="text-xs text-[var(--muted)]">
+                            <TypeBadge type={tx.type} />
+                            <span className="num ml-2">{fmtDate(tx.transaction_date)}</span>
+                            <span className="ml-2">{tx.material_unit}</span>
+                            {tx.source === "whatsapp" && <span className="ml-2 text-[#25D366]">WhatsApp</span>}
+                          </p>
+                          {tx.counterparty && (
+                            <p className="text-xs text-[var(--muted)]">Контрагент: <span className="text-[var(--text)]">{tx.counterparty}</span></p>
+                          )}
+                          {tx.note && (
+                            <p className="text-xs text-[var(--muted)] whitespace-pre-line">{tx.note}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        </>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* ── Pagination ──────────────────────────────────── */}
