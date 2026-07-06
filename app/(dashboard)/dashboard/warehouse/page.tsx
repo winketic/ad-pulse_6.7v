@@ -6,12 +6,19 @@ import WarehouseClient from "@/components/warehouse/WarehouseClient";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+export type WarehouseTx = {
+  date: string;
+  type: string;
+  qty: number;
+};
+
 export type WarehouseMaterial = {
   id: string;
   name: string;
   unit: string;
   balance: number;
   threshold: number | null;
+  recent: WarehouseTx[];
 };
 
 export default async function WarehousePage() {
@@ -40,8 +47,9 @@ export default async function WarehousePage() {
       .order("name"),
     supabase
       .from("material_transactions")
-      .select("material_id, type, quantity")
-      .eq("company_id", company_id),
+      .select("material_id, type, quantity, transaction_date, created_at")
+      .eq("company_id", company_id)
+      .order("created_at", { ascending: false }),
     supabase
       .from("material_thresholds")
       .select("material_id, min_quantity")
@@ -64,12 +72,27 @@ export default async function WarehousePage() {
     balMap.set(tx.material_id, prev + delta);
   }
 
+  // Last 5 movements per material (txResult is already newest-first)
+  const recentMap = new Map<string, WarehouseTx[]>();
+  for (const tx of txResult.data ?? []) {
+    const list = recentMap.get(tx.material_id) ?? [];
+    if (list.length < 5) {
+      list.push({
+        date: (tx.transaction_date as string) ?? (tx.created_at as string).split("T")[0],
+        type: tx.type,
+        qty: Number(tx.quantity),
+      });
+      recentMap.set(tx.material_id, list);
+    }
+  }
+
   const materials: WarehouseMaterial[] = (matsResult.data ?? []).map((m) => ({
     id: m.id,
     name: m.name,
     unit: m.unit,
     balance: balMap.get(m.id) ?? 0,
     threshold: thresholdMap.get(m.id) ?? null,
+    recent: recentMap.get(m.id) ?? [],
   }));
 
   return <WarehouseClient materials={materials} />;
