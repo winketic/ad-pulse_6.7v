@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   useState,
@@ -35,6 +35,7 @@ export type Plan = {
   status: PlanStatus;
   created_at: string;
   assigned_to: string | null;
+  items: { name: string; qty: number }[];
 };
 
 type MatRow = {
@@ -50,39 +51,6 @@ type FormState = {
   assigned_to: string;
 };
 
-// ─── Config ───────────────────────────────────────────────
-
-const STATUS_CFG: Record<
-  PlanStatus,
-  { label: string; bg: string; text: string; dot: string }
-> = {
-  active: {
-    label: "Активный",
-    bg: "bg-green-500/15 border border-green-500/20",
-    text: "text-green-400",
-    dot: "bg-green-400",
-  },
-  completed: {
-    label: "Завершён",
-    bg: "bg-blue-500/15 border border-blue-500/20",
-    text: "text-blue-400",
-    dot: "bg-blue-400",
-  },
-  cancelled: {
-    label: "Отменён",
-    bg: "bg-[var(--bg3)]",
-    text: "text-[var(--muted)]",
-    dot: "bg-gray-400",
-  },
-};
-
-const TABS: { key: PlanStatus | "all"; label: string }[] = [
-  { key: "all", label: "Все" },
-  { key: "active", label: "Активные" },
-  { key: "completed", label: "Завершённые" },
-  { key: "cancelled", label: "Отменённые" },
-];
-
 // ─── Helpers ──────────────────────────────────────────────
 
 function fmtDate(s: string) {
@@ -94,35 +62,105 @@ function uid() {
   return Math.random().toString(36).slice(2);
 }
 
-// ─── Status Badge ─────────────────────────────────────────
+// ─── Progress Ring — SVG circle with % inside ─────────────
 
-function StatusBadge({ status }: { status: PlanStatus }) {
-  const c = STATUS_CFG[status];
+function ProgressRing({ pct, tone }: { pct: number; tone: "accent" | "danger" | "success" }) {
+  const R = 26;
+  const C = 2 * Math.PI * R;
+  const clamped = Math.min(pct, 100);
+  const color =
+    tone === "success" ? "var(--success)" : tone === "danger" ? "var(--danger)" : "var(--accent)";
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${c.bg} ${c.text}`}
-    >
-      <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-      {c.label}
-    </span>
+    <div className="relative w-16 h-16 shrink-0" aria-label={`${pct.toFixed(0)}%`}>
+      <svg viewBox="0 0 64 64" className="w-16 h-16 -rotate-90">
+        <circle cx="32" cy="32" r={R} fill="none" stroke="var(--surface-3)" strokeWidth="6" />
+        <circle
+          cx="32"
+          cy="32"
+          r={R}
+          fill="none"
+          stroke={color}
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={C}
+          strokeDashoffset={C * (1 - clamped / 100)}
+          style={{ transition: "stroke-dashoffset 600ms var(--ease-out)" }}
+        />
+      </svg>
+      <span
+        className="num absolute inset-0 flex items-center justify-center text-sm font-bold"
+        style={{ color }}
+      >
+        {Math.min(pct, 999).toFixed(0)}%
+      </span>
+    </div>
   );
 }
 
-// ─── Progress Bar ─────────────────────────────────────────
+// ─── Plan card: ring left, meta right ─────────────────────
 
-function ProgressBar({ pct }: { pct: number }) {
-  const clamped = Math.min(pct, 100);
-  const done = pct >= 100;
+type PlanWithMeta = Plan & { pct: number; daysLeft: number };
+
+function countdownLabel(p: PlanWithMeta): { text: string; cls: string } {
+  if (p.status !== "active") {
+    return { text: p.status === "completed" ? "завершён" : "отменён", cls: "text-[var(--muted-2)]" };
+  }
+  if (p.daysLeft < 0)
+    return { text: `просрочен ${Math.abs(p.daysLeft)} дн`, cls: "text-[var(--danger)] font-bold uppercase" };
+  if (p.daysLeft === 0) return { text: "дедлайн сегодня", cls: "text-[var(--warning)] font-bold uppercase" };
+  if (p.daysLeft <= 3)
+    return { text: `осталось ${p.daysLeft} дн`, cls: "text-[var(--warning)] font-bold" };
+  return { text: `до ${fmtDate(p.end_date)} · ещё ${p.daysLeft} дн`, cls: "text-[var(--muted)]" };
+}
+
+function PlanCard({
+  plan,
+  index,
+  tone,
+  archived = false,
+}: {
+  plan: PlanWithMeta;
+  index: number;
+  tone: "accent" | "danger" | "success";
+  archived?: boolean;
+}) {
+  const cd = countdownLabel(plan);
+  const itemsLine = plan.items
+    .slice(0, 3)
+    .map((it) => `${it.name} ×${formatCompact(it.qty)}`)
+    .join(" · ");
+  const more = plan.items.length > 3 ? ` +${plan.items.length - 3}` : "";
 
   return (
-    <div className="h-2 rounded-full bg-[var(--surface-3)] overflow-hidden">
-      <div
-        className={`h-full rounded-full transition-[width] duration-500 ${
-          done ? "bg-[var(--success)]" : "bg-[var(--accent)]"
-        }`}
-        style={{ width: `${clamped}%` }}
-      />
-    </div>
+    <Link
+      href={`/dashboard/plans/${plan.id}`}
+      className={`flex items-center gap-4 bg-[var(--surface-1)] rounded-2xl border p-4 transition-colors tap-scale fade-in-up hover:bg-[var(--surface-2)] ${
+        tone === "danger" ? "border-[var(--danger)]/40" : "border-[var(--border)]"
+      } ${archived ? "opacity-70" : ""}`}
+      style={{ animationDelay: `${Math.min(index * 40, 320)}ms` }}
+    >
+      <ProgressRing pct={plan.pct} tone={plan.pct >= 100 ? "success" : tone} />
+
+      <div className="flex-1 min-w-0">
+        <h3 className="text-base font-semibold text-[var(--text)] leading-tight truncate">
+          {plan.name}
+        </h3>
+        <p className={`text-xs mt-1 ${cd.cls}`}>{cd.text}</p>
+        {itemsLine && (
+          <p className="num text-[11px] text-[var(--muted)] mt-1.5 truncate">
+            {itemsLine}
+            {more}
+          </p>
+        )}
+        <p className="num text-[11px] text-[var(--muted-2)] mt-0.5">
+          {formatCompact(plan.actual_quantity)} / {formatCompact(plan.planned_quantity)}
+        </p>
+      </div>
+
+      <svg className="w-4 h-4 text-[var(--muted-2)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    </Link>
   );
 }
 
@@ -535,24 +573,25 @@ export default function PlansClient({
   users: PlanUser[];
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<PlanStatus | "all">("all");
   const [modalOpen, setModalOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
-  const counts = useMemo(() => {
-    const c: Record<PlanStatus | "all", number> = {
-      all: plans.length,
-      active: 0,
-      completed: 0,
-      cancelled: 0,
-    };
-    for (const p of plans) c[p.status]++;
-    return c;
+  // Zones: burning/overdue on top, then active, archive collapsed
+  const zones = useMemo(() => {
+    const withMeta = plans.map((p) => {
+      const pct = p.planned_quantity > 0 ? (p.actual_quantity / p.planned_quantity) * 100 : 0;
+      const daysLeft = Math.ceil(
+        (new Date(p.end_date + "T23:59:59").getTime() - Date.now()) / (24 * 60 * 60 * 1000)
+      );
+      return { ...p, pct, daysLeft };
+    });
+    const overdue = withMeta.filter((p) => p.status === "active" && p.daysLeft < 0);
+    const active = withMeta
+      .filter((p) => p.status === "active" && p.daysLeft >= 0)
+      .sort((a, b) => a.daysLeft - b.daysLeft);
+    const archive = withMeta.filter((p) => p.status !== "active");
+    return { overdue, active, archive };
   }, [plans]);
-
-  const filtered = useMemo(
-    () => (tab === "all" ? plans : plans.filter((p) => p.status === tab)),
-    [plans, tab]
-  );
 
   const handleCreated = useCallback(
     (id: string) => {
@@ -587,119 +626,62 @@ export default function PlansClient({
         </button>
       </div>
 
-      {/* ── Status tabs ─────────────────────────────────── */}
-      {plans.length > 0 && (
-        <div className="flex items-center gap-1 bg-[var(--bg3)] rounded-xl p-1 mb-6 w-fit">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                tab === t.key
-                  ? "bg-[var(--card)] text-[var(--text)] shadow-sm"
-                  : "text-[var(--muted)] hover:text-[var(--muted)]"
-              }`}
-            >
-              {t.label}
-              {counts[t.key] > 0 && (
-                <span
-                  className={`ml-1.5 text-xs ${
-                    tab === t.key ? "text-[var(--muted)]" : "text-[var(--muted)]"
-                  }`}
-                >
-                  {counts[t.key]}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* ── Empty ───────────────────────────────────────── */}
-      {filtered.length === 0 && (
-        <EmptyState
-          onAdd={() => setModalOpen(true)}
-          isFiltered={tab !== "all" && plans.length > 0}
-        />
+      {plans.length === 0 && (
+        <EmptyState onAdd={() => setModalOpen(true)} isFiltered={false} />
       )}
 
-      {/* ── Plans list ─────────────────────────────────── */}
-      {filtered.length > 0 && (
-        <div className="space-y-2.5">
-          {filtered.map((plan, i) => {
-            const pct =
-              plan.planned_quantity > 0
-                ? (plan.actual_quantity / plan.planned_quantity) * 100
-                : 0;
+      {/* ── Zone: overdue — screams on top ──────────────── */}
+      {zones.overdue.length > 0 && (
+        <section className="mb-5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--danger)] mb-2">
+            ⛔ Горят ({zones.overdue.length})
+          </p>
+          <div className="space-y-2.5">
+            {zones.overdue.map((plan, i) => (
+              <PlanCard key={plan.id} plan={plan} index={i} tone="danger" />
+            ))}
+          </div>
+        </section>
+      )}
 
-            // Deadline urgency — only active plans can "burn"
-            const msLeft = new Date(plan.end_date + "T23:59:59").getTime() - Date.now();
-            const daysLeft = Math.ceil(msLeft / (24 * 60 * 60 * 1000));
-            const isActive = plan.status === "active";
-            const overdue = isActive && daysLeft < 0;
-            const burning = isActive && !overdue && daysLeft <= 3;
+      {/* ── Zone: active ────────────────────────────────── */}
+      {zones.active.length > 0 && (
+        <section className="mb-5">
+          {(zones.overdue.length > 0 || zones.archive.length > 0) && (
+            <p className="text-label mb-2">Активные ({zones.active.length})</p>
+          )}
+          <div className="space-y-2.5">
+            {zones.active.map((plan, i) => (
+              <PlanCard key={plan.id} plan={plan} index={i} tone="accent" />
+            ))}
+          </div>
+        </section>
+      )}
 
-            return (
-              <Link
-                key={plan.id}
-                href={`/dashboard/plans/${plan.id}`}
-                className={`block bg-[var(--surface-1)] rounded-xl border p-4 sm:p-5 transition-colors tap-scale fade-in-up hover:bg-[var(--surface-2)] ${
-                  overdue
-                    ? "border-[var(--danger)]/40"
-                    : burning
-                    ? "border-[var(--warning)]/40"
-                    : "border-[var(--border)]"
-                }`}
-                style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <StatusBadge status={plan.status} />
-                      {overdue ? (
-                        <span className="text-xs font-bold text-[var(--danger)] uppercase tracking-wide">
-                          Просрочен {Math.abs(daysLeft)} дн
-                        </span>
-                      ) : burning ? (
-                        <span className="text-xs font-bold text-[var(--warning)] uppercase tracking-wide">
-                          {daysLeft === 0 ? "Сегодня дедлайн" : `Осталось ${daysLeft} дн`}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-[var(--muted)]">
-                          {fmtDate(plan.start_date)} — {fmtDate(plan.end_date)}
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-base font-semibold text-[var(--text)] leading-tight">
-                      {plan.name}
-                    </h3>
-                  </div>
-
-                  {/* Big % — readable from across the shop floor */}
-                  <span
-                    className={`num-lg shrink-0 ${
-                      pct >= 100
-                        ? "text-[var(--success)]"
-                        : overdue
-                        ? "text-[var(--danger)]"
-                        : "text-[var(--accent)]"
-                    }`}
-                  >
-                    {Math.min(pct, 999).toFixed(0)}%
-                  </span>
-                </div>
-
-                {/* Progress */}
-                <div className="mt-3">
-                  <ProgressBar pct={pct} />
-                  <p className="num text-xs text-[var(--muted)] mt-1.5">
-                    {formatCompact(plan.actual_quantity)} / {formatCompact(plan.planned_quantity)}
-                  </p>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+      {/* ── Zone: archive — collapsed accordion ─────────── */}
+      {zones.archive.length > 0 && (
+        <section>
+          <button
+            onClick={() => setArchiveOpen((v) => !v)}
+            className="flex items-center gap-1.5 text-label hover:text-[var(--text)] transition-colors mb-2"
+          >
+            Завершённые и отменённые ({zones.archive.length})
+            <svg
+              className={`w-3.5 h-3.5 transition-transform ${archiveOpen ? "rotate-180" : ""}`}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {archiveOpen && (
+            <div className="space-y-2.5" style={{ animation: "fadeIn 150ms var(--ease) both" }}>
+              {zones.archive.map((plan, i) => (
+                <PlanCard key={plan.id} plan={plan} index={i} tone={plan.pct >= 100 ? "success" : "accent"} archived />
+              ))}
+            </div>
+          )}
+        </section>
       )}
 
       {/* ── Create Plan Modal ───────────────────────────── */}
