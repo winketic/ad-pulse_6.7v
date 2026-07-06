@@ -32,21 +32,63 @@ const NAV_ITEMS = [
   { href: "/dashboard/produce",      label: "Выпуск",     Icon: Factory,         tourId: undefined               },
 ];
 
-// Mobile bottom nav — 4 primary items only
-const MOBILE_NAV = [
+// Mobile bottom nav — 2 + FAB + 2. The center FAB is the primary
+// action (production entry), everything else is navigation.
+const MOBILE_NAV_LEFT = [
   NAV_ITEMS[0], // Обзор
   NAV_ITEMS[2], // Склад
+];
+const MOBILE_NAV_RIGHT = [
   NAV_ITEMS[3], // Движение
   NAV_ITEMS[4], // Планы
 ];
+const FAB_HREF = "/dashboard/produce";
 
 // Items surfaced in the "More" bottom sheet on mobile
 const MORE_ITEMS = [
-  NAV_ITEMS[8], // Выпуск — первый, самый важный для Олега
   NAV_ITEMS[1], // Материалы
   NAV_ITEMS[5], // Отчёты
   NAV_ITEMS[7], // Настройки
 ];
+
+// Bottom-bar tab with active pill
+function NavTab({
+  item,
+  active,
+}: {
+  item: { href: string; label: string; Icon: React.ElementType };
+  active: boolean;
+}) {
+  const { href, label, Icon } = item;
+  return (
+    <Link
+      href={href}
+      prefetch
+      className="flex-1 min-h-[64px] flex flex-col items-center justify-center gap-1 relative py-1.5 tap-scale"
+      style={{ WebkitTapHighlightColor: "transparent" }}
+    >
+      <span
+        className="flex items-center justify-center w-14 h-8 rounded-full transition-all duration-200"
+        style={{
+          background: active ? "var(--accent-15)" : "transparent",
+          color: active ? "var(--accent)" : "var(--muted)",
+          transform: active ? "translateY(-1px)" : "none",
+        }}
+      >
+        <Icon className="w-6 h-6" strokeWidth={active ? 2.2 : 1.6} />
+      </span>
+      <span
+        className="text-[11px] leading-none transition-colors duration-200"
+        style={{
+          color: active ? "var(--accent)" : "var(--muted)",
+          fontWeight: active ? 700 : 500,
+        }}
+      >
+        {label}
+      </span>
+    </Link>
+  );
+}
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -350,39 +392,42 @@ export default function DashboardShell({
         }}
       >
         <div className="flex items-stretch min-h-[72px] px-1">
-          {MOBILE_NAV.map(({ href, label, Icon }) => {
-            const active = isActive(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                prefetch
-                className="flex-1 min-h-[64px] flex flex-col items-center justify-center gap-1 relative py-1.5 tap-scale"
-                style={{ WebkitTapHighlightColor: "transparent" }}
-              >
-                {/* Active pill behind the icon — unmistakable at a glance */}
-                <span
-                  className="flex items-center justify-center w-14 h-8 rounded-full transition-all duration-200"
-                  style={{
-                    background: active ? "var(--accent-15)" : "transparent",
-                    color: active ? "var(--accent)" : "var(--muted)",
-                    transform: active ? "translateY(-1px)" : "none",
-                  }}
-                >
-                  <Icon className="w-6 h-6" strokeWidth={active ? 2.2 : 1.6} />
-                </span>
-                <span
-                  className="text-[11px] leading-none transition-colors duration-200"
-                  style={{
-                    color: active ? "var(--accent)" : "var(--muted)",
-                    fontWeight: active ? 700 : 500,
-                  }}
-                >
-                  {label}
-                </span>
-              </Link>
-            );
-          })}
+          {MOBILE_NAV_LEFT.map((item) => (
+            <NavTab key={item.href} item={item} active={isActive(item.href)} />
+          ))}
+
+          {/* Center FAB — primary action: production entry */}
+          <div className="flex-1 relative flex justify-center">
+            <Link
+              href={FAB_HREF}
+              prefetch
+              aria-label="Записать выпуск"
+              className="absolute -top-5 w-16 h-16 rounded-full flex items-center justify-center tap-scale"
+              style={{
+                background: "var(--accent)",
+                color: "var(--accent-text)",
+                boxShadow: isActive(FAB_HREF)
+                  ? "0 0 0 3px var(--bg), 0 0 0 5px var(--accent), 0 8px 24px color-mix(in srgb, var(--accent) 35%, transparent)"
+                  : "0 0 0 4px var(--bg), 0 8px 24px color-mix(in srgb, var(--accent) 35%, transparent)",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <Factory className="w-7 h-7" strokeWidth={2.2} />
+            </Link>
+            <span
+              className="self-end pb-2 text-[11px] leading-none"
+              style={{
+                color: isActive(FAB_HREF) ? "var(--accent)" : "var(--muted)",
+                fontWeight: isActive(FAB_HREF) ? 700 : 500,
+              }}
+            >
+              Выпуск
+            </span>
+          </div>
+
+          {MOBILE_NAV_RIGHT.map((item) => (
+            <NavTab key={item.href} item={item} active={isActive(item.href)} />
+          ))}
         </div>
       </nav>
     </div>
