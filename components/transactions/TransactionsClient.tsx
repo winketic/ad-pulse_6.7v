@@ -232,15 +232,15 @@ const PERIODS: { key: Period; label: string }[] = [
 // current page of transactions loaded.
 
 function DeltaBars({ deltas }: { deltas: number[] }) {
-  if (deltas.length < 2) return <span className="w-11 shrink-0" />;
+  if (deltas.length < 2) return <span className="w-12 shrink-0" />;
   const max = Math.max(...deltas.map(Math.abs), 1);
   return (
-    <span className="flex items-end gap-[2px] h-4 w-11 shrink-0 justify-end" aria-hidden>
+    <span className="flex items-end gap-[3px] h-4 w-12 shrink-0 justify-end" aria-hidden>
       {deltas.map((d, i) => (
         <span
           key={i}
-          className={`w-[3px] rounded-[1px] ${d >= 0 ? "bg-[var(--success)]/70" : "bg-[var(--danger)]/70"}`}
-          style={{ height: `${Math.max(2, (Math.abs(d) / max) * 16)}px` }}
+          className={`w-1 rounded-[1px] ${d >= 0 ? "bg-[var(--success)]" : "bg-[var(--danger)]"}`}
+          style={{ height: `${Math.max(3, (Math.abs(d) / max) * 16)}px` }}
         />
       ))}
     </span>
