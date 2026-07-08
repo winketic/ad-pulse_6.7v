@@ -46,6 +46,25 @@ export default async function PlansPage() {
       .order("full_name"),
   ]);
 
+  // Plan line items for the card summary ("2ПБ-16 ×120 · ...")
+  const planIds = (plansResult.data ?? []).map((p) => p.id);
+  const matNameById = new Map((matsResult.data ?? []).map((m) => [m.id, m.name]));
+  const itemsByPlan = new Map<string, { name: string; qty: number }[]>();
+  if (planIds.length > 0) {
+    const { data: pmRows } = await supabase
+      .from("plan_materials")
+      .select("plan_id, material_id, planned_quantity")
+      .in("plan_id", planIds);
+    for (const row of pmRows ?? []) {
+      const list = itemsByPlan.get(row.plan_id) ?? [];
+      list.push({
+        name: matNameById.get(row.material_id) ?? "—",
+        qty: Number(row.planned_quantity),
+      });
+      itemsByPlan.set(row.plan_id, list);
+    }
+  }
+
   const plans: Plan[] = (plansResult.data ?? []).map((p) => ({
     id: p.id,
     name: p.name,
@@ -56,6 +75,7 @@ export default async function PlansPage() {
     status: p.status as PlanStatus,
     created_at: p.created_at,
     assigned_to: p.assigned_to,
+    items: itemsByPlan.get(p.id) ?? [],
   }));
 
   const materials: PlanMaterial[] = (matsResult.data ?? []).map((m) => ({

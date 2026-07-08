@@ -275,7 +275,7 @@ function MaterialForm({
         <button
           type="submit"
           disabled={isPending || !form.name.trim()}
-          className="flex-1 py-2.5 px-4 rounded-lg bg-[#00f5c4] hover:bg-[#163d24] text-sm font-semibold text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px]"
+          className="dp-btn-primary flex-1 rounded-lg"
         >
           {isPending && (
             <svg
@@ -333,7 +333,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       </p>
       <button
         onClick={onAdd}
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm min-h-[48px]"
+        className="dp-btn-primary rounded-xl"
       >
         <svg
           className="w-4 h-4"
@@ -626,7 +626,7 @@ export default function MaterialsClient({
         </div>
         <button
           onClick={openCreate}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm self-start sm:self-auto min-h-[48px]"
+          className="dp-btn-primary rounded-xl self-start sm:self-auto"
         >
           <svg
             className="w-4 h-4"

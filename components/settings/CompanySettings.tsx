@@ -75,7 +75,7 @@ export default function CompanySettings({
               <button
                 onClick={handleSave}
                 disabled={isPending || !value.trim()}
-                className="flex-1 min-h-[48px] px-4 py-2 rounded-lg bg-[#00f5c4] text-white text-sm font-medium hover:bg-[#00f5c4]/90 disabled:opacity-50 transition-colors"
+                className="dp-btn-primary flex-1 rounded-lg"
               >
                 {isPending ? "Сохранение…" : "Сохранить"}
               </button>

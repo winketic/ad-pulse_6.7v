@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   useState,
@@ -8,13 +8,68 @@ import {
   useEffect,
 } from "react";
 import { useRouter } from "next/navigation";
-import BalanceCard, { type BalanceData } from "@/components/BalanceCard";
+import { type BalanceData } from "@/components/BalanceCard";
 import {
   createTransaction,
   createProductionTransaction,
   type TxType,
 } from "@/app/(dashboard)/dashboard/transactions/actions";
 import { formatQuantity } from "@/lib/utils/format";
+import { isNetworkError, savePending, clearPending } from "@/lib/hooks/useOfflineRetry";
+import { useToast } from "@/components/ui/Toast";
+import { OfflineRetryBanner } from "@/components/ui/OfflineRetryBanner";
+
+type PendingTx = { form: FormState; type: "regular" | "production" };
+
+const TX_PENDING_KEY = "tx_form";
+
+// Builds the final payload for createTransaction from raw form state.
+// Applies the kg→m conversion when the material has kg_per_meter set:
+// the user typed kilograms, we store meters and keep the entered kg in
+// the note for traceability. Single source of truth — used by both the
+// submit path and the offline-retry path.
+function buildTxInput(
+  form: FormState,
+  materials: Material[]
+): { type: TxType; material_id: string; quantity: number; note: string | null; counterparty: string | null; transaction_date: string } {
+  const noteBase =
+    form.type === "defect"
+      ? form.defect_reason.trim() +
+        (form.note.trim() ? `\n\n${form.note.trim()}` : "")
+      : form.note.trim() || null;
+
+  const mat = materials.find((m) => m.id === form.material_id);
+  const kgPerMeter =
+    mat?.kg_per_meter != null && mat.kg_per_meter > 0 ? mat.kg_per_meter : null;
+
+  const rawQty = parseFloat(form.quantity);
+  const quantity = kgPerMeter
+    ? Math.round((rawQty / kgPerMeter) * 10000) / 10000
+    : rawQty;
+  const kgNote = kgPerMeter ? `(введено: ${rawQty} кг)` : null;
+  const note = kgNote ? (noteBase ? `${noteBase}\n${kgNote}` : kgNote) : noteBase;
+
+  return {
+    type: form.type as TxType,
+    material_id: form.material_id,
+    quantity,
+    note,
+    counterparty: form.counterparty.trim() || null,
+    transaction_date: form.date,
+  };
+}
+
+async function retryTx(payload: PendingTx, materials: Material[]) {
+  if (payload.type === "production") {
+    await createProductionTransaction({
+      material_id: payload.form.material_id,
+      quantity: parseFloat(payload.form.quantity),
+      transaction_date: payload.form.date,
+    });
+  } else {
+    await createTransaction(buildTxInput(payload.form, materials));
+  }
+}
 
 export type { BalanceData };
 
@@ -44,16 +99,10 @@ export type Material = {
   unit: string;
   norm_concrete?: number | null;
   norm_rebar?: number | null;
+  rebar_material_name?: string | null;
   // kg→m conversion: when set, the user enters kg in the form and the
   // transaction is stored in meters (quantity = kg / kg_per_meter)
   kg_per_meter?: number | null;
-};
-
-type Filters = {
-  type: TxType | "all";
-  material_id: string;
-  dateFrom: string;
-  dateTo: string;
 };
 
 type FormState = {
@@ -80,38 +129,38 @@ const TYPE_CONFIG: Record<
 > = {
   income: {
     label: "Приход",
-    bg: "bg-green-100",
-    text: "text-green-700",
+    bg: "bg-[var(--success-bg)]",
+    text: "text-[var(--success)]",
     sign: "+",
-    qColor: "text-green-700",
+    qColor: "text-[var(--success)]",
   },
   expense: {
     label: "Расход",
-    bg: "bg-red-100",
-    text: "text-red-700",
+    bg: "bg-[var(--danger-bg)]",
+    text: "text-[var(--danger)]",
     sign: "−",
-    qColor: "text-red-700",
+    qColor: "text-[var(--danger)]",
   },
   return: {
     label: "Возврат",
-    bg: "bg-blue-100",
-    text: "text-blue-700",
+    bg: "bg-[var(--info-bg)]",
+    text: "text-[var(--info)]",
     sign: "+",
-    qColor: "text-blue-700",
+    qColor: "text-[var(--info)]",
   },
   defect: {
     label: "Брак",
-    bg: "bg-amber-100",
-    text: "text-amber-700",
+    bg: "bg-[var(--warning-bg)]",
+    text: "text-[var(--warning)]",
     sign: "−",
-    qColor: "text-amber-700",
+    qColor: "text-[var(--warning)]",
   },
   production: {
     label: "Производство",
-    bg: "bg-blue-500/20",
-    text: "text-blue-400",
+    bg: "bg-[var(--info-bg)]",
+    text: "text-[var(--info)]",
     sign: "+",
-    qColor: "text-blue-400",
+    qColor: "text-[var(--info)]",
   },
 };
 
@@ -120,13 +169,6 @@ const TX_TYPES = Object.keys(TYPE_CONFIG) as UiTxType[];
 // Real, persisted DB types only — for the filter bar and any rendering keyed
 // off an actual saved Transaction.type (which is never "production").
 const DB_TX_TYPES = TX_TYPES.filter((t) => t !== "production") as TxType[];
-
-const DEFAULT_FILTERS: Filters = {
-  type: "all",
-  material_id: "all",
-  dateFrom: "",
-  dateTo: "",
-};
 
 const todayStr = () => new Date().toISOString().split("T")[0];
 
@@ -137,6 +179,36 @@ function fmtDate(s: string) {
   return `${d}.${m}.${y}`;
 }
 
+const isoDay = (offset = 0) =>
+  new Date(Date.now() + offset * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+// "Сегодня" / "Вчера" / "24 июня" — human day headers for grouped lists
+function dayLabel(dateStr: string): string {
+  if (dateStr === isoDay(0)) return "Сегодня";
+  if (dateStr === isoDay(-1)) return "Вчера";
+  const d = new Date(dateStr + "T00:00:00");
+  const now = new Date();
+  return d.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}),
+  });
+}
+
+// Group transactions by transaction_date preserving incoming order
+function groupByDay(txs: Transaction[]): { date: string; items: Transaction[] }[] {
+  const groups: { date: string; items: Transaction[] }[] = [];
+  let current: { date: string; items: Transaction[] } | null = null;
+  for (const tx of txs) {
+    if (!current || current.date !== tx.transaction_date) {
+      current = { date: tx.transaction_date, items: [] };
+      groups.push(current);
+    }
+    current.items.push(tx);
+  }
+  return groups;
+}
+
 function pluralRecords(n: number) {
   if (n % 10 === 1 && n % 100 !== 11) return "запись";
   if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100))
@@ -144,30 +216,34 @@ function pluralRecords(n: number) {
   return "записей";
 }
 
-function computeBalances(txs: Transaction[]): BalanceData[] {
-  const map = new Map<string, BalanceData>();
-  for (const tx of txs) {
-    if (!map.has(tx.material_id)) {
-      map.set(tx.material_id, {
-        material_id: tx.material_id,
-        name: tx.material_name,
-        unit: tx.material_unit,
-        balance: 0,
-        totalIn: 0,
-        totalOut: 0,
-      });
-    }
-    const b = map.get(tx.material_id)!;
-    if (tx.type === "income" || tx.type === "return") {
-      b.totalIn += tx.quantity;
-      b.balance += tx.quantity;
-    } else {
-      b.totalOut += tx.quantity;
-      b.balance -= tx.quantity;
-    }
-  }
-  return Array.from(map.values()).sort((a, b) =>
-    a.name.localeCompare(b.name, "ru")
+// ─── Period segments ──────────────────────────────────────
+
+type Period = "today" | "week" | "all";
+
+const PERIODS: { key: Period; label: string }[] = [
+  { key: "today", label: "Сегодня" },
+  { key: "week", label: "Неделя" },
+  { key: "all", label: "Всё" },
+];
+
+// ─── Delta bars — recent movement trend for a material ────
+// Bar per movement (oldest→newest), height ∝ |qty|, color = direction.
+// Deliberately shows deltas (not absolute balance): honest with only the
+// current page of transactions loaded.
+
+function DeltaBars({ deltas }: { deltas: number[] }) {
+  if (deltas.length < 2) return <span className="w-12 shrink-0" />;
+  const max = Math.max(...deltas.map(Math.abs), 1);
+  return (
+    <span className="flex items-end gap-[3px] h-4 w-12 shrink-0 justify-end" aria-hidden>
+      {deltas.map((d, i) => (
+        <span
+          key={i}
+          className={`w-1 rounded-[1px] ${d >= 0 ? "bg-[var(--success)]" : "bg-[var(--danger)]"}`}
+          style={{ height: `${Math.max(3, (Math.abs(d) / max) * 16)}px` }}
+        />
+      ))}
+    </span>
   );
 }
 
@@ -302,7 +378,8 @@ function AddTransactionForm({
 
   const selectedMaterial = materials.find((m) => m.id === form.material_id);
   const concreteMaterial = materials.find((m) => m.name === "Бетон");
-  const rebarMaterial = materials.find((m) => m.name === "Арматура");
+  const rebarMaterialName = selectedMaterial?.rebar_material_name ?? "Арматура";
+  const rebarMaterial = materials.find((m) => m.name === rebarMaterialName);
 
   // kg→m conversion: user enters kg, we store meters (regular types only)
   const kgPerMeter =
@@ -450,7 +527,7 @@ function AddTransactionForm({
         {quantityError ? (
           <p className="mt-1 text-xs text-red-600">{quantityError}</p>
         ) : kgPerMeter && qtyNum > 0 ? (
-          <p className="mt-1 text-xs font-medium text-[#00f5c4] tabular-nums">
+          <p className="mt-1 text-xs font-medium text-[var(--accent)] tabular-nums">
             = {(qtyNum / kgPerMeter).toFixed(2)} м
           </p>
         ) : (
@@ -464,7 +541,7 @@ function AddTransactionForm({
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-sm text-[var(--text)]">
-              Спишется: бетон {concreteAmount.toFixed(2)} {concreteMaterial?.unit ?? "м³"}, арматура {rebarAmount.toFixed(2)} {rebarMaterial?.unit ?? "кг"}
+              Спишется: бетон {concreteAmount.toFixed(2)} {concreteMaterial?.unit ?? "м³"}, {rebarMaterialName.toLowerCase()} {rebarAmount.toFixed(2)} {rebarMaterial?.unit ?? "кг"}
             </p>
           </div>
         )}
@@ -556,7 +633,7 @@ function AddTransactionForm({
         <button
           type="submit"
           disabled={isPending || !canSubmit}
-          className="flex-1 py-2.5 px-4 rounded-lg bg-[#00f5c4] hover:bg-[#00ddb3] text-[#0a0a0a] text-sm font-semibold text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-2 min-h-[48px]"
+          className="dp-btn-primary flex-1 rounded-lg"
         >
           {isPending && (
             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -568,107 +645,6 @@ function AddTransactionForm({
         </button>
       </div>
     </form>
-  );
-}
-
-// ─── Filter Bar ───────────────────────────────────────────
-
-function FilterBar({
-  filters,
-  onChange,
-  materials,
-  hasActive,
-  onClear,
-}: {
-  filters: Filters;
-  onChange: (p: Partial<Filters>) => void;
-  materials: Material[];
-  hasActive: boolean;
-  onClear: () => void;
-}) {
-  const selectCls =
-    "w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
-  const labelCls = "block text-xs font-medium text-[var(--muted)] mb-1.5";
-
-  return (
-    <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4 mb-5">
-      <div className="flex flex-wrap gap-3 items-end">
-        {/* Type */}
-        <div className="flex-1 min-w-[120px]">
-          <label className={labelCls}>Тип операции</label>
-          <select
-            value={filters.type}
-            onChange={(e) =>
-              onChange({ type: e.target.value as Filters["type"] })
-            }
-            className={selectCls}
-          >
-            <option value="all">Все типы</option>
-            {DB_TX_TYPES.map((k) => (
-              <option key={k} value={k}>
-                {TYPE_CONFIG[k].label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Material */}
-        <div className="flex-1 min-w-[150px]">
-          <label className={labelCls}>Материал</label>
-          <select
-            value={filters.material_id}
-            onChange={(e) => onChange({ material_id: e.target.value })}
-            className={selectCls}
-          >
-            <option value="all">Все материалы</option>
-            {materials.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Dates — paired together so they stack on mobile instead of
-            cramming side by side like Type/Material do. */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full sm:w-auto sm:flex-1 sm:min-w-[270px]">
-          <div>
-            <label className={labelCls}>Дата с</label>
-            <input
-              type="date"
-              value={filters.dateFrom}
-              max={filters.dateTo || todayStr()}
-              onChange={(e) => onChange({ dateFrom: e.target.value })}
-              className="field-input"
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Дата по</label>
-            <input
-              type="date"
-              value={filters.dateTo}
-              min={filters.dateFrom}
-              max={todayStr()}
-              onChange={(e) => onChange({ dateTo: e.target.value })}
-              className="field-input"
-            />
-          </div>
-        </div>
-
-        {/* Clear */}
-        {hasActive && (
-          <button
-            onClick={onClear}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-[var(--muted)] hover:bg-gray-100 border border-gray-300 transition-colors whitespace-nowrap"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            Сбросить
-          </button>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -712,7 +688,7 @@ function EmptyState({
       </p>
       <button
         onClick={onAdd}
-        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#00ddb3] text-[#0a0a0a] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm min-h-[48px]"
+        className="dp-btn-primary rounded-xl"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -776,10 +752,10 @@ function Pagination({
 export default function TransactionsClient({
   transactions,
   materials,
-  initialBalances,
   page,
   totalPages,
   totalCount,
+  initialMaterialId,
 }: {
   transactions: Transaction[];
   materials: Material[];
@@ -787,48 +763,62 @@ export default function TransactionsClient({
   page?: number;
   totalPages?: number;
   totalCount?: number;
+  initialMaterialId?: string;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [modalOpen, setModalOpen] = useState(false);
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [period, setPeriod] = useState<Period>("week");
+  const [typeFilter, setTypeFilter] = useState<TxType | "all">("all");
+  const [materialFilter, setMaterialFilter] = useState<string>(initialMaterialId ?? "all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
 
-  // Use server-computed balances (full dataset) if provided, otherwise
-  // fall back to client-side computation over current page's transactions.
-  const balances = useMemo(
-    () => initialBalances ?? computeBalances(transactions),
-    [initialBalances, transactions]
-  );
+  // Optimistic rows shown instantly while the server call is in flight.
+  // Cleared as soon as fresh server data arrives via router.refresh().
+  const [optimistic, setOptimistic] = useState<Transaction[]>([]);
+  useEffect(() => {
+    setOptimistic([]);
+  }, [transactions]);
+
+  // Optimistic rows merged on top, re-sorted so a backdated entry lands in
+  // its own day group instead of floating above "Сегодня".
+  const displayTxs = useMemo(() => {
+    if (optimistic.length === 0) return transactions;
+    return [...optimistic, ...transactions].sort((a, b) =>
+      b.transaction_date.localeCompare(a.transaction_date)
+    );
+  }, [optimistic, transactions]);
+
+  // Delta history per material (oldest→newest within loaded page) for bars
+  const deltasByMaterial = useMemo(() => {
+    const map = new Map<string, number[]>();
+    for (let i = displayTxs.length - 1; i >= 0; i--) {
+      const tx = displayTxs[i];
+      const delta =
+        tx.type === "income" || tx.type === "return" ? tx.quantity : -tx.quantity;
+      const list = map.get(tx.material_id) ?? [];
+      list.push(delta);
+      map.set(tx.material_id, list);
+    }
+    map.forEach((v, k) => map.set(k, v.slice(-8)));
+    return map;
+  }, [displayTxs]);
 
   const filtered = useMemo(() => {
-    return transactions.filter((tx) => {
-      if (filters.type !== "all" && tx.type !== filters.type) return false;
-      if (
-        filters.material_id !== "all" &&
-        tx.material_id !== filters.material_id
-      )
-        return false;
-      if (filters.dateFrom && tx.transaction_date < filters.dateFrom)
-        return false;
-      if (filters.dateTo && tx.transaction_date > filters.dateTo) return false;
+    return displayTxs.filter((tx) => {
+      if (period === "today" && tx.transaction_date !== isoDay(0)) return false;
+      if (period === "week" && tx.transaction_date < isoDay(-6)) return false;
+      if (typeFilter !== "all" && tx.type !== typeFilter) return false;
+      if (materialFilter !== "all" && tx.material_id !== materialFilter) return false;
       return true;
     });
-  }, [transactions, filters]);
+  }, [displayTxs, period, typeFilter, materialFilter]);
 
-  const hasFilters = useMemo(
-    () =>
-      filters.type !== "all" ||
-      filters.material_id !== "all" ||
-      !!filters.dateFrom ||
-      !!filters.dateTo,
-    [filters]
-  );
-
-  const updateFilters = useCallback(
-    (p: Partial<Filters>) => setFilters((prev) => ({ ...prev, ...p })),
-    []
-  );
+  const hasFilters = typeFilter !== "all" || materialFilter !== "all" || period !== "all";
+  const filterMaterialName =
+    materialFilter !== "all" ? materials.find((m) => m.id === materialFilter)?.name : null;
 
   const closeModal = useCallback(() => {
     setModalOpen(false);
@@ -838,80 +828,108 @@ export default function TransactionsClient({
   const handleAdd = useCallback(
     (form: FormState) => {
       setFormError("");
-      startTransition(async () => {
-        try {
-          if (form.type === "production") {
+
+      // Production decomposes into several rows server-side — keep the
+      // modal open until the RPC confirms (no meaningful optimistic shape).
+      if (form.type === "production") {
+        startTransition(async () => {
+          try {
             await createProductionTransaction({
               material_id: form.material_id,
               quantity: parseFloat(form.quantity),
               transaction_date: form.date,
             });
+            clearPending(TX_PENDING_KEY);
             router.refresh();
             closeModal();
-            return;
+          } catch (e) {
+            if (isNetworkError(e)) {
+              const mat = materials.find((m) => m.id === form.material_id);
+              const label = `Производство — ${mat?.name ?? "материал"}, ${form.quantity} ${mat?.unit ?? ""}`;
+              savePending<PendingTx>(TX_PENDING_KEY, { form, type: "production" }, label);
+              toast("Нет связи — данные сохранены локально", "info");
+              closeModal();
+            } else {
+              setFormError(e instanceof Error ? e.message : "Ошибка добавления записи");
+            }
           }
+        });
+        return;
+      }
 
-          const noteBase =
-            form.type === "defect"
-              ? form.defect_reason.trim() +
-                (form.note.trim() ? `\n\n${form.note.trim()}` : "")
-              : form.note.trim() || null;
+      // Regular types: optimistic — instant row, modal closes immediately.
+      // buildTxInput applies the kg→m conversion when the material has
+      // kg_per_meter, so both the optimistic row and the server payload
+      // carry the converted (meters) quantity.
+      const input = buildTxInput(form, materials);
+      const mat = materials.find((m) => m.id === form.material_id);
+      const hasConversion = mat?.kg_per_meter != null && mat.kg_per_meter > 0;
+      const temp: Transaction = {
+        id: `tmp-${Date.now()}`,
+        type: input.type,
+        quantity: input.quantity,
+        note: input.note,
+        counterparty: input.counterparty,
+        transaction_date: input.transaction_date,
+        created_at: new Date().toISOString(),
+        material_id: input.material_id,
+        created_by: null,
+        material_name: mat?.name ?? "—",
+        material_unit: mat?.unit ?? "",
+        creator_name: "Вы",
+        source: "manual",
+      };
+      setOptimistic((prev) => [temp, ...prev]);
+      closeModal();
+      toast("Запись добавлена");
 
-          // kg→m conversion: material with kg_per_meter takes kg input
-          // and stores meters; the entered kg goes into the note
-          const mat = materials.find((m) => m.id === form.material_id);
-          const kgPerMeter =
-            mat?.kg_per_meter != null && mat.kg_per_meter > 0
-              ? mat.kg_per_meter
-              : null;
-          const rawQty = parseFloat(form.quantity);
-          const quantity = kgPerMeter
-            ? Math.round((rawQty / kgPerMeter) * 10000) / 10000
-            : rawQty;
-          const kgNote = kgPerMeter ? `(введено: ${rawQty} кг)` : null;
-          const noteToSave = kgNote
-            ? noteBase
-              ? `${noteBase}\n${kgNote}`
-              : kgNote
-            : noteBase;
-
-          await createTransaction({
-            type: form.type as TxType,
-            material_id: form.material_id,
-            quantity,
-            note: noteToSave,
-            counterparty: form.counterparty.trim() || null,
-            transaction_date: form.date,
-          });
+      startTransition(async () => {
+        try {
+          await createTransaction(input);
+          clearPending(TX_PENDING_KEY);
           router.refresh();
-          closeModal();
         } catch (e) {
-          setFormError(
-            e instanceof Error ? e.message : "Ошибка добавления записи"
-          );
+          setOptimistic((prev) => prev.filter((t) => t.id !== temp.id));
+          if (isNetworkError(e)) {
+            const enteredLabel = hasConversion
+              ? `${form.quantity} кг`
+              : `${form.quantity} ${mat?.unit ?? ""}`;
+            const label = `${TYPE_CONFIG[input.type].label} — ${mat?.name ?? "материал"}, ${enteredLabel}`;
+            savePending<PendingTx>(TX_PENDING_KEY, { form, type: "regular" }, label);
+            toast("Нет связи — данные сохранены локально", "info");
+          } else {
+            toast(
+              e instanceof Error ? `Не сохранено: ${e.message}` : "Ошибка добавления записи",
+              "error"
+            );
+          }
         }
       });
     },
-    [router, closeModal, materials]
+    [router, closeModal, toast, materials]
   );
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <OfflineRetryBanner<PendingTx>
+        pendingKey={TX_PENDING_KEY}
+        onRetry={(payload) => retryTx(payload, materials)}
+      />
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">
+          <h1 className="text-display text-[var(--text)]">
             Движение материалов
           </h1>
-          <p className="text-sm text-[var(--muted)] mt-0.5">
+          <p className="text-label mt-1.5">
             {(totalCount ?? transactions.length) === 0
               ? "Записей нет"
-              : `${totalCount ?? transactions.length} ${pluralRecords(totalCount ?? transactions.length)} всего`}
+              : `${totalCount ?? transactions.length} ${pluralRecords(totalCount ?? transactions.length)}`}
           </p>
         </div>
         <button
           onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#00f5c4] hover:bg-[#00ddb3] text-[#0a0a0a] text-white text-sm font-semibold rounded-xl transition-colors shadow-sm self-start sm:self-auto min-h-[48px]"
+          className="dp-btn-primary rounded-xl self-start sm:self-auto"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -921,26 +939,63 @@ export default function TransactionsClient({
       </div>
 
       {/* ── Balance Cards ───────────────────────────────── */}
-      {balances.length > 0 && <BalanceCard balances={balances} />}
-
-      {/* ── Filters ─────────────────────────────────────── */}
+      {/* ── Period segments ─────────────────────────────── */}
       {transactions.length > 0 && (
-        <FilterBar
-          filters={filters}
-          onChange={updateFilters}
-          materials={materials}
-          hasActive={hasFilters}
-          onClear={() => setFilters(DEFAULT_FILTERS)}
-        />
-      )}
+        <>
+          <div className="flex items-center bg-[var(--surface-2)] rounded-xl p-1 mb-2.5 w-fit">
+            {PERIODS.map((p) => (
+              <button
+                key={p.key}
+                onClick={() => setPeriod(p.key)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors tap-scale ${
+                  period === p.key
+                    ? "bg-[var(--surface-3)] text-[var(--text)] shadow-sm"
+                    : "text-[var(--muted)]"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
 
-      {/* ── Count ───────────────────────────────────────── */}
-      {hasFilters && filtered.length !== transactions.length && (
-        <p className="text-sm text-[var(--muted)] mb-3">
-          Показано{" "}
-          <span className="font-semibold text-gray-800">{filtered.length}</span>{" "}
-          из {transactions.length}
-        </p>
+          {/* Type chips + material badge */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <button
+              onClick={() => setTypeFilter("all")}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap tap-scale transition-colors ${
+                typeFilter === "all"
+                  ? "bg-[var(--text)] text-[var(--bg)]"
+                  : "bg-[var(--surface-2)] text-[var(--muted)]"
+              }`}
+            >
+              Все
+            </button>
+            {DB_TX_TYPES.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(typeFilter === t ? "all" : t)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap tap-scale transition-colors ${
+                  typeFilter === t
+                    ? `${TYPE_CONFIG[t].bg} ${TYPE_CONFIG[t].text} ring-1 ring-current`
+                    : "bg-[var(--surface-2)] text-[var(--muted)]"
+                }`}
+              >
+                {TYPE_CONFIG[t].label}
+              </button>
+            ))}
+            {filterMaterialName && (
+              <button
+                onClick={() => setMaterialFilter("all")}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-[var(--accent-15)] text-[var(--accent)] tap-scale"
+              >
+                {filterMaterialName}
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </>
       )}
 
       {/* ── Empty state ─────────────────────────────────── */}
@@ -951,150 +1006,91 @@ export default function TransactionsClient({
         />
       )}
 
-      {/* ── Desktop Table ───────────────────────────────── */}
+      {/* ── Compact list — one pattern for all widths ───── */}
       {filtered.length > 0 && (
-        <>
-          <div
-            className={`hidden sm:block bg-[var(--card)] rounded-xl border border-[var(--border)] overflow-hidden transition-opacity ${
-              isPending ? "opacity-60 pointer-events-none" : ""
-            }`}
-          >
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-[var(--bg3)] border-b border-[var(--border)]">
-                  {[
-                    ["Дата", "w-24"],
-                    ["Материал", ""],
-                    ["Тип", "w-24"],
-                    ["Количество", "w-36 text-right"],
-                    ["Кто добавил", "w-36"],
-                    ["Примечание", ""],
-                  ].map(([label, cls]) => (
-                    <th
-                      key={label as string}
-                      className={`px-5 py-3.5 text-left text-xs font-semibold text-[var(--muted)] uppercase tracking-wide ${cls}`}
-                    >
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border)]">
-                {filtered.map((tx) => {
+        <div className="bg-[var(--surface-1)] rounded-xl border border-[var(--border)] overflow-hidden">
+          {groupByDay(filtered).map((group) => (
+            <div key={group.date}>
+              {period !== "today" && (
+                <div className="flex items-baseline gap-2 px-3.5 py-1.5 bg-[var(--surface-2)]/60 border-b border-[var(--border)]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+                    {dayLabel(group.date)}
+                  </span>
+                  <span className="num text-[10px] text-[var(--muted-2)]">{fmtDate(group.date)}</span>
+                </div>
+              )}
+              <div className="divide-y divide-[var(--border)]">
+                {group.items.map((tx) => {
                   const cfg = TYPE_CONFIG[tx.type];
+                  const isTemp = tx.id.startsWith("tmp-");
+                  const expanded = expandedId === tx.id;
                   return (
-                    <tr
-                      key={tx.id}
-                      className="hover:bg-[var(--bg3)] transition-colors"
-                    >
-                      <td className="px-5 py-3.5 text-[var(--muted)] text-xs tabular-nums whitespace-nowrap">
-                        {fmtDate(tx.transaction_date)}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="font-medium text-[var(--text)]">{tx.material_name}</span>
-                        {tx.counterparty && (
-                          <p className="text-xs text-[var(--muted)] mt-0.5">{tx.counterparty}</p>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <TypeBadge type={tx.type} />
-                      </td>
-                      <td
-                        className={`px-5 py-3.5 text-right font-bold tabular-nums font-mono text-sm ${cfg.qColor}`}
+                    <div key={tx.id} className={isTemp ? "opacity-60 animate-pulse" : ""}>
+                      {/* Compact row: dot · qty · name/creator · delta bars */}
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(expanded ? null : tx.id)}
+                        className="w-full flex items-center gap-2.5 min-h-[44px] px-3.5 py-1.5 text-left hover:bg-[var(--surface-2)] transition-colors"
+                        style={{ WebkitTapHighlightColor: "transparent" }}
                       >
-                        {cfg.sign}
-                        {formatQuantity(tx.quantity)}{" "}
-                        <span className="text-xs font-normal text-[var(--muted)]">
-                          {tx.material_unit}
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{
+                            background: `var(--${
+                              tx.type === "income"
+                                ? "success"
+                                : tx.type === "expense"
+                                ? "danger"
+                                : tx.type === "defect"
+                                ? "warning"
+                                : "info"
+                            })`,
+                          }}
+                        />
+                        <span className={`num text-sm font-bold w-[72px] shrink-0 ${cfg.qColor}`}>
+                          {cfg.sign}
+                          {formatQuantity(tx.quantity)}
                         </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-xs">
-                        {tx.source === "whatsapp" ? (
-                          <div className="flex items-center gap-1.5">
-                            <svg className="w-3 h-3 shrink-0 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                            </svg>
-                            <span className="text-[var(--muted)]">{tx.creator_name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[var(--muted)]">{tx.creator_name}</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5 text-[var(--muted)] text-xs max-w-[180px]">
-                        {tx.note ? (
-                          <span
-                            className="block truncate"
-                            title={tx.note}
-                          >
-                            {tx.note}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300">—</span>
-                        )}
-                      </td>
-                    </tr>
+                        <span className="flex-1 min-w-0 text-sm text-[var(--text)] truncate">
+                          {tx.material_name}
+                          <span className="text-[var(--muted-2)] text-xs"> · {tx.creator_name}</span>
+                        </span>
+                        <span className="num text-[10px] text-[var(--muted-2)] shrink-0">
+                          {new Date(tx.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <DeltaBars deltas={deltasByMaterial.get(tx.material_id) ?? []} />
+                      </button>
+
+                      {/* Expanded detail */}
+                      {expanded && (
+                        <div className="px-3.5 pb-3 pt-0.5 pl-10 space-y-1" style={{ animation: "fadeIn 120ms var(--ease) both" }}>
+                          <p className="text-xs text-[var(--muted)]">
+                            <TypeBadge type={tx.type} />
+                            <span className="num ml-2">{fmtDate(tx.transaction_date)}</span>
+                            <span className="num ml-2">
+                              внесено {new Date(tx.created_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                            <span className="ml-2">{tx.material_unit}</span>
+                            {tx.source === "whatsapp" && <span className="ml-2 text-[#25D366]">WhatsApp</span>}
+                          </p>
+                          <p className="text-xs text-[var(--muted)]">
+                            Добавил: <span className="text-[var(--text)]">{tx.creator_name}</span>
+                          </p>
+                          {tx.counterparty && (
+                            <p className="text-xs text-[var(--muted)]">Контрагент: <span className="text-[var(--text)]">{tx.counterparty}</span></p>
+                          )}
+                          {tx.note && (
+                            <p className="text-xs text-[var(--muted)] whitespace-pre-line">{tx.note}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* ── Mobile Cards ──────────────────────────────── */}
-          <div
-            className={`sm:hidden space-y-3 transition-opacity ${
-              isPending ? "opacity-60 pointer-events-none" : ""
-            }`}
-          >
-            {filtered.map((tx) => {
-              const cfg = TYPE_CONFIG[tx.type];
-              return (
-                <div
-                  key={tx.id}
-                  className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2.5">
-                    <TypeBadge type={tx.type} />
-                    <span className="text-xs text-[var(--muted)] tabular-nums">
-                      {fmtDate(tx.transaction_date)}
-                    </span>
-                  </div>
-
-                  <p className="font-semibold text-[var(--text)] text-sm">
-                    {tx.material_name}
-                  </p>
-                  {tx.counterparty && (
-                    <p className="text-xs text-[var(--muted)] mt-0.5">{tx.counterparty}</p>
-                  )}
-
-                  <p
-                    className={`text-xl font-bold tabular-nums mt-1 ${cfg.qColor}`}
-                  >
-                    {cfg.sign}
-                    {formatQuantity(tx.quantity)}{" "}
-                    <span className="text-sm font-normal text-[var(--muted)]">
-                      {tx.material_unit}
-                    </span>
-                  </p>
-
-                  {tx.note && (
-                    <p className="text-xs text-[var(--muted)] mt-2 line-clamp-2 leading-relaxed">
-                      {tx.note}
-                    </p>
-                  )}
-
-                  <p className="text-xs text-[var(--muted)] mt-2 pt-2 border-t border-[var(--border)] flex items-center gap-1.5">
-                    {tx.source === "whatsapp" && (
-                      <svg className="w-3 h-3 shrink-0 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                      </svg>
-                    )}
-                    {tx.creator_name}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* ── Pagination ──────────────────────────────────── */}

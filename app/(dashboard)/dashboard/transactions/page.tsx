@@ -14,7 +14,7 @@ const PAGE_SIZE = 50;
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: { page?: string };
+  searchParams: { page?: string; material_id?: string };
 }) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -141,6 +141,7 @@ export default async function TransactionsPage({
       unit: m.unit,
       norm_concrete: m.norm_concrete != null ? Number(m.norm_concrete) : null,
       norm_rebar: m.norm_rebar != null ? Number(m.norm_rebar) : null,
+      rebar_material_name: (raw.rebar_material_name as string | null) ?? null,
       kg_per_meter: raw.kg_per_meter != null ? Number(raw.kg_per_meter) : null,
     };
   });
@@ -177,6 +178,7 @@ export default async function TransactionsPage({
       page={page}
       totalPages={totalPages}
       totalCount={totalCount}
+      initialMaterialId={searchParams.material_id}
     />
   );
 }

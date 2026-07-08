@@ -6,11 +6,23 @@ import WarehouseClient from "@/components/warehouse/WarehouseClient";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+export type WarehouseTx = {
+  date: string;
+  type: string;
+  qty: number;
+};
+
 export type WarehouseMaterial = {
   id: string;
   name: string;
   unit: string;
   balance: number;
+  threshold: number | null;
+  // Finished product (перемычка, has both consumption norms) vs raw
+  // material (Бетон/Арматура/Проволока…). Stock-level warnings apply
+  // only to raw materials — a product at 0 is normal, not critical.
+  isProduct: boolean;
+  recent: WarehouseTx[];
 };
 
 export default async function WarehousePage() {
@@ -31,17 +43,28 @@ export default async function WarehousePage() {
   const company_id = profile?.company_id as string | undefined;
   if (!company_id) return <NoCompanyState />;
 
-  const [matsResult, txResult] = await Promise.all([
+  const [matsResult, txResult, thresholdsResult] = await Promise.all([
+    // select("*") — survives not-yet-applied schema migrations
     supabase
       .from("materials")
-      .select("id, name, unit")
+      .select("*")
       .eq("company_id", company_id)
       .order("name"),
     supabase
       .from("material_transactions")
-      .select("material_id, type, quantity")
+      .select("material_id, type, quantity, transaction_date, created_at")
+      .eq("company_id", company_id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("material_thresholds")
+      .select("material_id, min_quantity")
       .eq("company_id", company_id),
   ]);
+
+  const thresholdMap = new Map<string, number>();
+  for (const t of thresholdsResult.data ?? []) {
+    thresholdMap.set(t.material_id, Number(t.min_quantity));
+  }
 
   const balMap = new Map<string, number>();
   for (const mat of matsResult.data ?? []) balMap.set(mat.id, 0);
@@ -54,12 +77,32 @@ export default async function WarehousePage() {
     balMap.set(tx.material_id, prev + delta);
   }
 
-  const materials: WarehouseMaterial[] = (matsResult.data ?? []).map((m) => ({
-    id: m.id,
-    name: m.name,
-    unit: m.unit,
-    balance: balMap.get(m.id) ?? 0,
-  }));
+  // Last 5 movements per material (txResult is already newest-first)
+  const recentMap = new Map<string, WarehouseTx[]>();
+  for (const tx of txResult.data ?? []) {
+    const list = recentMap.get(tx.material_id) ?? [];
+    if (list.length < 5) {
+      list.push({
+        date: (tx.transaction_date as string) ?? (tx.created_at as string).split("T")[0],
+        type: tx.type,
+        qty: Number(tx.quantity),
+      });
+      recentMap.set(tx.material_id, list);
+    }
+  }
+
+  const materials: WarehouseMaterial[] = (matsResult.data ?? []).map((m) => {
+    const raw = m as Record<string, unknown>;
+    return {
+      id: m.id,
+      name: m.name,
+      unit: m.unit,
+      balance: balMap.get(m.id) ?? 0,
+      threshold: thresholdMap.get(m.id) ?? null,
+      isProduct: raw.norm_concrete != null && raw.norm_rebar != null,
+      recent: recentMap.get(m.id) ?? [],
+    };
+  });
 
   return <WarehouseClient materials={materials} />;
 }
