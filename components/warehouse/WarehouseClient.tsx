@@ -2,22 +2,28 @@
 
 import { useState, useTransition, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { setInitialStock } from "@/app/(dashboard)/dashboard/warehouse/actions";
+import { createTransaction } from "@/app/(dashboard)/dashboard/transactions/actions";
 import type { WarehouseMaterial } from "@/app/(dashboard)/dashboard/warehouse/page";
 import { formatCompact, formatQuantity } from "@/lib/utils/format";
+import { useToast } from "@/components/ui/Toast";
 
 // ─── Stock level ──────────────────────────────────────────
 // critical ≤ min threshold, low ≤ 2×min, else normal.
 // No threshold → critical only at ≤0.
 type StockLevel = "normal" | "low" | "critical";
 
-function stockLevel(balance: number, threshold: number | null): StockLevel {
-  if (threshold != null && threshold > 0) {
-    if (balance <= threshold) return "critical";
-    if (balance <= threshold * 2) return "low";
+// Level warnings apply only to raw materials (сырьё). Finished products
+// (перемычки) live at 0 most of the time — that's normal, not critical.
+function stockLevel(m: { balance: number; threshold: number | null; isProduct: boolean }): StockLevel {
+  if (m.isProduct) return "normal";
+  if (m.threshold != null && m.threshold > 0) {
+    if (m.balance <= m.threshold) return "critical";
+    if (m.balance <= m.threshold * 2) return "low";
     return "normal";
   }
-  return balance <= 0 ? "critical" : "normal";
+  return m.balance <= 0 ? "critical" : "normal";
 }
 
 const LEVEL_ORDER: Record<StockLevel, number> = { critical: 0, low: 1, normal: 2 };
@@ -77,7 +83,7 @@ function MaterialSheet({
     };
   }, [onClose]);
 
-  const level = stockLevel(material.balance, material.threshold);
+  const level = stockLevel(material);
   const s = TILE_STYLE[level];
 
   return (
@@ -141,18 +147,100 @@ function MaterialSheet({
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-2 px-5 pt-1">
+        {/* Quick adjust: add / remove N units right from the sheet */}
+        <QuickAdjust material={material} />
+
+        {/* Secondary actions */}
+        <div className="flex items-center justify-between px-5 pt-2">
           <Link
             href={`/dashboard/transactions?material_id=${material.id}`}
-            className="dp-btn-secondary flex-1 rounded-xl"
+            className="text-xs font-medium text-[var(--accent)] hover:underline py-2"
           >
-            Вся история
+            Вся история →
           </Link>
-          <button onClick={onEnterStock} className="dp-btn-primary flex-1 rounded-xl">
-            Ввести остаток
+          <button
+            onClick={onEnterStock}
+            className="text-xs font-medium text-[var(--muted)] hover:text-[var(--text)] transition-colors py-2"
+          >
+            Ввести начальный остаток
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Quick adjust: ± N from the warehouse sheet ───────────
+// Creates a regular income/expense transaction via the existing action.
+
+function QuickAdjust({ material }: { material: WarehouseMaterial }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [qty, setQty] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  const n = parseFloat(qty);
+  const valid = !isNaN(n) && n > 0;
+
+  const submit = (type: "income" | "expense") => {
+    if (!valid || isPending) return;
+    startTransition(async () => {
+      try {
+        await createTransaction({
+          type,
+          material_id: material.id,
+          quantity: n,
+          note: "Корректировка со склада",
+          counterparty: null,
+          transaction_date: new Date().toISOString().split("T")[0],
+        });
+        toast(
+          `✓ ${type === "income" ? "+" : "−"}${formatQuantity(n)} ${material.unit} — ${material.name}`,
+          "success"
+        );
+        setQty("");
+        router.refresh();
+      } catch (err) {
+        toast(err instanceof Error ? err.message : "Ошибка записи", "error");
+      }
+    });
+  };
+
+  return (
+    <div className="px-5 pt-1">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-2)] mb-1.5">
+        Быстрая корректировка
+      </p>
+      <div className="flex gap-2">
+        <input
+          type="number"
+          value={qty}
+          onChange={(e) => setQty(e.target.value)}
+          placeholder="0"
+          min="0.0001"
+          step="0.0001"
+          inputMode="decimal"
+          className="field-input num flex-1 min-w-0"
+          style={{ height: "48px" }}
+        />
+        <button
+          type="button"
+          onClick={() => submit("expense")}
+          disabled={!valid || isPending}
+          className="dp-btn-danger rounded-xl px-4 shrink-0"
+          style={{ minHeight: "48px" }}
+        >
+          − Убрать
+        </button>
+        <button
+          type="button"
+          onClick={() => submit("income")}
+          disabled={!valid || isPending}
+          className="dp-btn-primary rounded-xl px-4 shrink-0"
+          style={{ minHeight: "48px" }}
+        >
+          + Добавить
+        </button>
       </div>
     </div>
   );
@@ -275,19 +363,22 @@ export default function WarehouseClient({
   const [sheetMaterial, setSheetMaterial] = useState<WarehouseMaterial | null>(null);
   const [stockMaterial, setStockMaterial] = useState<WarehouseMaterial | null>(null);
 
-  // Critical first, then low, then normal; alphabetical inside a group
+  // Raw materials (Бетон/Арматура/Проволока…) first — that's where the
+  // level warnings live; inside: critical → low → normal, then by name.
+  // Finished products follow, alphabetically.
   const sorted = useMemo(
     () =>
       [...materials].sort((a, b) => {
-        const la = LEVEL_ORDER[stockLevel(a.balance, a.threshold)];
-        const lb = LEVEL_ORDER[stockLevel(b.balance, b.threshold)];
+        if (a.isProduct !== b.isProduct) return a.isProduct ? 1 : -1;
+        const la = LEVEL_ORDER[stockLevel(a)];
+        const lb = LEVEL_ORDER[stockLevel(b)];
         if (la !== lb) return la - lb;
         return a.name.localeCompare(b.name, "ru", { numeric: true });
       }),
     [materials]
   );
 
-  const criticalCount = sorted.filter((m) => stockLevel(m.balance, m.threshold) === "critical").length;
+  const criticalCount = sorted.filter((m) => stockLevel(m) === "critical").length;
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
@@ -320,7 +411,7 @@ export default function WarehouseClient({
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
           {sorted.map((m, i) => {
-            const level = stockLevel(m.balance, m.threshold);
+            const level = stockLevel(m);
             const s = TILE_STYLE[level];
             return (
               <button
