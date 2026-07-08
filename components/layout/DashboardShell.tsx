@@ -67,13 +67,10 @@ function NavTab({
       className="flex-1 min-h-[64px] flex flex-col items-center justify-center gap-1 relative py-1.5 tap-scale"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
+      {/* No pill — the icon and label themselves light up */}
       <span
-        className="flex items-center justify-center w-14 h-8 rounded-full transition-all duration-200"
-        style={{
-          background: active ? "var(--accent-15)" : "transparent",
-          color: active ? "var(--accent)" : "var(--muted)",
-          transform: active ? "translateY(-1px)" : "none",
-        }}
+        className="flex items-center justify-center h-8 transition-colors duration-200"
+        style={{ color: active ? "var(--accent)" : "var(--muted)" }}
       >
         <Icon className="w-6 h-6" strokeWidth={active ? 2.2 : 1.6} />
       </span>

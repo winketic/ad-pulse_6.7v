@@ -1055,6 +1055,9 @@ export default function TransactionsClient({
                           {tx.material_name}
                           <span className="text-[var(--muted-2)] text-xs"> · {tx.creator_name}</span>
                         </span>
+                        <span className="num text-[10px] text-[var(--muted-2)] shrink-0">
+                          {new Date(tx.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
                         <DeltaBars deltas={deltasByMaterial.get(tx.material_id) ?? []} />
                       </button>
 
@@ -1064,8 +1067,14 @@ export default function TransactionsClient({
                           <p className="text-xs text-[var(--muted)]">
                             <TypeBadge type={tx.type} />
                             <span className="num ml-2">{fmtDate(tx.transaction_date)}</span>
+                            <span className="num ml-2">
+                              внесено {new Date(tx.created_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            </span>
                             <span className="ml-2">{tx.material_unit}</span>
                             {tx.source === "whatsapp" && <span className="ml-2 text-[#25D366]">WhatsApp</span>}
+                          </p>
+                          <p className="text-xs text-[var(--muted)]">
+                            Добавил: <span className="text-[var(--text)]">{tx.creator_name}</span>
                           </p>
                           {tx.counterparty && (
                             <p className="text-xs text-[var(--muted)]">Контрагент: <span className="text-[var(--text)]">{tx.counterparty}</span></p>

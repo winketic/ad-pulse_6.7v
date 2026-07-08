@@ -64,10 +64,12 @@ export default async function TransactionsPage({
         .eq("company_id", company_id)
         .order("name"),
 
-      // Profiles lookup (including phone for WhatsApp sender matching)
+      // Profiles lookup — select("*") so the not-yet-migrated phone column
+      // (migration 019) can't fail the whole query and blank out all
+      // creator names; phone is only needed for WhatsApp sender matching
       supabase
         .from("profiles")
-        .select("id, full_name, phone")
+        .select("*")
         .eq("company_id", company_id),
 
       // Lightweight all-tx for balance cards (3 fields only)
