@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -48,6 +48,21 @@ const FAB_HREF = "/dashboard/produce";
 const MORE_ITEMS = [
   NAV_ITEMS[1], // Материалы
   NAV_ITEMS[5], // Отчёты
+  NAV_ITEMS[7], // Настройки
+];
+
+// Desktop top-nav tabs (GitHub/Vercel style). Secondary destinations
+// live in the user dropdown.
+const DESKTOP_TABS = [
+  NAV_ITEMS[0], // Обзор
+  NAV_ITEMS[2], // Склад
+  NAV_ITEMS[3], // Движение
+  NAV_ITEMS[4], // Планы
+  NAV_ITEMS[5], // Отчёты
+];
+const USER_MENU_ITEMS = [
+  NAV_ITEMS[1], // Материалы
+  NAV_ITEMS[6], // WhatsApp
   NAV_ITEMS[7], // Настройки
 ];
 
@@ -104,17 +119,33 @@ export default function DashboardShell({
   const router   = useRouter();
   const supabase = createClient();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Close "more" sheet on navigation
-  useEffect(() => { setMoreOpen(false); }, [pathname]);
+  useEffect(() => { setMoreOpen(false); setMenuOpen(false); }, [pathname]);
 
   // Close on Escape
   useEffect(() => {
-    if (!moreOpen) return;
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape") setMoreOpen(false); };
+    if (!moreOpen && !menuOpen) return;
+    const h = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setMoreOpen(false); setMenuOpen(false); }
+    };
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
-  }, [moreOpen]);
+  }, [moreOpen, menuOpen]);
+
+  // Close user dropdown on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const h = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [menuOpen]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -128,159 +159,140 @@ export default function DashboardShell({
   const initials = userName.charAt(0).toUpperCase();
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
+    <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
 
-      {/* ── Desktop sidebar ─────────────────────────────────── */}
-      <aside
-        className={[
-          "group hidden lg:flex lg:flex-col shrink-0 overflow-hidden",
-          "w-[60px] hover:w-[220px]",
-        ].join(" ")}
-        style={{
-          background: "var(--bg)",
-          borderRight: "1px solid var(--border)",
-          transition: "width 300ms cubic-bezier(0.4, 0, 0.2, 1)",
-        }}
+      {/* ── Desktop top nav (GitHub/Vercel style) ───────────── */}
+      <header
+        className="hidden lg:flex items-center px-6 shrink-0 h-14"
+        style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)" }}
       >
+        <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0 mr-6">
+          <Logo size={26} />
+          <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>AD Pulse</span>
+        </Link>
 
-        {/* Logo */}
-        <div
-          className="flex items-center gap-3 px-[14px] shrink-0"
-          style={{ borderBottom: "1px solid var(--border)", height: "56px" }}
-        >
-          <Logo size={28} />
-          {/* Text: hidden when collapsed, fades in on hover */}
-          <div className="overflow-hidden min-w-0">
-            <p
-              className="font-semibold text-sm leading-tight whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 delay-75"
-              style={{ color: "var(--text)" }}
-            >
-              AD Pulse
-            </p>
-            <p
-              className="text-[10px] mt-0.5 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 delay-100"
-              style={{ color: "var(--muted)" }}
-            >
-              Учёт материалов
-            </p>
-          </div>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto overflow-x-hidden">
-          {NAV_ITEMS.map((item) => {
+        {/* Tabs — full-height with bottom indicator */}
+        <nav className="flex items-stretch h-full">
+          {DESKTOP_TABS.map((item) => {
             const active = isActive(item.href);
-            const badge  = item.href === "/dashboard/whatsapp" && whatsappBadge > 0 ? whatsappBadge : 0;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 prefetch
                 id={item.tourId}
-                className="relative flex items-center gap-3 h-9 px-[10px] rounded-lg text-sm font-medium transition-colors"
+                className="relative flex items-center px-3.5 text-sm transition-colors duration-150"
                 style={{
-                  background: active ? "var(--bg3)" : "transparent",
                   color: active ? "var(--text)" : "var(--muted)",
+                  fontWeight: active ? 600 : 400,
                 }}
-                onMouseEnter={(e) => {
-                  if (!active) {
-                    (e.currentTarget as HTMLElement).style.background = "var(--bg2)";
-                    (e.currentTarget as HTMLElement).style.color = "var(--text)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) {
-                    (e.currentTarget as HTMLElement).style.background = "transparent";
-                    (e.currentTarget as HTMLElement).style.color = "var(--muted)";
-                  }
-                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
+                onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.color = "var(--muted)"; }}
               >
-                {/* Active accent bar */}
+                {item.label}
                 {active && (
                   <span
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r shrink-0"
+                    className="absolute bottom-0 left-2 right-2 h-0.5 rounded-t"
                     style={{ background: "var(--accent)" }}
                   />
-                )}
-
-                {/* Icon — always visible */}
-                <item.Icon
-                  size={17}
-                  strokeWidth={active ? 2 : 1.6}
-                  className="shrink-0"
-                  style={{ color: active ? "var(--accent)" : undefined }}
-                />
-
-                {/* Label — fades in on sidebar hover */}
-                <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis opacity-0 group-hover:opacity-100 transition-opacity duration-150 delay-75">
-                  {item.label}
-                </span>
-
-                {/* Badge */}
-                {badge > 0 && (
-                  <span
-                    className="shrink-0 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-150 delay-75"
-                    style={{ background: "var(--accent)", color: "var(--accent-text)" }}
-                  >
-                    {badge > 99 ? "99+" : badge}
-                  </span>
                 )}
               </Link>
             );
           })}
         </nav>
 
-        {/* User area */}
-        <div
-          className="px-2 py-3 shrink-0"
-          style={{ borderTop: "1px solid var(--border)" }}
+        <div className="flex-1" />
+
+        {/* Primary action */}
+        <Link
+          href="/dashboard/produce"
+          prefetch
+          className="flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-sm font-semibold transition-colors duration-150 mr-3"
+          style={{ background: "var(--accent)", color: "var(--accent-text)" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--accent-hover)"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--accent)"; }}
         >
-          <div className="flex items-center gap-3 px-[10px] py-2 rounded-lg">
-            {/* Avatar — always visible */}
+          <Factory size={15} strokeWidth={2.2} />
+          Выпуск
+        </Link>
+
+        {/* User menu */}
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex items-center gap-2 h-9 pl-1.5 pr-2.5 rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+          >
             {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+              <img src={avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
             ) : (
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: "var(--accent-15)" }}
+              <span
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold"
+                style={{ background: "var(--accent-15)", color: "var(--accent)" }}
               >
-                <span className="text-xs font-bold" style={{ color: "var(--accent)" }}>
-                  {initials}
-                </span>
-              </div>
+                {initials}
+              </span>
             )}
-
-            {/* Name — fades in on sidebar hover */}
-            <p
-              className="flex-1 text-sm font-medium truncate whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 delay-75 min-w-0"
-              style={{ color: "var(--text)" }}
-            >
+            <span className="text-sm max-w-[140px] truncate" style={{ color: "var(--text)" }}>
               {userName}
-            </p>
+            </span>
+            <svg className="w-3.5 h-3.5" style={{ color: "var(--muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
 
-            {/* Logout button — fades in on sidebar hover */}
-            <button
-              onClick={handleLogout}
-              className="shrink-0 p-1.5 rounded-md transition-colors opacity-0 group-hover:opacity-100 duration-150 delay-75"
-              style={{ color: "var(--muted)" }}
-              title="Выйти"
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "var(--bg3)";
-                (e.currentTarget as HTMLElement).style.color = "var(--text)";
+          {menuOpen && (
+            <div
+              className="absolute right-0 top-11 w-56 rounded-xl py-1.5 z-[60]"
+              style={{
+                background: "var(--surface-2)",
+                border: "1px solid var(--border-strong)",
+                boxShadow: "var(--shadow-raised)",
+                animation: "fadeIn 120ms var(--ease)",
               }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "transparent";
-                (e.currentTarget as HTMLElement).style.color = "var(--muted)";
-              }}
+              role="menu"
             >
-              <LogOut size={14} />
-            </button>
-          </div>
+              {USER_MENU_ITEMS.map((item) => {
+                const badge = item.href === "/dashboard/whatsapp" && whatsappBadge > 0 ? whatsappBadge : 0;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center gap-2.5 px-3.5 py-2 text-sm transition-colors duration-150 hover:bg-[var(--surface-3)]"
+                    style={{ color: "var(--text)" }}
+                    role="menuitem"
+                  >
+                    <item.Icon size={15} strokeWidth={1.8} style={{ color: "var(--muted)" }} />
+                    <span className="flex-1">{item.label}</span>
+                    {badge > 0 && (
+                      <span
+                        className="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold"
+                        style={{ background: "var(--accent)", color: "var(--accent-text)" }}
+                      >
+                        {badge > 99 ? "99+" : badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+              <div className="my-1.5" style={{ borderTop: "1px solid var(--border)" }} />
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-sm transition-colors duration-150 hover:bg-[var(--surface-3)]"
+                style={{ color: "var(--muted)" }}
+                role="menuitem"
+              >
+                <LogOut size={15} strokeWidth={1.8} />
+                Выйти
+              </button>
+            </div>
+          )}
         </div>
-      </aside>
+      </header>
 
       {/* ── Main area ───────────────────────────────────────── */}
-      <div className="flex flex-col flex-1 min-w-0">
+      <div className="flex flex-col flex-1 min-w-0 min-h-0">
 
         {/* Mobile top bar */}
         <header
