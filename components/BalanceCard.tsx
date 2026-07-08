@@ -32,57 +32,44 @@ export default function BalanceCard({
       </div>
       )}
 
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 sm:mx-0 px-4 sm:px-0 snap-x">
-        {balances.map((b) => {
+      <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-4 sm:mx-0 px-4 sm:px-0 snap-x">
+        {balances.map((b, i) => {
           const isNegative = b.balance < 0;
           const isZero = b.balance === 0;
 
           return (
             <div
               key={b.material_id}
-              className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-5 min-w-[180px] max-w-[230px] flex-shrink-0 snap-start hover:shadow-sm transition-shadow"
+              className="bg-[var(--surface-1)] rounded-xl border border-[var(--border)] p-4 min-w-[168px] max-w-[220px] flex-shrink-0 snap-start fade-in-up"
+              style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
             >
               {/* Name */}
-              <p
-                className="text-xs font-medium text-[var(--muted)] uppercase tracking-wide truncate mb-2.5"
-                title={b.name}
-              >
+              <p className="text-label truncate mb-2" title={b.name}>
                 {b.name}
               </p>
 
-              {/* Balance */}
+              {/* Balance — ticker style */}
               <p
-                className={`text-3xl font-bold tabular-nums leading-none tracking-tight ${
+                className={`num-lg leading-none ${
                   isZero
                     ? "text-[var(--muted)]"
                     : isNegative
-                    ? "text-red-600"
-                    : "text-[#00f5c4]"
+                    ? "text-[var(--danger)]"
+                    : "text-[var(--accent)]"
                 }`}
               >
-                {isNegative ? "" : ""}
                 {formatCompact(b.balance)}
               </p>
-              <p className="text-xs text-[var(--muted)] mt-0.5">{b.unit}</p>
+              <p className="text-xs text-[var(--muted-2)] mt-1">{b.unit}</p>
 
               {/* Breakdown */}
-              <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[var(--border)]">
-                <div className="flex items-center gap-1 text-xs">
-                  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-100 text-green-600 font-bold text-[10px]">
-                    ↑
-                  </span>
-                  <span className="tabular-nums text-[var(--muted)] font-medium">
-                    {formatCompact(b.totalIn)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 text-xs">
-                  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-100 text-red-500 font-bold text-[10px]">
-                    ↓
-                  </span>
-                  <span className="tabular-nums text-[var(--muted)] font-medium">
-                    {formatCompact(b.totalOut)}
-                  </span>
-                </div>
+              <div className="flex items-center gap-3 mt-3 pt-2.5 border-t border-[var(--border)]">
+                <span className="num text-xs text-[var(--success)]">
+                  ↑{formatCompact(b.totalIn)}
+                </span>
+                <span className="num text-xs text-[var(--danger)]">
+                  ↓{formatCompact(b.totalOut)}
+                </span>
               </div>
             </div>
           );

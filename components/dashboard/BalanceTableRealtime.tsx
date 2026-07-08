@@ -8,13 +8,36 @@ import { formatCompact } from "@/lib/utils/format";
 export type Material = { id: string; name: string; unit: string };
 export type Balance = { income: number; expense: number; balance: number };
 
+// Stock level classification against per-material thresholds:
+// critical — at/below min threshold (or ≤0 with no threshold set)
+// low      — within 2× of the threshold
+// normal   — everything else
+type StockLevel = "normal" | "low" | "critical";
+
+function stockLevel(balance: number, threshold: number | undefined): StockLevel {
+  if (threshold != null && threshold > 0) {
+    if (balance <= threshold) return "critical";
+    if (balance <= threshold * 2) return "low";
+    return "normal";
+  }
+  if (balance <= 0) return "critical";
+  return "normal";
+}
+
+const LEVEL_STYLE: Record<StockLevel, { dot: string; text: string; label: string }> = {
+  normal:   { dot: "bg-[var(--success)]", text: "text-[var(--accent)]",  label: "норма" },
+  low:      { dot: "bg-[var(--warning)]", text: "text-[var(--warning)]", label: "мало" },
+  critical: { dot: "bg-[var(--danger)]",  text: "text-[var(--danger)]",  label: "критично" },
+};
+
 interface Props {
   materials: Material[];
   initialBalances: Record<string, Balance>;
   companyId: string;
+  thresholds?: Record<string, number>;
 }
 
-export function BalanceTableRealtime({ materials, initialBalances, companyId }: Props) {
+export function BalanceTableRealtime({ materials, initialBalances, companyId, thresholds = {} }: Props) {
   const [balances, setBalances] = useState<Record<string, Balance>>(initialBalances);
   const supabase = createClient();
 
@@ -41,9 +64,7 @@ export function BalanceTableRealtime({ materials, initialBalances, companyId }: 
     const { data } = await supabase
       .from("material_transactions")
       .select("material_id, type, quantity")
-      .eq("company_id", companyId)
-      .order("created_at", { ascending: false })
-      .limit(500);
+      .eq("company_id", companyId);
 
     if (!data) return;
 
@@ -93,18 +114,28 @@ export function BalanceTableRealtime({ materials, initialBalances, companyId }: 
           <tbody className="divide-y divide-[var(--border)]">
             {materials.map((mat) => {
               const b = balances[mat.id] ?? { income: 0, expense: 0, balance: 0 };
+              const level = stockLevel(b.balance, thresholds[mat.id]);
+              const s = LEVEL_STYLE[level];
               return (
-                <tr key={mat.id} className="hover:bg-[var(--bg3)]">
+                <tr key={mat.id} className="hover:bg-[var(--bg3)] transition-colors">
                   <td className="px-5 py-3 font-medium text-[var(--text)] text-sm">
-                    <span className="block break-words">{mat.name}</span>
-                    <span className="text-xs text-[var(--muted)]">{mat.unit}</span>
+                    <span className="flex items-center gap-2">
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} title={s.label} />
+                      <span className="break-words">{mat.name}</span>
+                    </span>
+                    <span className="text-xs text-[var(--muted)] pl-3.5">{mat.unit}</span>
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-sm text-green-700 font-mono">{formatCompact(b.income)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-sm text-red-600 font-mono">{formatCompact(b.expense)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-sm text-[var(--success)] font-mono">{formatCompact(b.income)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-sm text-[var(--danger)] font-mono">{formatCompact(b.expense)}</td>
                   <td className="px-5 py-3 text-right">
-                    <span className={`tabular-nums text-sm font-bold font-mono ${b.balance > 0 ? "text-[#00f5c4]" : b.balance < 0 ? "text-red-600" : "text-[var(--muted)]"}`}>
+                    <span className={`tabular-nums text-sm font-bold font-mono ${s.text}`}>
                       {formatCompact(b.balance)}
                     </span>
+                    {level !== "normal" && (
+                      <span className={`block text-[10px] font-semibold uppercase tracking-wide ${s.text}`}>
+                        {s.label}
+                      </span>
+                    )}
                   </td>
                 </tr>
               );
@@ -117,16 +148,28 @@ export function BalanceTableRealtime({ materials, initialBalances, companyId }: 
       <div className="sm:hidden divide-y divide-[var(--border)]">
         {materials.map((mat) => {
           const b = balances[mat.id] ?? { income: 0, expense: 0, balance: 0 };
+          const level = stockLevel(b.balance, thresholds[mat.id]);
+          const s = LEVEL_STYLE[level];
           return (
-            <div key={mat.id} className="px-4 py-3 flex items-start justify-between gap-3">
+            <div key={mat.id} className="px-4 py-2.5 flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-[var(--text)] break-words">{mat.name}</p>
-                <p className="text-xs text-[var(--muted)]">{mat.unit}</p>
+                <p className="text-sm font-medium text-[var(--text)] break-words flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} />
+                  {mat.name}
+                </p>
+                <p className="text-xs text-[var(--muted)] pl-3">
+                  {mat.unit}
+                  {level !== "normal" && (
+                    <span className={`ml-1.5 font-semibold uppercase text-[10px] tracking-wide ${s.text}`}>
+                      {s.label}
+                    </span>
+                  )}
+                </p>
               </div>
               <div className="flex items-center gap-3 shrink-0 text-xs tabular-nums font-mono">
-                <span className="text-green-700">+{formatCompact(b.income)}</span>
-                <span className="text-red-600">−{formatCompact(b.expense)}</span>
-                <span className={`font-bold text-sm ${b.balance > 0 ? "text-[#00f5c4]" : b.balance < 0 ? "text-red-600" : "text-[var(--muted)]"}`}>
+                <span className="text-[var(--success)]">+{formatCompact(b.income)}</span>
+                <span className="text-[var(--danger)]">−{formatCompact(b.expense)}</span>
+                <span className={`font-bold text-sm ${s.text}`}>
                   {formatCompact(b.balance)}
                 </span>
               </div>

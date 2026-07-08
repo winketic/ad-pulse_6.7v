@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -203,7 +203,7 @@ function FilterBar({
       <button
         type="submit"
         disabled={isPending}
-        className="px-5 py-2 rounded-lg bg-[#00f5c4] hover:bg-[#163d24] text-white text-sm font-semibold transition-colors disabled:opacity-60 flex items-center gap-2 min-h-[48px]"
+        className="dp-btn-primary rounded-lg"
       >
         {isPending && (
           <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
@@ -268,16 +268,16 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
                   {row.unit}
                 </span>
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono text-green-400">
+              <td className="px-4 py-3 text-right tabular-nums font-mono text-[var(--success)]">
                 {fmtQty(row.income)}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono text-blue-600">
+              <td className="px-4 py-3 text-right tabular-nums font-mono text-[var(--info)]">
                 {fmtQty(row.return_qty)}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono text-red-400">
+              <td className="px-4 py-3 text-right tabular-nums font-mono text-[var(--danger)]">
                 {fmtQty(row.expense)}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono text-amber-600">
+              <td className="px-4 py-3 text-right tabular-nums font-mono text-[var(--warning)]">
                 {fmtQty(row.defect)}
               </td>
               <td className="px-4 py-3 text-right">
@@ -286,7 +286,7 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
                     row.balance > 0
                       ? "text-[#00f5c4]"
                       : row.balance < 0
-                      ? "text-red-400"
+                      ? "text-[var(--danger)]"
                       : "text-[var(--muted)]"
                   }`}
                 >
@@ -307,16 +307,16 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
               >
                 Итого
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-green-400">
+              <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-[var(--success)]">
                 {totalIncome.toFixed(4)}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-blue-600">
+              <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-[var(--info)]">
                 {totalReturn.toFixed(4)}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-red-400">
+              <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-[var(--danger)]">
                 {totalExpense.toFixed(4)}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-amber-600">
+              <td className="px-4 py-3 text-right tabular-nums font-mono font-bold text-[var(--warning)]">
                 {totalDefect.toFixed(4)}
               </td>
               <td className="px-4 py-3 text-right">
@@ -325,7 +325,7 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
                     totalBalance > 0
                       ? "text-[#00f5c4]"
                       : totalBalance < 0
-                      ? "text-red-400"
+                      ? "text-[var(--danger)]"
                       : "text-[var(--muted)]"
                   }`}
                 >
@@ -393,7 +393,7 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
                   {row.material_unit}
                 </span>
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-mono font-semibold text-amber-400">
+              <td className="px-4 py-3 text-right tabular-nums font-mono font-semibold text-[var(--warning)]">
                 {row.quantity.toFixed(4)}
               </td>
               <td className="px-4 py-3 text-[var(--muted)] text-xs max-w-xs">
@@ -461,18 +461,15 @@ export default function ReportsClient({
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Отчёты</h1>
-          <p className="text-sm text-[var(--muted)] mt-0.5">
-            Период:{" "}
-            <span className="font-medium text-[var(--muted)]">
-              {fmtDate(from)} — {fmtDate(to)}
-            </span>
+          <h1 className="text-display text-[var(--text)]">Отчёты</h1>
+          <p className="text-label mt-1.5">
+            <span className="num">{fmtDate(from)} — {fmtDate(to)}</span>
           </p>
         </div>
         <button
           onClick={handleExport}
           disabled={exporting || summary.length === 0}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-[#1a472a] text-[#00f5c4] hover:bg-[#00f5c4] hover:text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--accent)]/40 text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--accent-text)] text-sm font-semibold transition-colors tap-scale disabled:opacity-40 disabled:cursor-not-allowed self-start sm:self-auto min-h-[48px]"
         >
           {exporting ? (
             <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -530,7 +527,7 @@ export default function ReportsClient({
           </div>
           {defects.length > 0 && (
             <div className="text-right">
-              <p className="text-2xl font-bold tabular-nums leading-none text-[var(--text)]">
+              <p className="num-lg leading-none text-[var(--warning)]">
                 {defects.length}
               </p>
               <p className="text-xs text-[var(--muted)] mt-0.5">
