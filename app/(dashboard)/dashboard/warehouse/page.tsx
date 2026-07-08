@@ -18,6 +18,10 @@ export type WarehouseMaterial = {
   unit: string;
   balance: number;
   threshold: number | null;
+  // Finished product (перемычка, has both consumption norms) vs raw
+  // material (Бетон/Арматура/Проволока…). Stock-level warnings apply
+  // only to raw materials — a product at 0 is normal, not critical.
+  isProduct: boolean;
   recent: WarehouseTx[];
 };
 
@@ -40,9 +44,10 @@ export default async function WarehousePage() {
   if (!company_id) return <NoCompanyState />;
 
   const [matsResult, txResult, thresholdsResult] = await Promise.all([
+    // select("*") — survives not-yet-applied schema migrations
     supabase
       .from("materials")
-      .select("id, name, unit")
+      .select("*")
       .eq("company_id", company_id)
       .order("name"),
     supabase
@@ -86,14 +91,18 @@ export default async function WarehousePage() {
     }
   }
 
-  const materials: WarehouseMaterial[] = (matsResult.data ?? []).map((m) => ({
-    id: m.id,
-    name: m.name,
-    unit: m.unit,
-    balance: balMap.get(m.id) ?? 0,
-    threshold: thresholdMap.get(m.id) ?? null,
-    recent: recentMap.get(m.id) ?? [],
-  }));
+  const materials: WarehouseMaterial[] = (matsResult.data ?? []).map((m) => {
+    const raw = m as Record<string, unknown>;
+    return {
+      id: m.id,
+      name: m.name,
+      unit: m.unit,
+      balance: balMap.get(m.id) ?? 0,
+      threshold: thresholdMap.get(m.id) ?? null,
+      isProduct: raw.norm_concrete != null && raw.norm_rebar != null,
+      recent: recentMap.get(m.id) ?? [],
+    };
+  });
 
   return <WarehouseClient materials={materials} />;
 }
