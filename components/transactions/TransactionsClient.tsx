@@ -918,10 +918,10 @@ export default function TransactionsClient({
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-display text-[var(--text)]">
+          <h1 className="text-display lg:text-lg lg:font-semibold lg:tracking-normal text-[var(--text)]">
             Движение материалов
           </h1>
-          <p className="text-label mt-1.5">
+          <p className="text-label mt-1.5 lg:hidden">
             {(totalCount ?? transactions.length) === 0
               ? "Записей нет"
               : `${totalCount ?? transactions.length} ${pluralRecords(totalCount ?? transactions.length)}`}
@@ -1006,9 +1006,82 @@ export default function TransactionsClient({
         />
       )}
 
-      {/* ── Compact list — one pattern for all widths ───── */}
+      {/* ── Desktop full table (lg+) — everything in columns ── */}
       {filtered.length > 0 && (
-        <div className="bg-[var(--surface-1)] rounded-xl border border-[var(--border)] overflow-hidden">
+        <div className="hidden lg:block rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--border)]">
+                {["Время", "Тип", "Кол-во", "Материал", "Кто", "Контрагент", "Примечание"].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`h-10 px-4 text-xs font-medium text-[var(--muted)] ${i === 2 ? "text-right" : "text-left"} ${i === 0 ? "w-24 pl-5" : ""} ${i === 1 ? "w-28" : ""} ${i === 2 ? "w-32" : ""} ${i === 4 ? "w-32" : ""}`}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)]">
+              {groupByDay(filtered).map((group) => [
+                period !== "today" && (
+                  <tr key={`day-${group.date}`} className="bg-[var(--surface-2)]/50">
+                    <td colSpan={7} className="px-5 py-1.5 text-[11px] font-medium text-[var(--muted)]">
+                      {dayLabel(group.date)}
+                      <span className="num text-[var(--muted-2)] ml-2">{fmtDate(group.date)}</span>
+                    </td>
+                  </tr>
+                ),
+                ...group.items.map((tx) => {
+                  const cfg = TYPE_CONFIG[tx.type];
+                  const isTemp = tx.id.startsWith("tmp-");
+                  return (
+                    <tr key={tx.id} className={`h-12 hover:bg-[var(--surface-2)] transition-colors duration-150 ${isTemp ? "opacity-60 animate-pulse" : ""}`}>
+                      <td className="num pl-5 px-4 text-xs text-[var(--muted)]">
+                        {new Date(tx.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                      </td>
+                      <td className="px-4">
+                        <span className={`flex items-center gap-1.5 text-xs ${cfg.text}`}>
+                          <span
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{
+                              background: `var(--${
+                                tx.type === "income" ? "success" : tx.type === "expense" ? "danger" : tx.type === "defect" ? "warning" : "info"
+                              })`,
+                            }}
+                          />
+                          {cfg.label}
+                        </span>
+                      </td>
+                      <td className={`num px-4 text-right font-semibold ${cfg.qColor}`}>
+                        {cfg.sign}{formatQuantity(tx.quantity)}
+                        <span className="text-xs font-normal text-[var(--muted)] ml-1">{tx.material_unit}</span>
+                      </td>
+                      <td className="px-4 text-[var(--text)]">{tx.material_name}</td>
+                      <td className="px-4 text-xs text-[var(--muted)]">
+                        {tx.source === "whatsapp" && <span className="text-[#25D366] mr-1">WA</span>}
+                        {tx.creator_name}
+                      </td>
+                      <td className="px-4 text-xs text-[var(--muted)]">{tx.counterparty ?? "—"}</td>
+                      <td className="px-4 text-xs text-[var(--muted)] max-w-[220px]">
+                        {tx.note ? (
+                          <span className="block truncate" title={tx.note}>{tx.note}</span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  );
+                }),
+              ])}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── Compact list (mobile) ─────────────────────────── */}
+      {filtered.length > 0 && (
+        <div className="lg:hidden bg-[var(--surface-1)] rounded-xl border border-[var(--border)] overflow-hidden">
           {groupByDay(filtered).map((group) => (
             <div key={group.date}>
               {period !== "today" && (
