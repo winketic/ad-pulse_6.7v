@@ -353,7 +353,31 @@ function StockModal({
   );
 }
 
-// ─── Main: heatmap tiles ──────────────────────────────────
+// ─── Week sparkline (desktop table) ───────────────────────
+
+function WeekSparkline({ week }: { week: number[] }) {
+  if (week.every((d) => d === 0)) {
+    return <span className="text-xs text-[var(--muted-2)]">—</span>;
+  }
+  const max = Math.max(...week.map(Math.abs), 1);
+  return (
+    <span className="flex items-end gap-[3px] h-4" aria-hidden>
+      {week.map((d, i) => (
+        <span
+          key={i}
+          className={`w-1 rounded-[1px] ${
+            d === 0 ? "bg-[var(--surface-3)]" : d > 0 ? "bg-[var(--success)]" : "bg-[var(--danger)]"
+          }`}
+          style={{ height: d === 0 ? "3px" : `${Math.max(3, (Math.abs(d) / max) * 16)}px` }}
+        />
+      ))}
+    </span>
+  );
+}
+
+// ─── Main: heatmap tiles (mobile) / table (desktop) ───────
+
+type SortKey = "status" | "name" | "balance";
 
 export default function WarehouseClient({
   materials,
@@ -362,6 +386,8 @@ export default function WarehouseClient({
 }) {
   const [sheetMaterial, setSheetMaterial] = useState<WarehouseMaterial | null>(null);
   const [stockMaterial, setStockMaterial] = useState<WarehouseMaterial | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("status");
+  const [sortAsc, setSortAsc] = useState(true);
 
   // Raw materials (Бетон/Арматура/Проволока…) first — that's where the
   // level warnings live; inside: critical → low → normal, then by name.
@@ -378,12 +404,36 @@ export default function WarehouseClient({
     [materials]
   );
 
+  // Desktop table sort — click a header to re-sort
+  const tableSorted = useMemo(() => {
+    if (sortKey === "status") return sortAsc ? sorted : [...sorted].reverse();
+    const arr = [...materials].sort((a, b) => {
+      const cmp =
+        sortKey === "name"
+          ? a.name.localeCompare(b.name, "ru", { numeric: true })
+          : a.balance - b.balance;
+      return sortAsc ? cmp : -cmp;
+    });
+    return arr;
+  }, [materials, sorted, sortKey, sortAsc]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortAsc((v) => !v);
+    else {
+      setSortKey(key);
+      setSortAsc(true);
+    }
+  };
+
+  const sortArrow = (key: SortKey) =>
+    sortKey === key ? (sortAsc ? " ↑" : " ↓") : "";
+
   const criticalCount = sorted.filter((m) => stockLevel(m) === "critical").length;
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="mb-4">
+    <div className="p-4 sm:p-6 max-w-5xl lg:max-w-6xl mx-auto">
+      {/* Header — mobile: display; desktop: calm context strip */}
+      <div className="mb-4 lg:hidden">
         <h1 className="text-display text-[var(--text)]">Склад</h1>
         <p className="text-label mt-1.5">
           {materials.length} позиц{materials.length === 1 ? "ия" : materials.length < 5 ? "ии" : "ий"}
@@ -391,6 +441,17 @@ export default function WarehouseClient({
             <span className="text-[var(--danger)]"> · {criticalCount} критично</span>
           )}
         </p>
+      </div>
+      <div className="hidden lg:flex items-baseline justify-between mb-5">
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-lg font-semibold text-[var(--text)]">Склад</h1>
+          <p className="text-sm text-[var(--muted)]">
+            {materials.length} позиц{materials.length === 1 ? "ия" : materials.length < 5 ? "ии" : "ий"}
+            {criticalCount > 0 && (
+              <span className="text-[var(--danger)]"> · {criticalCount} критично</span>
+            )}
+          </p>
+        </div>
       </div>
 
       {materials.length === 0 ? (
@@ -409,7 +470,9 @@ export default function WarehouseClient({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+        <>
+        {/* Mobile heatmap tiles */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 lg:hidden">
           {sorted.map((m, i) => {
             const level = stockLevel(m);
             const s = TILE_STYLE[level];
@@ -441,6 +504,84 @@ export default function WarehouseClient({
             );
           })}
         </div>
+
+        {/* Desktop table — Supabase style: 48px rows, sortable headers,
+            hover actions on the right */}
+        <div className="hidden lg:block rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--border)]">
+                <th
+                  className="text-left px-5 h-10 text-xs font-medium text-[var(--muted)] cursor-pointer select-none hover:text-[var(--text)] transition-colors duration-150"
+                  onClick={() => toggleSort("name")}
+                >
+                  Материал{sortArrow("name")}
+                </th>
+                <th
+                  className="text-right px-4 h-10 text-xs font-medium text-[var(--muted)] cursor-pointer select-none hover:text-[var(--text)] transition-colors duration-150 w-40"
+                  onClick={() => toggleSort("balance")}
+                >
+                  Остаток{sortArrow("balance")}
+                </th>
+                <th
+                  className="text-left px-4 h-10 text-xs font-medium text-[var(--muted)] cursor-pointer select-none hover:text-[var(--text)] transition-colors duration-150 w-32"
+                  onClick={() => toggleSort("status")}
+                >
+                  Статус{sortArrow("status")}
+                </th>
+                <th className="text-left px-4 h-10 text-xs font-medium text-[var(--muted)] w-32">
+                  Неделя
+                </th>
+                <th className="w-56" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)]">
+              {tableSorted.map((m) => {
+                const level = stockLevel(m);
+                const s = TILE_STYLE[level];
+                return (
+                  <tr key={m.id} className="group h-12 hover:bg-[var(--surface-2)] transition-colors duration-150">
+                    <td className="px-5 text-[var(--text)]">{m.name}</td>
+                    <td className={`px-4 text-right num font-semibold ${level === "normal" ? "text-[var(--text)]" : s.num}`}>
+                      {formatCompact(m.balance)}
+                      <span className="text-xs font-normal text-[var(--muted)] ml-1.5">{m.unit}</span>
+                    </td>
+                    <td className="px-4">
+                      <span className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            level === "critical" ? "bg-[var(--danger)]" : level === "low" ? "bg-[var(--warning)]" : "bg-[var(--success)]"
+                          }`}
+                        />
+                        {level === "critical" ? "Критично" : level === "low" ? "Мало" : "Норма"}
+                      </span>
+                    </td>
+                    <td className="px-4">
+                      <WeekSparkline week={m.week} />
+                    </td>
+                    <td className="px-4 text-right">
+                      <span className="inline-flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <Link
+                          href={`/dashboard/transactions?material_id=${m.id}`}
+                          className="px-2.5 h-7 inline-flex items-center rounded-md border border-[var(--border)] text-xs text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--border-strong)] transition-colors duration-150"
+                        >
+                          История
+                        </Link>
+                        <button
+                          onClick={() => setSheetMaterial(m)}
+                          className="px-2.5 h-7 inline-flex items-center rounded-md border border-[var(--border)] text-xs text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--border-strong)] transition-colors duration-150"
+                        >
+                          Корректировка
+                        </button>
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        </>
       )}
 
       {/* Sheet + modal */}
