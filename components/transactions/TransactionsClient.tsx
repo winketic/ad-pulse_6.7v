@@ -12,6 +12,7 @@ import { type BalanceData } from "@/components/BalanceCard";
 import {
   createTransaction,
   createProductionTransaction,
+  deleteTransaction,
   type TxType,
 } from "@/app/(dashboard)/dashboard/transactions/actions";
 import { formatQuantity } from "@/lib/utils/format";
@@ -91,6 +92,8 @@ export type Transaction = {
   material_unit: string;
   creator_name: string;
   source: string;
+  deleted_at?: string | null;
+  deleted_by_name?: string | null;
 };
 
 export type Material = {
@@ -756,6 +759,7 @@ export default function TransactionsClient({
   totalPages,
   totalCount,
   initialMaterialId,
+  isAdmin = false,
 }: {
   transactions: Transaction[];
   materials: Material[];
@@ -764,6 +768,7 @@ export default function TransactionsClient({
   totalPages?: number;
   totalCount?: number;
   initialMaterialId?: string;
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -773,7 +778,31 @@ export default function TransactionsClient({
   const [typeFilter, setTypeFilter] = useState<TxType | "all">("all");
   const [materialFilter, setMaterialFilter] = useState<string>(initialMaterialId ?? "all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
+
+  // Soft-delete a transaction (admin only). Confirms, then calls the action;
+  // the server recomputes balances on next load via revalidatePath.
+  const handleDelete = useCallback(
+    (tx: Transaction) => {
+      if (!window.confirm("Удалить транзакцию? Остаток пересчитается.")) return;
+      setDeletingId(tx.id);
+      startTransition(async () => {
+        try {
+          await deleteTransaction(tx.id);
+          toast("Транзакция удалена", "success");
+          setExpandedId(null);
+          router.refresh();
+        } catch (e) {
+          toast(e instanceof Error ? e.message : "Ошибка удаления", "error");
+        } finally {
+          setDeletingId(null);
+        }
+      });
+    },
+    [router, toast]
+  );
 
   // Optimistic rows shown instantly while the server call is in flight.
   // Cleared as soon as fresh server data arrives via router.refresh().
@@ -808,13 +837,20 @@ export default function TransactionsClient({
 
   const filtered = useMemo(() => {
     return displayTxs.filter((tx) => {
+      // Deleted rows hidden unless admin toggles "показать удалённые"
+      if (tx.deleted_at && !showDeleted) return false;
       if (period === "today" && tx.transaction_date !== isoDay(0)) return false;
       if (period === "week" && tx.transaction_date < isoDay(-6)) return false;
       if (typeFilter !== "all" && tx.type !== typeFilter) return false;
       if (materialFilter !== "all" && tx.material_id !== materialFilter) return false;
       return true;
     });
-  }, [displayTxs, period, typeFilter, materialFilter]);
+  }, [displayTxs, period, typeFilter, materialFilter, showDeleted]);
+
+  const deletedCount = useMemo(
+    () => displayTxs.filter((tx) => tx.deleted_at).length,
+    [displayTxs]
+  );
 
   const hasFilters = typeFilter !== "all" || materialFilter !== "all" || period !== "all";
   const filterMaterialName =
@@ -995,6 +1031,23 @@ export default function TransactionsClient({
               </button>
             )}
           </div>
+
+          {/* Admin: show-deleted toggle */}
+          {isAdmin && deletedCount > 0 && (
+            <button
+              onClick={() => setShowDeleted((v) => !v)}
+              className="flex items-center gap-2 mb-3 text-xs text-[var(--muted)] hover:text-[var(--text)] transition-colors"
+            >
+              <span
+                className={`inline-flex items-center justify-center w-8 h-[18px] rounded-full transition-colors ${showDeleted ? "bg-[var(--accent)]" : "bg-[var(--surface-3)]"}`}
+              >
+                <span
+                  className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${showDeleted ? "translate-x-[7px]" : "-translate-x-[7px]"}`}
+                />
+              </span>
+              Показать удалённые ({deletedCount})
+            </button>
+          )}
         </>
       )}
 
@@ -1020,13 +1073,14 @@ export default function TransactionsClient({
                     {h}
                   </th>
                 ))}
+                {isAdmin && <th className="w-28" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {groupByDay(filtered).map((group) => [
                 period !== "today" && (
                   <tr key={`day-${group.date}`} className="bg-[var(--surface-2)]/50">
-                    <td colSpan={7} className="px-5 py-1.5 text-[11px] font-medium text-[var(--muted)]">
+                    <td colSpan={isAdmin ? 8 : 7} className="px-5 py-1.5 text-[11px] font-medium text-[var(--muted)]">
                       {dayLabel(group.date)}
                       <span className="num text-[var(--muted-2)] ml-2">{fmtDate(group.date)}</span>
                     </td>
@@ -1035,8 +1089,9 @@ export default function TransactionsClient({
                 ...group.items.map((tx) => {
                   const cfg = TYPE_CONFIG[tx.type];
                   const isTemp = tx.id.startsWith("tmp-");
+                  const isDeleted = !!tx.deleted_at;
                   return (
-                    <tr key={tx.id} className={`h-12 hover:bg-[var(--surface-2)] transition-colors duration-150 ${isTemp ? "opacity-60 animate-pulse" : ""}`}>
+                    <tr key={tx.id} className={`group h-12 hover:bg-[var(--surface-2)] transition-colors duration-150 ${isTemp ? "opacity-60 animate-pulse" : ""} ${isDeleted ? "opacity-45" : ""}`}>
                       <td className="num pl-5 px-4 text-xs text-[var(--muted)]">
                         {new Date(tx.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
                       </td>
@@ -1053,7 +1108,7 @@ export default function TransactionsClient({
                           {cfg.label}
                         </span>
                       </td>
-                      <td className={`num px-4 text-right font-semibold ${cfg.qColor}`}>
+                      <td className={`num px-4 text-right font-semibold ${cfg.qColor} ${isDeleted ? "line-through" : ""}`}>
                         {cfg.sign}{formatQuantity(tx.quantity)}
                         <span className="text-xs font-normal text-[var(--muted)] ml-1">{tx.material_unit}</span>
                       </td>
@@ -1070,6 +1125,26 @@ export default function TransactionsClient({
                           "—"
                         )}
                       </td>
+                      {isAdmin && (
+                        <td className="px-4 text-right">
+                          {isDeleted ? (
+                            <span className="text-[10px] text-[var(--muted-2)]" title={`удалил ${tx.deleted_by_name ?? "—"}`}>
+                              удалено
+                            </span>
+                          ) : !isTemp ? (
+                            <button
+                              onClick={() => handleDelete(tx)}
+                              disabled={deletingId === tx.id}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--muted)] hover:text-[var(--danger)] disabled:opacity-40"
+                              title="Удалить транзакцию"
+                            >
+                              <svg className="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          ) : null}
+                        </td>
+                      )}
                     </tr>
                   );
                 }),
@@ -1097,8 +1172,9 @@ export default function TransactionsClient({
                   const cfg = TYPE_CONFIG[tx.type];
                   const isTemp = tx.id.startsWith("tmp-");
                   const expanded = expandedId === tx.id;
+                  const isDeleted = !!tx.deleted_at;
                   return (
-                    <div key={tx.id} className={isTemp ? "opacity-60 animate-pulse" : ""}>
+                    <div key={tx.id} className={`${isTemp ? "opacity-60 animate-pulse" : ""} ${isDeleted ? "opacity-45" : ""}`}>
                       {/* Compact row: dot · qty · name/creator · delta bars */}
                       <button
                         type="button"
@@ -1120,7 +1196,7 @@ export default function TransactionsClient({
                             })`,
                           }}
                         />
-                        <span className={`num text-sm font-bold w-[72px] shrink-0 ${cfg.qColor}`}>
+                        <span className={`num text-sm font-bold w-[72px] shrink-0 ${cfg.qColor} ${isDeleted ? "line-through" : ""}`}>
                           {cfg.sign}
                           {formatQuantity(tx.quantity)}
                         </span>
@@ -1155,6 +1231,23 @@ export default function TransactionsClient({
                           {tx.note && (
                             <p className="text-xs text-[var(--muted)] whitespace-pre-line">{tx.note}</p>
                           )}
+                          {isDeleted ? (
+                            <p className="text-xs text-[var(--danger)]">
+                              Удалил {tx.deleted_by_name ?? "—"}
+                              {tx.deleted_at ? ` · ${new Date(tx.deleted_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}` : ""}
+                            </p>
+                          ) : isAdmin && !isTemp ? (
+                            <button
+                              onClick={() => handleDelete(tx)}
+                              disabled={deletingId === tx.id}
+                              className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--danger)] disabled:opacity-40"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              {deletingId === tx.id ? "Удаление…" : "Удалить транзакцию"}
+                            </button>
+                          ) : null}
                         </div>
                       )}
                     </div>

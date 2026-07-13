@@ -72,6 +72,7 @@ export default async function ProducePage() {
     .from("material_transactions")
     .select("material_id, quantity")
     .eq("company_id", company_id)
+    .is("deleted_at", null)
     .eq("type", "income")
     .in("material_id", matIds)
     .gte("transaction_date", sinceStr);
