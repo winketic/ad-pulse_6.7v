@@ -1,7 +1,13 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import ReportsClient from "@/components/reports/ReportsClient";
-import type { SummaryRow, DefectRow, AllTxRow } from "@/components/reports/ReportsClient";
+import type {
+  SummaryRow,
+  DefectRow,
+  AllTxRow,
+  CounterpartyRow,
+  ProductionRow,
+} from "@/components/reports/ReportsClient";
 import NoCompanyState from "@/components/ui/NoCompanyState";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +56,7 @@ export default async function ReportsPage({
       .from("material_transactions")
       .select("id, material_id, type, quantity, note, counterparty, transaction_date, created_by")
       .eq("company_id", company_id)
+      .is("deleted_at", null)
       .gte("transaction_date", from)
       .lte("transaction_date", to)
       .order("transaction_date", { ascending: false }),
@@ -150,11 +157,107 @@ export default async function ReportsPage({
     };
   });
 
+  // ── By counterparty ──────────────────────────────────────
+  // приход = income + return, расход = expense + defect, grouped by
+  // counterparty (empty → "Без контрагента"), with per-material income.
+  type CpAgg = {
+    incomeTotal: number;
+    expenseTotal: number;
+    byMaterial: Map<string, { unit: string; income: number; expense: number }>;
+  };
+  const cpMap = new Map<string, CpAgg>();
+  for (const tx of txs) {
+    const cp = (tx.counterparty as string | null)?.trim() || "Без контрагента";
+    let agg = cpMap.get(cp);
+    if (!agg) {
+      agg = { incomeTotal: 0, expenseTotal: 0, byMaterial: new Map() };
+      cpMap.set(cp, agg);
+    }
+    const mat = matMap.get(tx.material_id);
+    const key = mat?.name ?? "—";
+    let m = agg.byMaterial.get(key);
+    if (!m) {
+      m = { unit: mat?.unit ?? "", income: 0, expense: 0 };
+      agg.byMaterial.set(key, m);
+    }
+    const qty = Number(tx.quantity);
+    if (tx.type === "income" || tx.type === "return") {
+      agg.incomeTotal += qty;
+      m.income += qty;
+    } else {
+      agg.expenseTotal += qty;
+      m.expense += qty;
+    }
+  }
+  const byCounterparty: CounterpartyRow[] = Array.from(cpMap.entries())
+    .map(([counterparty, agg]) => ({
+      counterparty,
+      incomeTotal: agg.incomeTotal,
+      expenseTotal: agg.expenseTotal,
+      materials: Array.from(agg.byMaterial.entries())
+        .map(([material_name, mm]) => ({ material_name, ...mm }))
+        .filter((mm) => mm.income > 0 || mm.expense > 0)
+        .sort((a, b) => b.income - a.income),
+    }))
+    // "Без контрагента" always last; others by total volume
+    .sort((a, b) => {
+      if (a.counterparty === "Без контрагента") return 1;
+      if (b.counterparty === "Без контрагента") return -1;
+      return b.incomeTotal + b.expenseTotal - (a.incomeTotal + a.expenseTotal);
+    });
+
+  // ── Production ────────────────────────────────────────────
+  // The production RPC tags all 3 rows with note `Производство: <name> <qty> шт`.
+  // income row = lintel produced; expense rows = concrete/rebar consumed. We
+  // link concrete/rebar to a lintel by parsing the name out of the note.
+  const parseLintel = (note: string | null): string | null => {
+    if (!note) return null;
+    const m = note.match(/^Производство:\s+(.+)\s+[\d.,]+\s+шт$/);
+    return m ? m[1].trim() : null;
+  };
+  type ProdAgg = { unit: string; produced: number; concrete: number; rebar: number };
+  const prodMap = new Map<string, ProdAgg>();
+  let concreteUnit = "м³";
+  let rebarUnit = "м";
+  for (const tx of txs) {
+    const note = tx.note as string | null;
+    if (!note?.startsWith("Производство:")) continue;
+    const lintel = parseLintel(note);
+    if (!lintel) continue;
+    const mat = matMap.get(tx.material_id);
+    let agg = prodMap.get(lintel);
+    if (!agg) {
+      agg = { unit: "шт", produced: 0, concrete: 0, rebar: 0 };
+      prodMap.set(lintel, agg);
+    }
+    const qty = Number(tx.quantity);
+    if (tx.type === "income") {
+      agg.unit = mat?.unit ?? "шт";
+      agg.produced += qty;
+    } else if (tx.type === "expense") {
+      if (mat?.name === "Бетон") {
+        agg.concrete += qty;
+        concreteUnit = mat?.unit ?? concreteUnit;
+      } else {
+        agg.rebar += qty;
+        rebarUnit = mat?.unit ?? rebarUnit;
+      }
+    }
+  }
+  const production: ProductionRow[] = Array.from(prodMap.entries())
+    .map(([lintel_name, agg]) => ({ lintel_name, ...agg }))
+    .filter((r) => r.produced > 0)
+    .sort((a, b) => b.produced - a.produced);
+
   return (
     <ReportsClient
       summary={summary}
       defects={defects}
       allTransactions={allTransactions}
+      byCounterparty={byCounterparty}
+      production={production}
+      concreteUnit={concreteUnit}
+      rebarUnit={rebarUnit}
       from={from}
       to={to}
     />
