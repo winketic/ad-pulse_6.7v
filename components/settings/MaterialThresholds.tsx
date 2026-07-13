@@ -73,7 +73,7 @@ export function MaterialThresholds({ materials, initialThresholds }: Props) {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-[var(--text)] truncate">{mat.name}</p>
               {current != null ? (
-                <p className="text-xs" style={{ color: "#00f5c4" }}>
+                <p className="text-xs" style={{ color: "var(--accent)" }}>
                   Алерт при остатке &lt; {current} {mat.unit}
                 </p>
               ) : (
@@ -92,14 +92,14 @@ export function MaterialThresholds({ materials, initialThresholds }: Props) {
                   min={0}
                   step="any"
                   className="w-24 px-2 py-1 text-sm rounded-lg outline-none text-right"
-                  style={{ background: "#1a1a2e", border: "1px solid #00f5c4", color: "#f9fafb" }}
+                  style={{ background: "var(--surface-2)", border: "1px solid var(--accent)", color: "var(--text)" }}
                 />
                 <span className="text-xs text-[var(--muted)]">{mat.unit}</span>
                 <button
                   onClick={() => handleSave(mat.id, mat.unit)}
                   disabled={isPending}
                   className="px-3 py-1 text-xs rounded-lg font-medium"
-                  style={{ background: "#00f5c4", color: "#05050a" }}
+                  style={{ background: "var(--accent)", color: "var(--accent-text)" }}
                 >
                   ОК
                 </button>
@@ -121,7 +121,7 @@ export function MaterialThresholds({ materials, initialThresholds }: Props) {
               <button
                 onClick={() => startEdit(mat.id)}
                 className="shrink-0 px-3 py-1.5 text-xs rounded-lg"
-                style={{ background: "#1a1a2e", color: "#9ca3af", border: "1px solid #2a2a3d" }}
+                style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border-strong)" }}
               >
                 {current != null ? "Изменить" : "Задать"}
               </button>

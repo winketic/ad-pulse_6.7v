@@ -91,7 +91,7 @@ export function BalanceTableRealtime({ materials, initialBalances, companyId, th
     return (
       <div className="py-12 text-center">
         <p className="text-sm text-[var(--muted)]">Материалов нет</p>
-        <Link href="/dashboard/materials" className="mt-2 inline-block text-sm text-[#00f5c4] hover:underline">
+        <Link href="/dashboard/materials" className="mt-2 inline-block text-sm text-[var(--accent)] hover:underline">
           Добавить материалы
         </Link>
       </div>

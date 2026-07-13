@@ -35,14 +35,14 @@ export default function RegisterPage() {
         <div className="dp-auth-card">
           {done ? (
             <div className="text-center py-4">
-              <div className="w-12 h-12 rounded-full bg-[#00f5c4]/10 border border-[#00f5c4]/30 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-[#00f5c4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="w-12 h-12 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/30 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
               <h2 className="text-lg font-semibold text-[#ededed] mb-2">Заявка отправлена</h2>
               <p className="text-sm text-[#888888] mb-6">Мы свяжемся с вами в течение 24 часов.</p>
-              <Link href="/login" className="text-sm text-[#888888] hover:text-[#00f5c4] transition-colors">
+              <Link href="/login" className="text-sm text-[#888888] hover:text-[var(--accent)] transition-colors">
                 Вернуться ко входу
               </Link>
             </div>
@@ -74,7 +74,7 @@ export default function RegisterPage() {
               </form>
               <p className="text-center text-sm text-[#888888] mt-6">
                 Уже есть аккаунт?{" "}
-                <Link href="/login" className="font-medium text-[#ededed] hover:text-[#00f5c4] transition-colors">Войти</Link>
+                <Link href="/login" className="font-medium text-[#ededed] hover:text-[var(--accent)] transition-colors">Войти</Link>
               </p>
             </>
           )}

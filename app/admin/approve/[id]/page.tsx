@@ -35,7 +35,7 @@ export default async function AdminApprovePage({ params }: { params: { id: strin
           <div className="flex justify-center mb-4">
             <Logo size={48} />
           </div>
-          <h1 className="text-xl font-bold text-[#05050a]">Одобрение заявки</h1>
+          <h1 className="text-xl font-bold text-[#0A0C10]">Одобрение заявки</h1>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
@@ -70,7 +70,7 @@ export default async function AdminApprovePage({ params }: { params: { id: strin
           {isPending && <ApproveButton registrationId={params.id} />}
 
           <div className="mt-5 text-center">
-            <Link href="/admin/registrations" className="text-sm text-gray-400 hover:text-[#05050a] transition-colors">
+            <Link href="/admin/registrations" className="text-sm text-gray-400 hover:text-[#0A0C10] transition-colors">
               ← Все заявки
             </Link>
           </div>
