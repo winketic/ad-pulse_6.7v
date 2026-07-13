@@ -117,8 +117,8 @@ export default function AdminApproveClient({ registration: reg }: { registration
                 disabled={loading}
                 style={{
                   flex: 1,
-                  background: "#05050a",
-                  color: "#00f5c4",
+                  background: "var(--accent)",
+                  color: "var(--accent)",
                   padding: "14px 0",
                   borderRadius: "10px",
                   fontWeight: 600,
@@ -135,7 +135,7 @@ export default function AdminApproveClient({ registration: reg }: { registration
           )}
 
           <div className="mt-5 text-center">
-            <Link href="/admin/registrations" className="text-sm text-gray-400 hover:text-[#05050a] transition-colors">
+            <Link href="/admin/registrations" className="text-sm text-gray-400 hover:text-[#0A0C10] transition-colors">
               ← Все заявки
             </Link>
           </div>

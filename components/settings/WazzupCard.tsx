@@ -76,7 +76,7 @@ function CredentialsForm({
         </div>
         <button
           onClick={() => setEditing(true)}
-          className="text-xs text-[var(--muted)] hover:text-[#00f5c4] transition-colors ml-3 shrink-0"
+          className="text-xs text-[var(--muted)] hover:text-[var(--accent)] transition-colors ml-3 shrink-0"
         >
           Изменить
         </button>
@@ -96,7 +96,7 @@ function CredentialsForm({
           onChange={(e) => setClientId(e.target.value)}
           placeholder="2083-9002"
           required
-          className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--border)] rounded-lg text-sm font-mono text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
+          className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--border)] rounded-lg text-sm font-mono text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)]"
         />
       </div>
       <div>
@@ -109,7 +109,7 @@ function CredentialsForm({
           onChange={(e) => setEmail(e.target.value)}
           placeholder="partner@example.com"
           required
-          className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
+          className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)]"
         />
       </div>
       <div>
@@ -122,7 +122,7 @@ function CredentialsForm({
           onChange={(e) => setPassword(e.target.value)}
           placeholder={hasConfig ? "Оставьте пустым, чтобы не менять" : "••••••••"}
           required={!hasConfig}
-          className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
+          className="w-full px-3 py-2 bg-[var(--bg3)] border border-[var(--border)] rounded-lg text-sm text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)]"
         />
       </div>
       {error && (
@@ -141,7 +141,7 @@ function CredentialsForm({
         <button
           type="submit"
           disabled={pending}
-          className="px-4 py-1.5 rounded-lg bg-[#1a472a] text-white text-xs font-semibold hover:bg-[#1a472a]/90 disabled:opacity-50 transition-colors"
+          className="px-4 py-1.5 rounded-lg bg-[var(--accent-hover)] text-white text-xs font-semibold hover:bg-[var(--accent-hover)]/90 disabled:opacity-50 transition-colors"
         >
           {pending ? "Сохранение…" : "Сохранить"}
         </button>
@@ -190,7 +190,7 @@ function ResubscribeButton() {
         )}
         Обновить webhook
       </button>
-      {status === "ok" && <span className="text-xs" style={{ color: "#00f5c4" }}>✓ Зарегистрирован</span>}
+      {status === "ok" && <span className="text-xs" style={{ color: "var(--accent)" }}>✓ Зарегистрирован</span>}
       {status === "err" && <span className="text-xs" style={{ color: "#f87171" }}>Ошибка — см. логи</span>}
     </div>
   );
