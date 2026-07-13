@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────
@@ -38,6 +38,21 @@ export type AllTxRow = {
   creator_name: string;
 };
 
+export type CounterpartyRow = {
+  counterparty: string;
+  incomeTotal: number;
+  expenseTotal: number;
+  materials: { material_name: string; unit: string; income: number; expense: number }[];
+};
+
+export type ProductionRow = {
+  lintel_name: string;
+  unit: string;
+  produced: number;
+  concrete: number;
+  rebar: number;
+};
+
 // ─── Helpers ──────────────────────────────────────────────
 
 function fmtDate(s: string) {
@@ -47,6 +62,11 @@ function fmtDate(s: string) {
 
 function fmtQty(n: number) {
   return n === 0 ? "—" : n.toFixed(4);
+}
+
+// Compact: up to 2 decimals, no trailing zeros; dash for zero.
+function fmt2(n: number) {
+  return n === 0 ? "—" : parseFloat(n.toFixed(2)).toString();
 }
 
 function pluralCases(n: number) {
@@ -74,6 +94,10 @@ async function exportExcel(
   summary: SummaryRow[],
   defects: DefectRow[],
   allTransactions: AllTxRow[],
+  byCounterparty: CounterpartyRow[],
+  production: ProductionRow[],
+  concreteUnit: string,
+  rebarUnit: string,
   from: string,
   to: string
 ) {
@@ -148,6 +172,53 @@ async function exportExcel(
   ];
   XLSX.utils.book_append_sheet(wb, ws3, "Движение");
 
+  // Sheet 4: By counterparty — one row per material line + subtotal per cp
+  const s4Data: Record<string, string | number>[] = [];
+  for (const cp of byCounterparty) {
+    for (const m of cp.materials) {
+      s4Data.push({
+        "Контрагент": cp.counterparty,
+        "Материал": m.material_name,
+        "Ед. изм.": m.unit,
+        "Приход": m.income || "",
+        "Расход": m.expense || "",
+      });
+    }
+    s4Data.push({
+      "Контрагент": cp.counterparty,
+      "Материал": "ИТОГО",
+      "Ед. изм.": "",
+      "Приход": cp.incomeTotal || "",
+      "Расход": cp.expenseTotal || "",
+    });
+  }
+  const ws4 = XLSX.utils.json_to_sheet(s4Data.length ? s4Data : [{ "Контрагент": "Нет данных" }]);
+  ws4["!cols"] = [{ wch: 28 }, { wch: 28 }, { wch: 10 }, { wch: 14 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, ws4, "Контрагенты");
+
+  // Sheet 5: Production — per lintel + total row
+  const prodTotals = production.reduce(
+    (t, r) => ({ produced: t.produced + r.produced, concrete: t.concrete + r.concrete, rebar: t.rebar + r.rebar }),
+    { produced: 0, concrete: 0, rebar: 0 }
+  );
+  const s5Data: Record<string, string | number>[] = production.map((r) => ({
+    "Перемычка": r.lintel_name,
+    "Выпущено (шт)": r.produced,
+    [`Бетон (${concreteUnit})`]: Number(r.concrete.toFixed(3)),
+    [`Арматура (${rebarUnit})`]: Number(r.rebar.toFixed(3)),
+  }));
+  if (production.length > 0) {
+    s5Data.push({
+      "Перемычка": "ИТОГО",
+      "Выпущено (шт)": prodTotals.produced,
+      [`Бетон (${concreteUnit})`]: Number(prodTotals.concrete.toFixed(3)),
+      [`Арматура (${rebarUnit})`]: Number(prodTotals.rebar.toFixed(3)),
+    });
+  }
+  const ws5 = XLSX.utils.json_to_sheet(s5Data.length ? s5Data : [{ "Перемычка": "Нет данных" }]);
+  ws5["!cols"] = [{ wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, ws5, "Производство");
+
   const filename = `AD_Pulse_${from}_${to}.xlsx`;
   XLSX.writeFile(wb, filename);
 }
@@ -212,6 +283,20 @@ function FilterBar({
           </svg>
         )}
         Применить
+      </button>
+
+      {/* Quick presets */}
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() => {
+          const now = new Date();
+          const first = new Date(now.getFullYear(), now.getMonth(), 1);
+          onApply(first.toISOString().split("T")[0], now.toISOString().split("T")[0]);
+        }}
+        className="dp-btn-secondary rounded-lg"
+      >
+        Этот месяц
       </button>
     </form>
   );
@@ -420,12 +505,20 @@ export default function ReportsClient({
   summary,
   defects,
   allTransactions,
+  byCounterparty,
+  production,
+  concreteUnit,
+  rebarUnit,
   from,
   to,
 }: {
   summary: SummaryRow[];
   defects: DefectRow[];
   allTransactions: AllTxRow[];
+  byCounterparty: CounterpartyRow[];
+  production: ProductionRow[];
+  concreteUnit: string;
+  rebarUnit: string;
   from: string;
   to: string;
 }) {
@@ -448,7 +541,17 @@ export default function ReportsClient({
   const handleExport = async () => {
     setExporting(true);
     try {
-      await exportExcel(summary, defects, allTransactions, from, to);
+      await exportExcel(
+        summary,
+        defects,
+        allTransactions,
+        byCounterparty,
+        production,
+        concreteUnit,
+        rebarUnit,
+        from,
+        to
+      );
     } finally {
       setExporting(false);
     }
@@ -512,6 +615,103 @@ export default function ReportsClient({
         >
           <SummaryTable rows={summary} />
         </div>
+      </div>
+
+      {/* ── By counterparty ─────────────────────────────── */}
+      <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] mb-4">
+        <div className="px-5 py-4 border-b border-[var(--border)]">
+          <h2 className="text-sm font-semibold text-[var(--text)]">По контрагентам</h2>
+          <p className="text-xs text-[var(--muted)] mt-0.5">
+            Приход и расход по каждому контрагенту за период
+          </p>
+        </div>
+        {byCounterparty.length === 0 ? (
+          <p className="text-sm text-[var(--muted)] text-center py-10">Нет данных за период</p>
+        ) : (
+          <div className={`overflow-x-auto ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
+            <table className="w-full text-sm min-w-[560px]">
+              <thead>
+                <tr className="border-b border-[var(--border)]">
+                  <th className="text-left px-5 h-9 text-xs font-medium text-[var(--muted)]">Контрагент / материал</th>
+                  <th className="text-right px-4 h-9 text-xs font-medium text-[var(--muted)] w-40">Приход</th>
+                  <th className="text-right px-5 h-9 text-xs font-medium text-[var(--muted)] w-40">Расход</th>
+                </tr>
+              </thead>
+              <tbody>
+                {byCounterparty.map((cp) => (
+                  <Fragment key={cp.counterparty}>
+                    <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]/40">
+                      <td className="px-5 py-2 font-semibold text-[var(--text)]">{cp.counterparty}</td>
+                      <td className="num px-4 py-2 text-right font-semibold text-[var(--success)]">{fmt2(cp.incomeTotal)}</td>
+                      <td className="num px-5 py-2 text-right font-semibold text-[var(--danger)]">{fmt2(cp.expenseTotal)}</td>
+                    </tr>
+                    {cp.materials.map((m) => (
+                      <tr key={cp.counterparty + m.material_name} className="border-b border-[var(--border)] last:border-0">
+                        <td className="px-5 py-1.5 pl-8 text-[var(--muted)]">
+                          {m.material_name} <span className="text-[var(--muted-2)] text-xs">{m.unit}</span>
+                        </td>
+                        <td className="num px-4 py-1.5 text-right text-[var(--muted)]">{fmt2(m.income)}</td>
+                        <td className="num px-5 py-1.5 text-right text-[var(--muted)]">{fmt2(m.expense)}</td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Production ───────────────────────────────────── */}
+      <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] mb-4">
+        <div className="px-5 py-4 border-b border-[var(--border)]">
+          <h2 className="text-sm font-semibold text-[var(--text)]">Производство</h2>
+          <p className="text-xs text-[var(--muted)] mt-0.5">
+            Выпуск перемычек и списанное сырьё за период
+          </p>
+        </div>
+        {production.length === 0 ? (
+          <p className="text-sm text-[var(--muted)] text-center py-10">Нет выпуска за период</p>
+        ) : (
+          <div className={`overflow-x-auto ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
+            <table className="w-full text-sm min-w-[520px]">
+              <thead>
+                <tr className="border-b border-[var(--border)]">
+                  <th className="text-left px-5 h-9 text-xs font-medium text-[var(--muted)]">Перемычка</th>
+                  <th className="text-right px-4 h-9 text-xs font-medium text-[var(--muted)] w-32">Выпущено</th>
+                  <th className="text-right px-4 h-9 text-xs font-medium text-[var(--muted)] w-36">Бетон, {concreteUnit}</th>
+                  <th className="text-right px-5 h-9 text-xs font-medium text-[var(--muted)] w-40">Арматура, {rebarUnit}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {production.map((r) => (
+                  <tr key={r.lintel_name} className="h-10 hover:bg-[var(--surface-2)] transition-colors">
+                    <td className="px-5 text-[var(--text)]">{r.lintel_name}</td>
+                    <td className="num px-4 text-right font-semibold text-[var(--info)]">
+                      {fmt2(r.produced)} <span className="text-xs font-normal text-[var(--muted)]">{r.unit}</span>
+                    </td>
+                    <td className="num px-4 text-right text-[var(--muted)]">{fmt2(r.concrete)}</td>
+                    <td className="num px-5 text-right text-[var(--muted)]">{fmt2(r.rebar)}</td>
+                  </tr>
+                ))}
+                {(() => {
+                  const t = production.reduce(
+                    (a, r) => ({ p: a.p + r.produced, c: a.c + r.concrete, r: a.r + r.rebar }),
+                    { p: 0, c: 0, r: 0 }
+                  );
+                  return (
+                    <tr className="h-10 bg-[var(--surface-2)]/50 font-semibold">
+                      <td className="px-5 text-[var(--text)]">ИТОГО</td>
+                      <td className="num px-4 text-right text-[var(--text)]">{fmt2(t.p)} шт</td>
+                      <td className="num px-4 text-right text-[var(--text)]">{fmt2(t.c)}</td>
+                      <td className="num px-5 text-right text-[var(--text)]">{fmt2(t.r)}</td>
+                    </tr>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* ── Defect cases ────────────────────────────────── */}
