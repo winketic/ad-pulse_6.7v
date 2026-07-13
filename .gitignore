@@ -53,3 +53,5 @@ dev-stderr.log
 build.log
 
 .vercel
+
+*.tmp.mjs
