@@ -26,12 +26,13 @@ export default async function TransactionsPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("company_id")
+    .select("company_id, role")
     .eq("id", user.id)
     .single();
 
   const company_id = profile?.company_id as string | undefined;
   if (!company_id) return <NoCompanyState />;
+  const isAdmin = profile?.role === "admin";
 
   const page = Math.max(1, parseInt(searchParams.page ?? "1", 10));
   const rangeFrom = (page - 1) * PAGE_SIZE;
@@ -39,22 +40,24 @@ export default async function TransactionsPage({
 
   const [txResult, countResult, matResult, profilesResult, balanceTxResult] =
     await Promise.all([
-      // Paginated list
+      // Paginated list — includes deleted rows so an admin can toggle
+      // "показать удалённые"; the client hides them by default.
       supabase
         .from("material_transactions")
         .select(
-          "id, type, quantity, note, counterparty, transaction_date, created_at, material_id, created_by, source, wazzup_message_id"
+          "id, type, quantity, note, counterparty, transaction_date, created_at, material_id, created_by, source, wazzup_message_id, deleted_at, deleted_by"
         )
         .eq("company_id", company_id)
         .order("transaction_date", { ascending: false })
         .order("created_at", { ascending: false })
         .range(rangeFrom, rangeTo),
 
-      // Total count only (no data, very fast)
+      // Total count — active (non-deleted) rows only for the headline
       supabase
         .from("material_transactions")
         .select("id", { count: "exact", head: true })
-        .eq("company_id", company_id),
+        .eq("company_id", company_id)
+        .is("deleted_at", null),
 
       // Materials lookup — select("*") so not-yet-migrated columns
       // (kg_per_meter) don't fail the whole query before migration 033
@@ -72,11 +75,12 @@ export default async function TransactionsPage({
         .select("*")
         .eq("company_id", company_id),
 
-      // Lightweight all-tx for balance cards (3 fields only)
+      // Lightweight all-tx for balance cards (3 fields only) — active only
       supabase
         .from("material_transactions")
         .select("material_id, type, quantity")
-        .eq("company_id", company_id),
+        .eq("company_id", company_id)
+        .is("deleted_at", null),
     ]);
 
   const totalCount = countResult.count ?? 0;
@@ -116,6 +120,9 @@ export default async function TransactionsPage({
     } else if (tx.created_by) {
       creatorName = profileMap.get(tx.created_by)?.full_name ?? "—";
     }
+    const rawTx = tx as Record<string, unknown>;
+    const deletedAt = (rawTx.deleted_at as string | null) ?? null;
+    const deletedBy = (rawTx.deleted_by as string | null) ?? null;
     return {
       id: tx.id,
       type: tx.type as TxType,
@@ -130,6 +137,8 @@ export default async function TransactionsPage({
       material_unit: matMap.get(tx.material_id)?.unit ?? "",
       creator_name: creatorName,
       source: tx.source ?? "manual",
+      deleted_at: deletedAt,
+      deleted_by_name: deletedBy ? profileMap.get(deletedBy)?.full_name ?? "—" : null,
     };
   });
 
@@ -179,6 +188,7 @@ export default async function TransactionsPage({
       totalPages={totalPages}
       totalCount={totalCount}
       initialMaterialId={searchParams.material_id}
+      isAdmin={isAdmin}
     />
   );
 }

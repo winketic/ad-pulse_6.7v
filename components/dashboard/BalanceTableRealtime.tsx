@@ -64,7 +64,8 @@ export function BalanceTableRealtime({ materials, initialBalances, companyId, th
     const { data } = await supabase
       .from("material_transactions")
       .select("material_id, type, quantity")
-      .eq("company_id", companyId);
+      .eq("company_id", companyId)
+      .is("deleted_at", null);
 
     if (!data) return;
 

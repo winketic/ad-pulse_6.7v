@@ -121,20 +121,24 @@ export default async function DashboardPage() {
       .from("material_transactions")
       .select("type, quantity, material_id")
       .eq("company_id", company_id)
+      .is("deleted_at", null)
       .eq("transaction_date", today),
     supabase
       .from("material_transactions")
       .select("type, quantity, material_id")
       .eq("company_id", company_id)
+      .is("deleted_at", null)
       .eq("transaction_date", yesterday),
     supabase
       .from("material_transactions")
       .select("material_id, type, quantity, transaction_date")
-      .eq("company_id", company_id),
+      .eq("company_id", company_id)
+      .is("deleted_at", null),
     supabase
       .from("material_transactions")
       .select("id, type, quantity, transaction_date, created_at, material_id, created_by")
       .eq("company_id", company_id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(12),
     supabase

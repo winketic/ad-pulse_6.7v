@@ -66,6 +66,7 @@ export default async function PlanDetailPage({
     .from("material_transactions")
     .select("material_id, type, quantity")
     .eq("company_id", company_id)
+    .is("deleted_at", null)
     .in("type", ["expense", "defect"])
     .gte("transaction_date", plan.start_date)
     .lte("transaction_date", plan.end_date);

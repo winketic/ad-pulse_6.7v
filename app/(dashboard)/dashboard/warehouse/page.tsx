@@ -56,6 +56,7 @@ export default async function WarehousePage() {
       .from("material_transactions")
       .select("material_id, type, quantity, transaction_date, created_at")
       .eq("company_id", company_id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false }),
     supabase
       .from("material_thresholds")
