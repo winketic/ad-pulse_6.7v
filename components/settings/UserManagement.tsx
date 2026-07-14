@@ -129,7 +129,7 @@ export default function UserManagement({
         {isAdmin && (
           <button
             onClick={() => setShowInvite(!showInvite)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[36px] rounded-lg bg-[#00f5c4] text-[#0a0a0a] text-xs font-medium hover:bg-[#00ddb3] transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 min-h-[36px] rounded-lg bg-[var(--accent)] text-[var(--accent-text)] text-xs font-medium hover:bg-[var(--accent-hover)] transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -141,7 +141,7 @@ export default function UserManagement({
 
       {/* Flash messages */}
       {(actionError || actionSuccess) && (
-        <div className={`mx-5 mt-4 px-3 py-2.5 rounded-lg text-sm ${actionError ? "bg-red-500/10 border border-red-500/20 text-red-400" : "bg-[#00f5c4]/10 border border-[#00f5c4]/20 text-[#00f5c4]"}`}>
+        <div className={`mx-5 mt-4 px-3 py-2.5 rounded-lg text-sm ${actionError ? "bg-red-500/10 border border-red-500/20 text-red-400" : "bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-[var(--accent)]"}`}>
           {actionError || actionSuccess}
         </div>
       )}
@@ -184,7 +184,7 @@ export default function UserManagement({
             <button
               type="submit"
               disabled={isPending || !inviteEmail.trim()}
-              className="flex-1 min-h-[48px] px-3 py-2 rounded-lg bg-[#00f5c4] text-[#0a0a0a] text-sm font-medium hover:bg-[#00ddb3] disabled:opacity-50 transition-colors"
+              className="flex-1 min-h-[48px] px-3 py-2 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] text-sm font-medium hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
             >
               {isPending ? "Добавление…" : "Добавить"}
             </button>
@@ -208,7 +208,7 @@ export default function UserManagement({
               <RoleBadge role={user.role} />
               {isAdmin && !isSelf && (
                 <button onClick={() => setEditingRoleId(user.id)}
-                  className="text-[10px] text-[var(--muted)] hover:text-[#00f5c4] hover:underline">
+                  className="text-[10px] text-[var(--muted)] hover:text-[var(--accent)] hover:underline">
                   изменить
                 </button>
               )}
@@ -218,11 +218,11 @@ export default function UserManagement({
             <div className="flex items-center gap-2 flex-wrap">
               <select value={roleValues[user.id] ?? user.role}
                 onChange={(e) => setRoleValues((prev) => ({ ...prev, [user.id]: e.target.value }))}
-                className="px-2 py-1.5 border border-[var(--border)] rounded-md text-xs bg-[var(--bg3)] text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-[#00f5c4]">
+                className="px-2 py-1.5 border border-[var(--border)] rounded-md text-xs bg-[var(--bg3)] text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]">
                 {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
               </select>
               <button onClick={() => handleRoleSave(user.id)} disabled={isPending}
-                className="text-xs text-[#00f5c4] font-medium hover:underline disabled:opacity-50">Сохранить</button>
+                className="text-xs text-[var(--accent)] font-medium hover:underline disabled:opacity-50">Сохранить</button>
               <button onClick={() => setEditingRoleId(null)}
                 className="text-xs text-[var(--muted)] hover:underline">Отмена</button>
             </div>
@@ -253,8 +253,8 @@ export default function UserManagement({
               return (
                 <div key={user.id} className="px-5 py-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-9 h-9 rounded-full bg-[#00f5c4]/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <span className="text-[#00f5c4] text-sm font-semibold uppercase">
+                    <div className="w-9 h-9 rounded-full bg-[var(--accent)]/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="text-[var(--accent)] text-sm font-semibold uppercase">
                         {(user.full_name ?? user.email).charAt(0)}
                       </span>
                     </div>

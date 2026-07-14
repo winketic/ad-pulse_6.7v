@@ -218,6 +218,7 @@ async function fireAlerts({
     .from("material_transactions")
     .select("type, quantity")
     .eq("company_id", companyId)
+    .is("deleted_at", null)
     .eq("material_id", materialId);
 
   let balance = 0;
@@ -315,6 +316,7 @@ async function fireAlerts({
         .from("material_transactions")
         .select("quantity, transaction_date")
         .eq("company_id", companyId)
+        .is("deleted_at", null)
         .eq("material_id", materialId)
         .eq("type", "expense")
         .gte("transaction_date", minStart)

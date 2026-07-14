@@ -121,20 +121,24 @@ export default async function DashboardPage() {
       .from("material_transactions")
       .select("type, quantity, material_id")
       .eq("company_id", company_id)
+      .is("deleted_at", null)
       .eq("transaction_date", today),
     supabase
       .from("material_transactions")
       .select("type, quantity, material_id")
       .eq("company_id", company_id)
+      .is("deleted_at", null)
       .eq("transaction_date", yesterday),
     supabase
       .from("material_transactions")
       .select("material_id, type, quantity, transaction_date")
-      .eq("company_id", company_id),
+      .eq("company_id", company_id)
+      .is("deleted_at", null),
     supabase
       .from("material_transactions")
       .select("id, type, quantity, transaction_date, created_at, material_id, created_by")
       .eq("company_id", company_id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(12),
     supabase
@@ -274,10 +278,174 @@ export default async function DashboardPage() {
   });
   const companyName = companyResult.data?.name ?? "";
 
+  // Desktop stock list — critical first (mobile ticker is recency-first)
+  const levelOrder: Record<StockLevel, number> = { critical: 0, low: 1, normal: 2 };
+  const desktopStocks = [...ticker].sort((a, b) => levelOrder[a.level] - levelOrder[b.level]);
+
   // ─────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <>
+    {/* ════ DESKTOP (lg+) — calm three-metric dashboard ════ */}
+    <div className="hidden lg:block max-w-6xl mx-auto px-6 py-8 w-full">
+      <p className="text-sm text-[var(--muted)] capitalize mb-6">
+        {todayLabel}
+        {companyName && <span className="text-[var(--muted-2)]"> · {companyName}</span>}
+      </p>
+
+      {/* Metric cards row */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-5">
+          <p className="text-sm text-[var(--muted)]">Выпуск сегодня</p>
+          <div className="flex items-baseline gap-2.5 mt-2">
+            <span className="num text-3xl font-semibold text-[var(--text)]">
+              {hasProduction ? formatCompact(todayProdTotal) : "—"}
+            </span>
+            {hasProduction && <span className="text-sm text-[var(--muted)]">шт</span>}
+            {prodTrend && prodTrend.dir !== "flat" && (
+              <span className={`num text-xs font-semibold ${prodTrend.good ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
+                {prodTrend.dir === "up" ? "↑" : "↓"}
+                {prodTrend.pct != null && `${Math.abs(prodTrend.pct).toFixed(0)}%`}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-5">
+          <p className="text-sm text-[var(--muted)]">Движений сегодня</p>
+          <div className="flex items-baseline gap-2.5 mt-2">
+            <span className="num text-3xl font-semibold text-[var(--text)]">{todayTxs.length}</span>
+            <span className="num text-xs text-[var(--muted)]">
+              <span className="text-[var(--success)]">+{formatCompact(todayInQty)}</span>
+              {" / "}
+              <span className="text-[var(--danger)]">−{formatCompact(todayOutQty)}</span>
+            </span>
+          </div>
+        </div>
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-5">
+          <p className="text-sm text-[var(--muted)]">Активных планов</p>
+          <div className="flex items-baseline gap-2.5 mt-2">
+            <span className="num text-3xl font-semibold text-[var(--text)]">{plans.length}</span>
+            {plans.some((p) => p.daysLeft < 0) && (
+              <span className="text-xs font-semibold text-[var(--danger)]">
+                {plans.filter((p) => p.daysLeft < 0).length} просрочен
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Two-column: activity feed | stocks + plans */}
+      <div className="grid grid-cols-[1fr_360px] gap-6 mt-6 items-start">
+        {/* Activity */}
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)]">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border)]">
+            <h2 className="text-sm font-semibold text-[var(--text)]">Активность</h2>
+            <Link href="/dashboard/transactions" className="text-xs text-[var(--accent)] hover:underline">
+              Всё движение →
+            </Link>
+          </div>
+          {timeline.length === 0 ? (
+            <p className="text-sm text-[var(--muted)] text-center py-10">Сегодня пока тихо</p>
+          ) : (
+            <div className="divide-y divide-[var(--border)]">
+              {timeline.map((item) => (
+                <div key={item.id} className="flex items-center gap-3 px-5 h-11 hover:bg-[var(--surface-2)] transition-colors duration-150">
+                  <span className="num text-xs text-[var(--muted-2)] w-20 shrink-0">{item.timeLabel}</span>
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${DOT_COLOR[item.kind]}`} />
+                  <span className="text-sm text-[var(--text)] truncate flex-1 min-w-0">
+                    <span className="font-medium">{item.label}</span>
+                    <span className="text-[var(--muted)]"> · {item.material}</span>
+                    {item.who && <span className="text-[var(--muted-2)]"> · {item.who}</span>}
+                  </span>
+                  <span className={`num text-sm font-semibold shrink-0 ${Q_COLOR[item.kind]}`}>
+                    {item.sign}{formatQuantity(item.qty)} {item.unit}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-6">
+          {/* Stocks — critical first */}
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)]">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border)]">
+              <h2 className="text-sm font-semibold text-[var(--text)]">Остатки</h2>
+              <Link href="/dashboard/warehouse" className="text-xs text-[var(--accent)] hover:underline">
+                Весь склад →
+              </Link>
+            </div>
+            {desktopStocks.length === 0 ? (
+              <p className="text-sm text-[var(--muted)] text-center py-8">Нет движения за 7 дней</p>
+            ) : (
+              <div className="divide-y divide-[var(--border)]">
+                {desktopStocks.map((t) => (
+                  <Link
+                    key={t.id}
+                    href={`/dashboard/transactions?material_id=${t.id}`}
+                    className="flex items-center gap-2.5 px-5 h-10 hover:bg-[var(--surface-2)] transition-colors duration-150"
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${LEVEL_DOT[t.level]}`} />
+                    <span className="text-sm text-[var(--text)] truncate flex-1">{t.name}</span>
+                    <span className={`num text-sm font-semibold shrink-0 ${LEVEL_NUM[t.level]}`}>
+                      {formatCompact(t.balance)}
+                      <span className="text-xs font-normal text-[var(--muted)] ml-1">{t.unit}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Plans */}
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)]">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border)]">
+              <h2 className="text-sm font-semibold text-[var(--text)]">Планы</h2>
+              <Link href="/dashboard/plans" className="text-xs text-[var(--accent)] hover:underline">
+                Все планы →
+              </Link>
+            </div>
+            {plans.length === 0 ? (
+              <p className="text-sm text-[var(--muted)] text-center py-8">Нет активных планов</p>
+            ) : (
+              <div className="divide-y divide-[var(--border)]">
+                {plans.map((plan) => {
+                  const overdue = plan.daysLeft < 0;
+                  return (
+                    <Link
+                      key={plan.id}
+                      href={`/dashboard/plans/${plan.id}`}
+                      className="block px-5 py-3 hover:bg-[var(--surface-2)] transition-colors duration-150"
+                    >
+                      <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                        <span className="text-sm text-[var(--text)] truncate">{plan.name}</span>
+                        <span className={`num text-xs font-semibold shrink-0 ${
+                          plan.pct >= 100 ? "text-[var(--success)]" : overdue ? "text-[var(--danger)]" : "text-[var(--muted)]"
+                        }`}>
+                          {Math.min(plan.pct, 999).toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="h-1 rounded-full bg-[var(--surface-3)] overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            plan.pct >= 100 ? "bg-[var(--success)]" : overdue ? "bg-[var(--danger)]" : "bg-[var(--accent)]"
+                          }`}
+                          style={{ width: `${Math.min(plan.pct, 100)}%` }}
+                        />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* ════ MOBILE (<lg) — unchanged command center ════ */}
+    <div className="lg:hidden max-w-7xl mx-auto">
       {/* ── Thin context row ───────────────────────────── */}
       <div className="px-4 sm:px-6 pt-4 sm:pt-6">
         <p className="text-label fade-in-up">
@@ -487,5 +655,6 @@ export default async function DashboardPage() {
         </section>
       </div>
     </div>
+    </>
   );
 }

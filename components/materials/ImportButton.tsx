@@ -50,7 +50,7 @@ export function ImportButton() {
         onClick={() => inputRef.current?.click()}
         disabled={loading}
         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
-        style={{ background: "#1a1a2e", color: "#9ca3af", border: "1px solid #2a2a3d" }}
+        style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border-strong)" }}
       >
         {loading ? (
           <>
@@ -70,7 +70,7 @@ export function ImportButton() {
         )}
       </button>
       {result && (
-        <p className="text-xs" style={{ color: "#00f5c4" }}>
+        <p className="text-xs" style={{ color: "var(--accent)" }}>
           Импортировано: {result.imported}{result.skipped > 0 ? `, пропущено: ${result.skipped}` : ""}
         </p>
       )}

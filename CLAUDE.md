@@ -39,7 +39,7 @@ AD Pulse — мультитенантный B2B SaaS для учёта мате�
 - /api/wazzup/webhook — публичный endpoint (без авторизации), отвечает 200 OK немедленно
 - /api/wazzup/connect — требует авторизацию Supabase
 - /api/wazzup/callback — публичный (редирект от Wazzup после OAuth)
-- Wazzup client_id: 2083-9002
+- Wazzup client_id: 4ed9ca8e-… (полный — в wazzup_config компании / Vercel env)
 
 ### Парсинг сообщений
 - Файл: /lib/wazzup/parser.ts
@@ -68,7 +68,7 @@ AD Pulse — мультитенантный B2B SaaS для учёта мате�
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 SUPABASE_SERVICE_ROLE_KEY
-NEXT_PUBLIC_APP_URL=https://ad-pulse-eight.vercel.app
+NEXT_PUBLIC_APP_URL=https://pulse.altaidynamics.kz
 TELEGRAM_BOT_TOKEN=8940872486:AAHsPkkyS4JnW_k51UX4XSluoXqoLJWGcLU
 ADMIN_TELEGRAM_CHAT_ID=1700146125
 RESEND_API_KEY
@@ -98,7 +98,7 @@ EMAIL_FROM=onboarding@resend.dev
   - Алерты: брак, критический остаток, перерасход
   - Уведомления администратору о новых заявках
   - Admin chat_id: 1700146125
-- Wazzup OAuth (client_id: 4578-6962) — ожидаем одобрения redirect_uri
+- Wazzup OAuth подключён (client_id 4ed9ca8e-…)
 - Webhook /api/wazzup/webhook — готов к приёму сообщений
 - Парсер WhatsApp сообщений (текст + медиа)
 
@@ -110,7 +110,7 @@ EMAIL_FROM=onboarding@resend.dev
 
 #### PWA и мобильное
 - manifest.json, иконки, theme-color #05050a
-- Адаптивная нижняя навигация (6 пунктов, иконки #00f5c4)
+- Адаптивная нижняя навигация: 4 пункта + центральный FAB «Выпуск»
 - Логотип SVG во всех точках входа
 
 #### Email (Resend)
@@ -128,9 +128,6 @@ EMAIL_FROM=onboarding@resend.dev
 - production: ветка main → pulse.altaidynamics.kz (vercel deploy --prod или git push ad-pulse main)
 - staging: ветка staging → preview-алиас ad-pulse-git-staging-*.vercel.app (git push ad-pulse staging, БЕЗ --prod)
 - Прод-фиксы делаются на main → деплой --prod → черри-пик на staging; фичи наоборот: staging → проверка → черри-пик на main
-
-### Ждём от внешних сервисов
-- Wazzup: одобрение redirect_uri https://ad-pulse-eight.vercel.app/api/wazzup/callback
 
 ## Важные решения
 - Supabase free tier пока для пилота, Pro когда появятся клиенты

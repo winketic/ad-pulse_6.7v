@@ -50,33 +50,33 @@ export async function submitRegistration(data: {
 <tr><td align="center">
 <table width="100%" style="max-width:560px;">
   <tr><td align="center" style="padding-bottom:24px;">
-    <div style="background:#05050a;border-radius:16px;padding:14px 20px;display:inline-block;">
-      <span style="color:#00f5c4;font-size:20px;font-weight:700;">AD Pulse</span>
+    <div style="background:#0A0C10;border-radius:16px;padding:14px 20px;display:inline-block;">
+      <span style="color:#5A8DF0;font-size:20px;font-weight:700;">AD Pulse</span>
     </div>
   </td></tr>
   <tr><td style="background:#fff;border-radius:16px;padding:40px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
     <h2 style="margin:0 0 24px;font-size:20px;color:#111827;">🏢 Новая заявка на подключение</h2>
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
-        <span style="font-size:13px;color:#9ca3af;">Компания</span><br>
+        <span style="font-size:13px;color:#99A2B2;">Компания</span><br>
         <span style="font-size:15px;font-weight:600;color:#111827;">${data.company_name}</span>
       </td></tr>
       <tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
-        <span style="font-size:13px;color:#9ca3af;">Контактное лицо</span><br>
+        <span style="font-size:13px;color:#99A2B2;">Контактное лицо</span><br>
         <span style="font-size:15px;color:#111827;">${data.contact_name}</span>
       </td></tr>
       <tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
-        <span style="font-size:13px;color:#9ca3af;">Email</span><br>
+        <span style="font-size:13px;color:#99A2B2;">Email</span><br>
         <span style="font-size:15px;color:#111827;">${data.email}</span>
       </td></tr>
       <tr><td style="padding:10px 0;">
-        <span style="font-size:13px;color:#9ca3af;">Телефон</span><br>
+        <span style="font-size:13px;color:#99A2B2;">Телефон</span><br>
         <span style="font-size:15px;color:#111827;">${data.phone || "—"}</span>
       </td></tr>
     </table>
     <div style="margin-top:32px;text-align:center;">
       <a href="${appUrl}/admin/approve/${reg.id}"
-         style="display:inline-block;background:#05050a;color:#00f5c4;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:10px;">
+         style="display:inline-block;background:#0A0C10;color:#5A8DF0;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:10px;">
         ✓ Одобрить
       </a>
     </div>

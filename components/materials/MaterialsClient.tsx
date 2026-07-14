@@ -310,9 +310,9 @@ function MaterialForm({
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-[#00f5c4]/8 flex items-center justify-center mb-4">
+      <div className="w-16 h-16 rounded-2xl bg-[var(--accent)]/8 flex items-center justify-center mb-4">
         <svg
-          className="w-8 h-8 text-[#00f5c4]/40"
+          className="w-8 h-8 text-[var(--accent)]/40"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -393,7 +393,7 @@ function RowActions({
     <div className="flex items-center justify-end gap-1">
       <button
         onClick={onEdit}
-        className="p-1.5 rounded-lg text-[var(--muted)] hover:bg-[var(--bg3)] hover:text-[#00f5c4] transition-colors"
+        className="p-1.5 rounded-lg text-[var(--muted)] hover:bg-[var(--bg3)] hover:text-[var(--accent)] transition-colors"
         title="Редактировать"
       >
         <svg
@@ -456,7 +456,7 @@ function MobileCard({
             {material.name}
           </h3>
           <div className="flex flex-wrap items-center gap-2 mt-2">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#00f5c4]/10 text-[#00f5c4]">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--accent)]/10 text-[var(--accent)]">
               {material.unit}
             </span>
             {material.gost_norm != null && (
@@ -472,7 +472,7 @@ function MobileCard({
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={onEdit}
-            className="p-2 rounded-lg text-[var(--muted)] hover:bg-[var(--bg3)] hover:text-[#00f5c4] transition-colors"
+            className="p-2 rounded-lg text-[var(--muted)] hover:bg-[var(--bg3)] hover:text-[var(--accent)] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -667,7 +667,7 @@ export default function MaterialsClient({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Поиск по названию..."
-            className="w-full sm:max-w-sm pl-10 pr-9 py-2.5 rounded-xl border border-gray-300 text-sm text-[var(--text)] placeholder-gray-400 bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors"
+            className="w-full sm:max-w-sm pl-10 pr-9 py-2.5 rounded-xl border border-gray-300 text-sm text-[var(--text)] placeholder-gray-400 bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] transition-colors"
           />
           {search && (
             <button
@@ -701,7 +701,7 @@ export default function MaterialsClient({
           </p>
           <button
             onClick={() => setSearch("")}
-            className="text-sm text-[#00f5c4] hover:underline font-medium"
+            className="text-sm text-[var(--accent)] hover:underline font-medium"
           >
             Сбросить поиск
           </button>
@@ -744,7 +744,7 @@ export default function MaterialsClient({
                       {m.name}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#00f5c4]/10 text-[#00f5c4]">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--accent)]/10 text-[var(--accent)]">
                         {m.unit}
                       </span>
                     </td>
