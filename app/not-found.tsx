@@ -5,7 +5,7 @@ export default function NotFound() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: "var(--bg)" }}
+      style={{ background: "#05050a" }}
     >
       <div className="text-center max-w-md w-full">
         <div className="flex justify-center mb-8">
@@ -14,12 +14,12 @@ export default function NotFound() {
 
         <div
           className="text-8xl font-black tabular-nums mb-4 select-none"
-          style={{ color: "var(--accent)", letterSpacing: "-0.05em" }}
+          style={{ color: "#00f5c4", letterSpacing: "-0.05em" }}
         >
           404
         </div>
 
-        <h1 className="text-xl font-bold mb-2" style={{ color: "var(--text)" }}>
+        <h1 className="text-xl font-bold mb-2" style={{ color: "#f9fafb" }}>
           Страница не найдена
         </h1>
         <p className="text-sm mb-8" style={{ color: "#6b7280" }}>
@@ -30,14 +30,14 @@ export default function NotFound() {
           <Link
             href="/dashboard"
             className="px-6 py-3 rounded-xl text-sm font-semibold transition-all"
-            style={{ background: "var(--accent)", color: "var(--accent-text)" }}
+            style={{ background: "#00f5c4", color: "#05050a" }}
           >
             На главную
           </Link>
           <Link
             href="/login"
             className="px-6 py-3 rounded-xl text-sm font-medium transition-all"
-            style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border-strong)" }}
+            style={{ background: "#1a1a2e", color: "#9ca3af", border: "1px solid #2a2a3d" }}
           >
             Войти
           </Link>

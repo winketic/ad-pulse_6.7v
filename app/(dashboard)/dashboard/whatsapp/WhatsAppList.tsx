@@ -46,7 +46,7 @@ const TX_TYPE_LABELS: Record<TxType, string> = {
 };
 
 const TX_TYPE_COLORS: Record<TxType, string> = {
-  income:  "text-[var(--accent)]",
+  income:  "text-[#00f5c4]",
   expense: "text-orange-400",
   defect:  "text-red-400",
   return:  "text-blue-400",
@@ -76,7 +76,7 @@ function truncate(text: string | null, len = 80) {
 
 function StatusBadge({ status }: { status: "green" | "yellow" | "gray" }) {
   if (status === "green") return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] text-xs font-medium border border-[var(--accent)]/20">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#00f5c4]/10 text-[#00f5c4] text-xs font-medium border border-[#00f5c4]/20">
       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
       </svg>
@@ -354,7 +354,7 @@ function MessageDetailDrawer({
                 )}
                 <div className="flex items-center justify-between pt-0.5" style={{ borderTop: "1px solid var(--border)" }}>
                   <span className="text-xs text-[var(--muted)]">Уверенность</span>
-                  <span className={`text-xs font-medium ${pr.confidence === "high" ? "text-[var(--accent)]" : "text-yellow-400"}`}>
+                  <span className={`text-xs font-medium ${pr.confidence === "high" ? "text-[#00f5c4]" : "text-yellow-400"}`}>
                     {pr.confidence === "high" ? "Высокая" : "Низкая"}
                   </span>
                 </div>
@@ -367,7 +367,7 @@ function MessageDetailDrawer({
             <a
               href={`/dashboard/transactions?wazzup_message_id=${message.id}`}
               className="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors"
-              style={{ background: "rgba(0,245,196,0.08)", border: "1px solid rgba(0,245,196,0.2)", color: "var(--accent)" }}
+              style={{ background: "rgba(0,245,196,0.08)", border: "1px solid rgba(0,245,196,0.2)", color: "#00f5c4" }}
             >
               <span>Перейти к транзакции</span>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -548,7 +548,7 @@ export default function WhatsAppList({
                 <p className="text-xs font-medium text-[var(--muted)]">Channel ID</p>
                 {channelIds.map((id) => (
                   <span key={id} className="block px-2 py-1 rounded-lg text-xs font-mono truncate"
-                    style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--muted)" }}>{id}</span>
+                    style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "#9ca3af" }}>{id}</span>
                 ))}
               </div>
             )}
@@ -626,14 +626,14 @@ export default function WhatsAppList({
                             <div>
                               {sender ? (
                                 <>
-                                  <span className="text-[var(--text)] font-medium group-hover:text-[var(--accent)] transition-colors">{sender.name}</span>
+                                  <span className="text-[var(--text)] font-medium group-hover:text-[#00f5c4] transition-colors">{sender.name}</span>
                                   {sender.position && <span className="block text-[var(--muted)] text-[10px]">{sender.position}</span>}
                                 </>
                               ) : (
-                                <span className="text-[var(--muted)] font-mono group-hover:text-[var(--accent)] transition-colors">{msg.sender_phone || "—"}</span>
+                                <span className="text-[var(--muted)] font-mono group-hover:text-[#00f5c4] transition-colors">{msg.sender_phone || "—"}</span>
                               )}
                             </div>
-                            <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-[var(--muted)] group-hover:text-[var(--accent)]">
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-[var(--muted)] group-hover:text-[#00f5c4]">
                               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                                 <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
@@ -651,7 +651,7 @@ export default function WhatsAppList({
                           <button
                             onClick={(e) => handleCopyChatId(e, msg.id, msg.chat_id!)}
                             title="Скопировать Chat ID"
-                            className="group flex items-center gap-1.5 cursor-pointer font-mono text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
+                            className="group flex items-center gap-1.5 cursor-pointer font-mono text-[var(--muted)] hover:text-[#00f5c4] transition-colors"
                           >
                             <span>
                               {msg.chat_id.length > 12 ? msg.chat_id.slice(0, 12) + "…" : msg.chat_id}
@@ -687,7 +687,7 @@ export default function WhatsAppList({
                           <button
                             onClick={(e) => { e.stopPropagation(); setConfirmingId(msg.id); }}
                             className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                            style={{ background: "rgba(0,245,196,0.1)", color: "var(--accent)", border: "1px solid rgba(0,245,196,0.2)" }}
+                            style={{ background: "rgba(0,245,196,0.1)", color: "#00f5c4", border: "1px solid rgba(0,245,196,0.2)" }}
                           >
                             Проверить
                           </button>
@@ -728,7 +728,7 @@ export default function WhatsAppList({
       {/* Toast */}
       {toast && (
         <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg ${
-          toast.ok ? "bg-[var(--accent)] text-[var(--accent-text)]" : "bg-red-500 text-white"
+          toast.ok ? "bg-[#00f5c4] text-[#05050a]" : "bg-red-500 text-white"
         }`}>
           {toast.text}
         </div>

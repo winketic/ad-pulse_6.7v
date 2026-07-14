@@ -9,59 +9,56 @@
 }
 
 /* ════════════════════════════════════════════════════
-   DESIGN TOKENS — «Каданс» (Cadence)
-   Dark-first enterprise. Pulse Blue accent, soft shadows,
-   no neon glow. Values are the single source of truth (brand PDF).
+   DESIGN TOKENS — «Индустриальный терминал»
+   Single dark theme. Depth via surface levels, not borders.
    ════════════════════════════════════════════════════ */
 
 :root {
   color-scheme: dark;
 
-  /* Surfaces — canvas → surface → elevated → line-level */
-  --bg: #0A0C10;          /* Canvas */
-  --surface-1: #12161F;   /* Surface (cards) */
-  --surface-2: #1A1F2B;   /* Elevated (nested / hover / menus) */
-  --surface-3: #232A38;   /* Line-level (highest chip fill) */
+  /* Surfaces — 4 depth levels, cool-tinted near-black */
+  --bg: #050507;          /* page */
+  --surface-1: #0c0c10;   /* cards */
+  --surface-2: #131318;   /* nested / hover */
+  --surface-3: #1a1a21;   /* highest (menus, chips on cards) */
 
-  /* Brand — Pulse Blue */
-  --accent: #5A8DF0;          /* 500 */
-  --accent-hover: #3D74E6;    /* 600 */
-  --accent-active: #2C61C8;   /* 700 */
-  --accent-300: #A9C3F7;      /* 300 tint */
-  --accent-900: #16264D;      /* 900 deep */
-  --accent-15: color-mix(in srgb, #5A8DF0 14%, transparent);
-  --accent-text: #FFFFFF;     /* white on mid-blue button */
-  --purple: #5A8DF0;          /* legacy alias → accent */
+  /* Brand — neon stays, used ONLY for data & actions */
+  --accent: #00f5c4;
+  --accent-hover: #00dcb0;
+  --accent-active: #00c39c;
+  --accent-15: color-mix(in srgb, #00f5c4 12%, transparent);
+  --accent-text: #04120e;
+  --purple: #7b5ea7;
 
-  /* Text — Ink Hi / Md / Lo */
-  --text: #EAEDF2;
-  --muted: #99A2B2;
-  --muted-2: #5C6474;
+  /* Text — 3 levels */
+  --text: #f2f2f5;
+  --muted: #8b8b96;
+  --muted-2: #5c5c66;
 
-  /* Hairlines — Line #232A38 */
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
+  /* Hairlines — barely there; depth comes from surfaces */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
 
-  /* Status */
-  --success: #35C08A;
-  --success-bg: rgba(53, 192, 138, 0.12);
-  --danger: #F0616D;
-  --danger-bg: rgba(240, 97, 109, 0.12);
-  --warning: #E0A05A;
-  --warning-bg: rgba(224, 160, 90, 0.12);
-  --info: #5A8DF0;
-  --info-bg: rgba(90, 141, 240, 0.12);
+  /* Status — muted so the neon accent stays dominant */
+  --success: #4ade80;
+  --success-bg: rgba(74, 222, 128, 0.1);
+  --danger: #f87171;
+  --danger-bg: rgba(248, 113, 113, 0.1);
+  --warning: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.1);
+  --info: #60a5fa;
+  --info-bg: rgba(96, 165, 250, 0.1);
 
-  /* Elevation — soft neutral shadows, no colored glow */
+  /* Elevation */
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.45);
   --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.7);
-  --glow-accent: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --glow-accent: 0 2px 14px color-mix(in srgb, var(--accent) 16%, transparent);
 
-  /* Geometry — brand radii 6/10/14/20 (4px base grid) */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  /* Geometry (4px base grid) */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-xl: 20px;
 
   /* Z-layers */
@@ -346,28 +343,29 @@ select:-webkit-autofill:active {
   caret-color: var(--text);
 }
 
-/* ── driver.js tour overrides — dark enterprise popover ─── */
+/* ── driver.js tour overrides ─────────────────────────── */
 .driver-popover.adpulse-tour {
-  background-color: #1A1F2B !important;
-  color: #EAEDF2 !important;
-  border: 1px solid rgba(255,255,255,0.14) !important;
-  border-radius: 14px !important;
+  background-color: #00f5c4 !important;
+  color: #05050a !important;
+  border: none !important;
+  border-radius: 12px !important;
   padding: 20px !important;
   max-width: 300px !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
 }
 
 .driver-popover.adpulse-tour .driver-popover-title {
-  color: #EAEDF2 !important;
+  color: #05050a !important;
   font-size: 15px !important;
   font-weight: 700 !important;
   margin-bottom: 6px !important;
 }
 
 .driver-popover.adpulse-tour .driver-popover-description {
-  color: #99A2B2 !important;
+  color: #05050a !important;
   font-size: 13px !important;
   line-height: 1.5 !important;
+  opacity: 0.85 !important;
 }
 
 .driver-popover.adpulse-tour .driver-popover-footer {
@@ -376,8 +374,8 @@ select:-webkit-autofill:active {
 
 .driver-popover.adpulse-tour .driver-popover-next-btn,
 .driver-popover.adpulse-tour .driver-popover-done-btn {
-  background: #5A8DF0 !important;
-  color: #FFFFFF !important;
+  background: #05050a !important;
+  color: #00f5c4 !important;
   border: none !important;
   border-radius: 8px !important;
   font-size: 13px !important;
@@ -387,8 +385,8 @@ select:-webkit-autofill:active {
 
 .driver-popover.adpulse-tour .driver-popover-prev-btn {
   background: transparent !important;
-  color: #99A2B2 !important;
-  border: 1px solid rgba(255,255,255,0.14) !important;
+  color: #05050a !important;
+  border: 1px solid rgba(5,5,10,0.3) !important;
   border-radius: 8px !important;
   font-size: 13px !important;
   font-weight: 600 !important;
@@ -396,8 +394,8 @@ select:-webkit-autofill:active {
 }
 
 .driver-popover.adpulse-tour .driver-popover-close-btn {
-  color: #99A2B2 !important;
-  opacity: 0.7 !important;
+  color: #05050a !important;
+  opacity: 0.6 !important;
   font-size: 18px !important;
 }
 
@@ -406,20 +404,21 @@ select:-webkit-autofill:active {
 }
 
 .driver-popover.adpulse-tour .driver-popover-arrow-side-left.driver-popover-arrow {
-  border-right-color: #1A1F2B !important;
+  border-right-color: #00f5c4 !important;
 }
 .driver-popover.adpulse-tour .driver-popover-arrow-side-right.driver-popover-arrow {
-  border-left-color: #1A1F2B !important;
+  border-left-color: #00f5c4 !important;
 }
 .driver-popover.adpulse-tour .driver-popover-arrow-side-top.driver-popover-arrow {
-  border-bottom-color: #1A1F2B !important;
+  border-bottom-color: #00f5c4 !important;
 }
 .driver-popover.adpulse-tour .driver-popover-arrow-side-bottom.driver-popover-arrow {
-  border-top-color: #1A1F2B !important;
+  border-top-color: #00f5c4 !important;
 }
 
 .driver-popover.adpulse-tour .driver-popover-progress-text {
-  color: #5C6474 !important;
+  color: #05050a !important;
+  opacity: 0.6 !important;
   font-size: 12px !important;
 }
 

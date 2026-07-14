@@ -80,7 +80,7 @@ export default function TelegramCard({ companyId, telegramConnected, isAdmin }: 
                   Отправьте боту ваш код подключения:
                 </p>
                 <div className="flex items-center gap-2">
-                  <code className="px-3 py-1.5 rounded-lg bg-[var(--bg)] text-[var(--accent)] text-base font-mono font-bold tracking-widest">
+                  <code className="px-3 py-1.5 rounded-lg bg-[var(--bg)] text-[#00f5c4] text-base font-mono font-bold tracking-widest">
                     {code}
                   </code>
                   <button

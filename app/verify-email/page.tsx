@@ -60,11 +60,11 @@ export default function VerifyEmailPage() {
             <span className="block text-xs mt-1">Проверьте папку «Спам».</span>
           </p>
           {resent && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/30 mb-4 text-left">
-              <svg className="w-4 h-4 text-[var(--accent)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-[#00f5c4]/10 border border-[#00f5c4]/30 mb-4 text-left">
+              <svg className="w-4 h-4 text-[#00f5c4] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
-              <span className="text-sm text-[var(--accent)]">Письмо отправлено повторно</span>
+              <span className="text-sm text-[#00f5c4]">Письмо отправлено повторно</span>
             </div>
           )}
           {error && (

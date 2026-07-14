@@ -38,8 +38,8 @@ export default function ForgotPasswordPage() {
         <div className="dp-auth-card">
           {sent ? (
             <div className="text-center py-4">
-              <div className="w-12 h-12 rounded-full bg-[var(--accent)]/10 border border-[var(--accent)]/30 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <div className="w-12 h-12 rounded-full bg-[#00f5c4]/10 border border-[#00f5c4]/30 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-[#00f5c4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
                 Мы отправили ссылку на <span className="text-[#ededed]">{email}</span>.
                 Проверьте папку «Спам».
               </p>
-              <Link href="/login" className="text-sm text-[#888888] hover:text-[var(--accent)] transition-colors flex items-center justify-center gap-1.5">
+              <Link href="/login" className="text-sm text-[#888888] hover:text-[#00f5c4] transition-colors flex items-center justify-center gap-1.5">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
                 </button>
               </form>
               <div className="mt-5 text-center">
-                <Link href="/login" className="text-sm text-[#888888] hover:text-[var(--accent)] transition-colors inline-flex items-center gap-1.5">
+                <Link href="/login" className="text-sm text-[#888888] hover:text-[#00f5c4] transition-colors inline-flex items-center gap-1.5">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
