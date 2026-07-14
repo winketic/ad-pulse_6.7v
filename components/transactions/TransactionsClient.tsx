@@ -539,8 +539,8 @@ function AddTransactionForm({
 
         {/* Production preview — live calc of what will be auto-deducted */}
         {isProduction && qtyNum > 0 && concreteAmount != null && rebarAmount != null && (
-          <div className="mt-2 flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg bg-[var(--accent)]/8 border border-[var(--accent)]/20">
-            <svg className="w-4 h-4 text-[var(--accent)] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="mt-2 flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg bg-[#00f5c4]/8 border border-[#00f5c4]/20">
+            <svg className="w-4 h-4 text-[#00a884] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-sm text-[var(--text)]">
@@ -678,8 +678,8 @@ function EmptyState({
 
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-[var(--accent)]/5 flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-[var(--accent)]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
+      <div className="w-16 h-16 rounded-2xl bg-[#00f5c4]/5 flex items-center justify-center mb-4">
+        <svg className="w-8 h-8 text-[#00f5c4]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
         </svg>
       </div>

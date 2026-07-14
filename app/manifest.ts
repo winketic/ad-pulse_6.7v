@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Учёт материалов на производстве",
     start_url: "/dashboard",
     display: "standalone",
-    background_color: "#0A0C10",
-    theme_color: "#0A0C10",
+    background_color: "#05050a",
+    theme_color: "#05050a",
     orientation: "portrait",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },

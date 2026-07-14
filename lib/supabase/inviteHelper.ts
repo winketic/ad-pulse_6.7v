@@ -76,8 +76,8 @@ export async function createInviteAndSendEmail(
 function buildInviteHtml(link: string): string {
   return `
 <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px;color:#111827;">
-  <h1 style="font-size:22px;font-weight:700;color:#0A0C10;margin:0 0 4px;">AD Pulse</h1>
-  <p style="font-size:13px;color:#99A2B2;margin:0 0 32px;">Система учёта материалов</p>
+  <h1 style="font-size:22px;font-weight:700;color:#05050a;margin:0 0 4px;">AD Pulse</h1>
+  <p style="font-size:13px;color:#9ca3af;margin:0 0 32px;">Система учёта материалов</p>
 
   <h2 style="font-size:18px;font-weight:600;margin:0 0 12px;">Вас пригласили в AD Pulse</h2>
   <p style="font-size:15px;color:#374151;line-height:1.6;margin:0 0 28px;">
@@ -85,11 +85,11 @@ function buildInviteHtml(link: string): string {
   </p>
 
   <a href="${link}"
-     style="display:inline-block;background:#3D74E6;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:600;">
+     style="display:inline-block;background:#1a472a;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:600;">
     Принять приглашение →
   </a>
 
-  <p style="font-size:13px;color:#99A2B2;margin-top:32px;line-height:1.5;">
+  <p style="font-size:13px;color:#9ca3af;margin-top:32px;line-height:1.5;">
     Ссылка действительна 24 часа.<br>
     Если вы не ожидали это письмо — просто проигнорируйте его.
   </p>

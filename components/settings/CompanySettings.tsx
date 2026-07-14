@@ -38,7 +38,7 @@ export default function CompanySettings({
         {canEdit && !editing && (
           <button
             onClick={() => setEditing(true)}
-            className="text-xs text-[var(--accent)] hover:underline font-medium"
+            className="text-xs text-[#00f5c4] hover:underline font-medium"
           >
             Изменить
           </button>
@@ -57,7 +57,7 @@ export default function CompanySettings({
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="Введите название"
-                className="w-full px-3 py-2.5 border border-[var(--border)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)]"
+                className="w-full px-3 py-2.5 border border-[var(--border)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
                 autoFocus
               />
             </div>

@@ -73,7 +73,7 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
     return (
       <button
         onClick={() => setStep("input")}
-        className="text-xs text-[var(--accent)] hover:underline font-medium mt-0.5 block"
+        className="text-xs text-[#00f5c4] hover:underline font-medium mt-0.5 block"
       >
         Изменить email
       </button>
@@ -86,7 +86,7 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
         <p className="text-xs text-green-800">
           Письмо с подтверждением отправлено на <strong>{confirmedEmail}</strong>. Перейдите по ссылке в письме, чтобы завершить смену.
         </p>
-        <button onClick={reset} className="text-xs text-[var(--accent)] hover:underline mt-1 block">
+        <button onClick={reset} className="text-xs text-[#00f5c4] hover:underline mt-1 block">
           Закрыть
         </button>
       </div>
@@ -103,7 +103,7 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
             onChange={(e) => setNewEmail(e.target.value)}
             placeholder="новый@email.com"
             autoFocus
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)]"
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
           />
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex gap-2">
@@ -141,7 +141,7 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
             onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
             placeholder="000000"
             autoFocus
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)]"
+            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4]"
           />
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex gap-2">
@@ -162,7 +162,7 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
             <button
               onClick={() => { setStep("input"); setCode(""); setError(""); }}
               disabled={loading}
-              className="text-xs text-[var(--muted)] hover:text-[var(--accent)] ml-auto"
+              className="text-xs text-[var(--muted)] hover:text-[#00f5c4] ml-auto"
             >
               Другой email
             </button>
@@ -174,7 +174,7 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
 }
 
 const BANNER_COLORS = [
-  "var(--accent)",
+  "#00f5c4",
   "#7b5ea7",
   "#2563eb",
   "#0891b2",
@@ -182,14 +182,14 @@ const BANNER_COLORS = [
   "#f59e0b",
   "#374151",
   "#0a0a0a",
-  "linear-gradient(135deg, var(--accent), #7b5ea7)",
+  "linear-gradient(135deg, #00f5c4, #7b5ea7)",
   "linear-gradient(135deg, #2563eb, #7b5ea7)",
   "linear-gradient(135deg, #f59e0b, #dc2626)",
-  "linear-gradient(135deg, #0891b2, var(--accent))",
+  "linear-gradient(135deg, #0891b2, #00f5c4)",
 ];
 
 const inputCls =
-  "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] transition-colors";
+  "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#00f5c4]/20 focus:border-[#00f5c4] transition-colors";
 
 interface ProfileCardProps {
   fullName: string | null;
@@ -226,7 +226,7 @@ export default function ProfileCard({
   const [displayName, setDisplayName] = useState(fullName);
   const [displayPos, setDisplayPos] = useState(position);
   const [displayAvatar, setDisplayAvatar] = useState(avatarUrl);
-  const [displayBanner, setDisplayBanner] = useState(bannerColor ?? "var(--accent)");
+  const [displayBanner, setDisplayBanner] = useState(bannerColor ?? "#00f5c4");
   const [avatarKey, setAvatarKey] = useState(0); // cache-bust
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -369,7 +369,7 @@ export default function ProfileCard({
                 className="w-5 h-5 rounded-full transition-transform hover:scale-110"
                 style={{
                   background: color,
-                  outline: displayBanner === color ? "2px solid var(--accent)" : "2px solid transparent",
+                  outline: displayBanner === color ? "2px solid #00f5c4" : "2px solid transparent",
                   outlineOffset: "2px",
                 }}
                 title={color}
@@ -385,7 +385,7 @@ export default function ProfileCard({
         {!editing && (
           <button
             onClick={() => setEditing(true)}
-            className="text-xs text-[var(--accent)] hover:underline font-medium"
+            className="text-xs text-[#00f5c4] hover:underline font-medium"
           >
             Изменить
           </button>

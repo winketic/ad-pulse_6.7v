@@ -84,10 +84,10 @@ export async function POST(request: NextRequest) {
     subject: "Подтверждение смены email — AD Pulse",
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-        <h2 style="color: #0A0C10;">Смена email</h2>
+        <h2 style="color: #0a0a0a;">Смена email</h2>
         <p>Вы запросили смену email на <strong>${newEmail}</strong>.</p>
         <p>Ваш код подтверждения:</p>
-        <div style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #5A8DF0; margin: 20px 0;">
+        <div style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #00f5c4; margin: 20px 0;">
           ${code}
         </div>
         <p style="color: #666; font-size: 13px;">Код действителен 15 минут. Если вы не запрашивали смену email — проигнорируйте это письмо.</p>

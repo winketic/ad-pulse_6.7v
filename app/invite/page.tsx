@@ -25,7 +25,7 @@ function passwordStrength(pwd: string): { score: number; label: string; color: s
   if (score <= 1) return { score, label: "Слабый", color: "bg-red-400" };
   if (score <= 2) return { score, label: "Средний", color: "bg-amber-400" };
   if (score <= 3) return { score, label: "Хороший", color: "bg-yellow-400" };
-  return { score, label: "Надёжный", color: "bg-[var(--accent)]" };
+  return { score, label: "Надёжный", color: "bg-[#00f5c4]" };
 }
 
 export default function InvitePage() {
@@ -161,7 +161,7 @@ export default function InvitePage() {
           <div className="flex justify-center mb-4">
             <Logo size={64} />
           </div>
-          <h1 className="text-2xl font-bold text-[#0A0C10] tracking-tight">
+          <h1 className="text-2xl font-bold text-[#05050a] tracking-tight">
             Добро пожаловать в AD Pulse
           </h1>
           <p className="text-sm text-gray-400 mt-1">Настройте аккаунт перед началом работы</p>
@@ -184,7 +184,7 @@ export default function InvitePage() {
                   <div key={s} className="flex-1 flex items-center gap-2">
                     <div
                       className={`h-1.5 flex-1 rounded-full transition-colors ${
-                        i <= stepIndex ? "bg-[var(--accent)]" : "bg-gray-150 bg-gray-200"
+                        i <= stepIndex ? "bg-[#05050a]" : "bg-gray-150 bg-gray-200"
                       }`}
                     />
                   </div>
@@ -213,7 +213,7 @@ export default function InvitePage() {
                       required
                       autoFocus
                       maxLength={100}
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] transition-colors"
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#05050a]/20 focus:border-[#05050a] transition-colors"
                     />
                   </div>
 
@@ -226,7 +226,7 @@ export default function InvitePage() {
                   <button
                     type="submit"
                     disabled={!fullName.trim()}
-                    className="w-full py-2.5 px-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                    className="w-full py-2.5 px-4 bg-[#05050a] hover:bg-[#1a1a2e] text-[#00f5c4] text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
                   >
                     Далее
                   </button>
@@ -252,7 +252,7 @@ export default function InvitePage() {
                       placeholder="Начальник склада"
                       autoFocus
                       maxLength={100}
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] transition-colors"
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#05050a]/20 focus:border-[#05050a] transition-colors"
                     />
                   </div>
 
@@ -266,7 +266,7 @@ export default function InvitePage() {
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 py-2.5 px-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                      className="flex-1 py-2.5 px-4 bg-[#05050a] hover:bg-[#1a1a2e] text-[#00f5c4] text-sm font-semibold rounded-lg transition-colors shadow-sm"
                     >
                       Далее
                     </button>
@@ -291,7 +291,7 @@ export default function InvitePage() {
                       minLength={8}
                       autoFocus
                       autoComplete="new-password"
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] transition-colors"
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#05050a]/20 focus:border-[#05050a] transition-colors"
                     />
                     {password.length > 0 && (
                       <div className="mt-2">
@@ -320,7 +320,7 @@ export default function InvitePage() {
                       placeholder="Повторите пароль"
                       required
                       autoComplete="new-password"
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] transition-colors"
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#05050a]/20 focus:border-[#05050a] transition-colors"
                     />
                     {confirm.length > 0 && password !== confirm && (
                       <p className="text-xs text-red-500 mt-1">Пароли не совпадают</p>
@@ -351,7 +351,7 @@ export default function InvitePage() {
                     <button
                       type="submit"
                       disabled={loading || password.length < 8 || password !== confirm}
-                      className="flex-1 py-2.5 px-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                      className="flex-1 py-2.5 px-4 bg-[#05050a] hover:bg-[#1a1a2e] text-[#00f5c4] text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
                     >
                       {loading ? (
                         <span className="flex items-center justify-center gap-2">

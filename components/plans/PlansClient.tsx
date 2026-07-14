@@ -315,7 +315,7 @@ function CreatePlanForm({
         <p className="text-sm font-medium text-[var(--text)]">Нет материалов в справочнике</p>
         <p className="text-sm text-[var(--muted)] mt-1">
           Сначала добавьте материалы в{" "}
-          <a href="/dashboard/materials" className="text-[var(--accent)] underline">
+          <a href="/dashboard/materials" className="text-[#00f5c4] underline">
             справочник
           </a>
         </p>
@@ -471,7 +471,7 @@ function CreatePlanForm({
           type="button"
           onClick={addRow}
           disabled={rows.length >= materials.length}
-          className="mt-2.5 flex items-center gap-1.5 text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="mt-2.5 flex items-center gap-1.5 text-sm text-[#00f5c4] hover:text-[#163d24] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -537,8 +537,8 @@ function EmptyState({
 
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-[var(--accent)]/8 flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-[var(--accent)]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
+      <div className="w-16 h-16 rounded-2xl bg-[#00f5c4]/8 flex items-center justify-center mb-4">
+        <svg className="w-8 h-8 text-[#00f5c4]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
       </div>
