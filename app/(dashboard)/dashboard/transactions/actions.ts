@@ -28,14 +28,44 @@ async function getSupabaseAndUser() {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("company_id")
+    .select("company_id, role")
     .eq("id", user.id)
     .single();
 
   if (profileError) throw new Error(`DB error: ${profileError.message}`);
   if (!profile?.company_id) throw new Error("Компания не найдена");
 
-  return { supabase, user, company_id: profile.company_id as string };
+  return {
+    supabase,
+    user,
+    company_id: profile.company_id as string,
+    role: (profile.role as string) ?? "workshop",
+  };
+}
+
+// Soft delete — admin only. Sets deleted_at/deleted_by instead of removing
+// the row so the audit trail and "показать удалённые" view survive. All
+// balance/report queries filter deleted_at IS NULL, so the stock recomputes.
+export async function deleteTransaction(id: string) {
+  const { supabase, user, company_id, role } = await getSupabaseAndUser();
+
+  if (role !== "admin") {
+    throw new Error("Удалять транзакции может только администратор");
+  }
+
+  const { error } = await supabase
+    .from("material_transactions")
+    .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
+    .eq("id", id)
+    .eq("company_id", company_id)
+    .is("deleted_at", null); // don't re-delete / touch already-deleted rows
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/dashboard/transactions");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/warehouse");
+  revalidatePath("/dashboard/reports");
 }
 
 export type ProductionTransactionInput = {
@@ -128,7 +158,8 @@ async function fireAlerts({
     .from("material_transactions")
     .select("quantity, type")
     .eq("material_id", input.material_id)
-    .eq("company_id", company_id);
+    .eq("company_id", company_id)
+    .is("deleted_at", null);
 
   const currentBalance =
     txs?.reduce((sum, t) => {

@@ -12,6 +12,7 @@ import { type BalanceData } from "@/components/BalanceCard";
 import {
   createTransaction,
   createProductionTransaction,
+  deleteTransaction,
   type TxType,
 } from "@/app/(dashboard)/dashboard/transactions/actions";
 import { formatQuantity } from "@/lib/utils/format";
@@ -91,6 +92,8 @@ export type Transaction = {
   material_unit: string;
   creator_name: string;
   source: string;
+  deleted_at?: string | null;
+  deleted_by_name?: string | null;
 };
 
 export type Material = {
@@ -536,8 +539,8 @@ function AddTransactionForm({
 
         {/* Production preview — live calc of what will be auto-deducted */}
         {isProduction && qtyNum > 0 && concreteAmount != null && rebarAmount != null && (
-          <div className="mt-2 flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg bg-[#00f5c4]/8 border border-[#00f5c4]/20">
-            <svg className="w-4 h-4 text-[#00a884] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="mt-2 flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg bg-[var(--accent)]/8 border border-[var(--accent)]/20">
+            <svg className="w-4 h-4 text-[var(--accent)] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-sm text-[var(--text)]">
@@ -675,8 +678,8 @@ function EmptyState({
 
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-[#00f5c4]/5 flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-[#00f5c4]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
+      <div className="w-16 h-16 rounded-2xl bg-[var(--accent)]/5 flex items-center justify-center mb-4">
+        <svg className="w-8 h-8 text-[var(--accent)]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
         </svg>
       </div>
@@ -756,6 +759,7 @@ export default function TransactionsClient({
   totalPages,
   totalCount,
   initialMaterialId,
+  isAdmin = false,
 }: {
   transactions: Transaction[];
   materials: Material[];
@@ -764,6 +768,7 @@ export default function TransactionsClient({
   totalPages?: number;
   totalCount?: number;
   initialMaterialId?: string;
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -773,7 +778,31 @@ export default function TransactionsClient({
   const [typeFilter, setTypeFilter] = useState<TxType | "all">("all");
   const [materialFilter, setMaterialFilter] = useState<string>(initialMaterialId ?? "all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [formError, setFormError] = useState("");
+
+  // Soft-delete a transaction (admin only). Confirms, then calls the action;
+  // the server recomputes balances on next load via revalidatePath.
+  const handleDelete = useCallback(
+    (tx: Transaction) => {
+      if (!window.confirm("Удалить транзакцию? Остаток пересчитается.")) return;
+      setDeletingId(tx.id);
+      startTransition(async () => {
+        try {
+          await deleteTransaction(tx.id);
+          toast("Транзакция удалена", "success");
+          setExpandedId(null);
+          router.refresh();
+        } catch (e) {
+          toast(e instanceof Error ? e.message : "Ошибка удаления", "error");
+        } finally {
+          setDeletingId(null);
+        }
+      });
+    },
+    [router, toast]
+  );
 
   // Optimistic rows shown instantly while the server call is in flight.
   // Cleared as soon as fresh server data arrives via router.refresh().
@@ -808,13 +837,20 @@ export default function TransactionsClient({
 
   const filtered = useMemo(() => {
     return displayTxs.filter((tx) => {
+      // Deleted rows hidden unless admin toggles "показать удалённые"
+      if (tx.deleted_at && !showDeleted) return false;
       if (period === "today" && tx.transaction_date !== isoDay(0)) return false;
       if (period === "week" && tx.transaction_date < isoDay(-6)) return false;
       if (typeFilter !== "all" && tx.type !== typeFilter) return false;
       if (materialFilter !== "all" && tx.material_id !== materialFilter) return false;
       return true;
     });
-  }, [displayTxs, period, typeFilter, materialFilter]);
+  }, [displayTxs, period, typeFilter, materialFilter, showDeleted]);
+
+  const deletedCount = useMemo(
+    () => displayTxs.filter((tx) => tx.deleted_at).length,
+    [displayTxs]
+  );
 
   const hasFilters = typeFilter !== "all" || materialFilter !== "all" || period !== "all";
   const filterMaterialName =
@@ -918,10 +954,10 @@ export default function TransactionsClient({
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-display text-[var(--text)]">
+          <h1 className="text-display lg:text-lg lg:font-semibold lg:tracking-normal text-[var(--text)]">
             Движение материалов
           </h1>
-          <p className="text-label mt-1.5">
+          <p className="text-label mt-1.5 lg:hidden">
             {(totalCount ?? transactions.length) === 0
               ? "Записей нет"
               : `${totalCount ?? transactions.length} ${pluralRecords(totalCount ?? transactions.length)}`}
@@ -995,6 +1031,23 @@ export default function TransactionsClient({
               </button>
             )}
           </div>
+
+          {/* Admin: show-deleted toggle */}
+          {isAdmin && deletedCount > 0 && (
+            <button
+              onClick={() => setShowDeleted((v) => !v)}
+              className="flex items-center gap-2 mb-3 text-xs text-[var(--muted)] hover:text-[var(--text)] transition-colors"
+            >
+              <span
+                className={`inline-flex items-center justify-center w-8 h-[18px] rounded-full transition-colors ${showDeleted ? "bg-[var(--accent)]" : "bg-[var(--surface-3)]"}`}
+              >
+                <span
+                  className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${showDeleted ? "translate-x-[7px]" : "-translate-x-[7px]"}`}
+                />
+              </span>
+              Показать удалённые ({deletedCount})
+            </button>
+          )}
         </>
       )}
 
@@ -1006,9 +1059,104 @@ export default function TransactionsClient({
         />
       )}
 
-      {/* ── Compact list — one pattern for all widths ───── */}
+      {/* ── Desktop full table (lg+) — everything in columns ── */}
       {filtered.length > 0 && (
-        <div className="bg-[var(--surface-1)] rounded-xl border border-[var(--border)] overflow-hidden">
+        <div className="hidden lg:block rounded-xl border border-[var(--border)] bg-[var(--surface-1)] overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--border)]">
+                {["Время", "Тип", "Кол-во", "Материал", "Кто", "Контрагент", "Примечание"].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`h-10 px-4 text-xs font-medium text-[var(--muted)] ${i === 2 ? "text-right" : "text-left"} ${i === 0 ? "w-24 pl-5" : ""} ${i === 1 ? "w-28" : ""} ${i === 2 ? "w-32" : ""} ${i === 4 ? "w-32" : ""}`}
+                  >
+                    {h}
+                  </th>
+                ))}
+                {isAdmin && <th className="w-28" />}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)]">
+              {groupByDay(filtered).map((group) => [
+                period !== "today" && (
+                  <tr key={`day-${group.date}`} className="bg-[var(--surface-2)]/50">
+                    <td colSpan={isAdmin ? 8 : 7} className="px-5 py-1.5 text-[11px] font-medium text-[var(--muted)]">
+                      {dayLabel(group.date)}
+                      <span className="num text-[var(--muted-2)] ml-2">{fmtDate(group.date)}</span>
+                    </td>
+                  </tr>
+                ),
+                ...group.items.map((tx) => {
+                  const cfg = TYPE_CONFIG[tx.type];
+                  const isTemp = tx.id.startsWith("tmp-");
+                  const isDeleted = !!tx.deleted_at;
+                  return (
+                    <tr key={tx.id} className={`group h-12 hover:bg-[var(--surface-2)] transition-colors duration-150 ${isTemp ? "opacity-60 animate-pulse" : ""} ${isDeleted ? "opacity-45" : ""}`}>
+                      <td className="num pl-5 px-4 text-xs text-[var(--muted)]">
+                        {new Date(tx.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                      </td>
+                      <td className="px-4">
+                        <span className={`flex items-center gap-1.5 text-xs ${cfg.text}`}>
+                          <span
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{
+                              background: `var(--${
+                                tx.type === "income" ? "success" : tx.type === "expense" ? "danger" : tx.type === "defect" ? "warning" : "info"
+                              })`,
+                            }}
+                          />
+                          {cfg.label}
+                        </span>
+                      </td>
+                      <td className={`num px-4 text-right font-semibold ${cfg.qColor} ${isDeleted ? "line-through" : ""}`}>
+                        {cfg.sign}{formatQuantity(tx.quantity)}
+                        <span className="text-xs font-normal text-[var(--muted)] ml-1">{tx.material_unit}</span>
+                      </td>
+                      <td className="px-4 text-[var(--text)]">{tx.material_name}</td>
+                      <td className="px-4 text-xs text-[var(--muted)]">
+                        {tx.source === "whatsapp" && <span className="text-[#25D366] mr-1">WA</span>}
+                        {tx.creator_name}
+                      </td>
+                      <td className="px-4 text-xs text-[var(--muted)]">{tx.counterparty ?? "—"}</td>
+                      <td className="px-4 text-xs text-[var(--muted)] max-w-[220px]">
+                        {tx.note ? (
+                          <span className="block truncate" title={tx.note}>{tx.note}</span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      {isAdmin && (
+                        <td className="px-4 text-right">
+                          {isDeleted ? (
+                            <span className="text-[10px] text-[var(--muted-2)]" title={`удалил ${tx.deleted_by_name ?? "—"}`}>
+                              удалено
+                            </span>
+                          ) : !isTemp ? (
+                            <button
+                              onClick={() => handleDelete(tx)}
+                              disabled={deletingId === tx.id}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--muted)] hover:text-[var(--danger)] disabled:opacity-40"
+                              title="Удалить транзакцию"
+                            >
+                              <svg className="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          ) : null}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                }),
+              ])}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── Compact list (mobile) ─────────────────────────── */}
+      {filtered.length > 0 && (
+        <div className="lg:hidden bg-[var(--surface-1)] rounded-xl border border-[var(--border)] overflow-hidden">
           {groupByDay(filtered).map((group) => (
             <div key={group.date}>
               {period !== "today" && (
@@ -1024,8 +1172,9 @@ export default function TransactionsClient({
                   const cfg = TYPE_CONFIG[tx.type];
                   const isTemp = tx.id.startsWith("tmp-");
                   const expanded = expandedId === tx.id;
+                  const isDeleted = !!tx.deleted_at;
                   return (
-                    <div key={tx.id} className={isTemp ? "opacity-60 animate-pulse" : ""}>
+                    <div key={tx.id} className={`${isTemp ? "opacity-60 animate-pulse" : ""} ${isDeleted ? "opacity-45" : ""}`}>
                       {/* Compact row: dot · qty · name/creator · delta bars */}
                       <button
                         type="button"
@@ -1047,7 +1196,7 @@ export default function TransactionsClient({
                             })`,
                           }}
                         />
-                        <span className={`num text-sm font-bold w-[72px] shrink-0 ${cfg.qColor}`}>
+                        <span className={`num text-sm font-bold w-[72px] shrink-0 ${cfg.qColor} ${isDeleted ? "line-through" : ""}`}>
                           {cfg.sign}
                           {formatQuantity(tx.quantity)}
                         </span>
@@ -1082,6 +1231,23 @@ export default function TransactionsClient({
                           {tx.note && (
                             <p className="text-xs text-[var(--muted)] whitespace-pre-line">{tx.note}</p>
                           )}
+                          {isDeleted ? (
+                            <p className="text-xs text-[var(--danger)]">
+                              Удалил {tx.deleted_by_name ?? "—"}
+                              {tx.deleted_at ? ` · ${new Date(tx.deleted_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}` : ""}
+                            </p>
+                          ) : isAdmin && !isTemp ? (
+                            <button
+                              onClick={() => handleDelete(tx)}
+                              disabled={deletingId === tx.id}
+                              className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--danger)] disabled:opacity-40"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              {deletingId === tx.id ? "Удаление…" : "Удалить транзакцию"}
+                            </button>
+                          ) : null}
                         </div>
                       )}
                     </div>

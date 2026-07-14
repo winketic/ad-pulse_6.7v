@@ -81,12 +81,12 @@ export default function AllowedChatsCard({ initialChatIds }: AllowedChatsCardPro
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
           placeholder="79001234567 или ID группы"
-          className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg3)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[#00f5c4]"
+          className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg3)] border border-[var(--border)] text-sm text-[var(--text)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)]"
         />
         <button
           onClick={add}
           disabled={loading || !input.trim()}
-          className="px-4 py-2 rounded-lg bg-[#00f5c4] text-[#0a0a0a] text-sm font-medium hover:bg-[#00ddb3] disabled:opacity-50 transition-colors shrink-0"
+          className="px-4 py-2 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] text-sm font-medium hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors shrink-0"
         >
           Добавить
         </button>

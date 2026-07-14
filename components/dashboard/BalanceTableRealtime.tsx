@@ -64,7 +64,8 @@ export function BalanceTableRealtime({ materials, initialBalances, companyId, th
     const { data } = await supabase
       .from("material_transactions")
       .select("material_id, type, quantity")
-      .eq("company_id", companyId);
+      .eq("company_id", companyId)
+      .is("deleted_at", null);
 
     if (!data) return;
 
@@ -91,7 +92,7 @@ export function BalanceTableRealtime({ materials, initialBalances, companyId, th
     return (
       <div className="py-12 text-center">
         <p className="text-sm text-[var(--muted)]">Материалов нет</p>
-        <Link href="/dashboard/materials" className="mt-2 inline-block text-sm text-[#00f5c4] hover:underline">
+        <Link href="/dashboard/materials" className="mt-2 inline-block text-sm text-[var(--accent)] hover:underline">
           Добавить материалы
         </Link>
       </div>

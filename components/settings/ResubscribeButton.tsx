@@ -35,7 +35,7 @@ export default function ResubscribeButton() {
       <button
         onClick={handle}
         disabled={status === "loading"}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--bg3)] border border-[var(--border)] text-sm text-[var(--text)] hover:border-[#00f5c4] hover:text-[#00f5c4] disabled:opacity-50 transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--bg3)] border border-[var(--border)] text-sm text-[var(--text)] hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
       >
         {status === "loading" ? (
           <>
@@ -55,7 +55,7 @@ export default function ResubscribeButton() {
         )}
       </button>
       {msg && (
-        <p className={`mt-2 text-xs ${status === "error" ? "text-red-400" : "text-[#00f5c4]"}`}>
+        <p className={`mt-2 text-xs ${status === "error" ? "text-red-400" : "text-[var(--accent)]"}`}>
           {msg}
         </p>
       )}

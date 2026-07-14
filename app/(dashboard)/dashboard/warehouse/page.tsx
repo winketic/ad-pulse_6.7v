@@ -23,6 +23,8 @@ export type WarehouseMaterial = {
   // only to raw materials — a product at 0 is normal, not critical.
   isProduct: boolean;
   recent: WarehouseTx[];
+  // Net movement per day, last 7 days oldest→newest — desktop sparkline
+  week: number[];
 };
 
 export default async function WarehousePage() {
@@ -54,6 +56,7 @@ export default async function WarehousePage() {
       .from("material_transactions")
       .select("material_id, type, quantity, transaction_date, created_at")
       .eq("company_id", company_id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false }),
     supabase
       .from("material_thresholds")
@@ -91,6 +94,22 @@ export default async function WarehousePage() {
     }
   }
 
+  // Daily net deltas for the last 7 days (per material)
+  const weekDays: string[] = Array.from({ length: 7 }, (_, i) =>
+    new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+  );
+  const dayIndex = new Map(weekDays.map((d, i) => [d, i]));
+  const weekMap = new Map<string, number[]>();
+  for (const tx of txResult.data ?? []) {
+    const d = (tx.transaction_date as string) ?? (tx.created_at as string).split("T")[0];
+    const idx = dayIndex.get(d);
+    if (idx == null) continue;
+    const series = weekMap.get(tx.material_id) ?? Array(7).fill(0);
+    const qty = Number(tx.quantity);
+    series[idx] += tx.type === "income" || tx.type === "return" ? qty : -qty;
+    weekMap.set(tx.material_id, series);
+  }
+
   const materials: WarehouseMaterial[] = (matsResult.data ?? []).map((m) => {
     const raw = m as Record<string, unknown>;
     return {
@@ -101,6 +120,7 @@ export default async function WarehousePage() {
       threshold: thresholdMap.get(m.id) ?? null,
       isProduct: raw.norm_concrete != null && raw.norm_rebar != null,
       recent: recentMap.get(m.id) ?? [],
+      week: weekMap.get(m.id) ?? Array(7).fill(0),
     };
   });
 
