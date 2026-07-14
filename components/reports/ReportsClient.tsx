@@ -245,59 +245,66 @@ function FilterBar({
         const fd = new FormData(e.currentTarget);
         onApply(fd.get("from") as string, fd.get("to") as string);
       }}
-      className="flex flex-wrap items-end gap-3"
+      className="space-y-3"
     >
-      <div className="flex-1 min-w-[140px]">
-        <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">
-          Период с
-        </label>
-        <input
-          type="date"
-          name="from"
-          defaultValue={from}
-          required
-          className="field-input w-full min-w-0"
-        />
+      {/* Dates stack full-width on mobile (native date render needs the room),
+          side-by-side on sm+ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">
+            Период с
+          </label>
+          <input
+            type="date"
+            name="from"
+            defaultValue={from}
+            required
+            className="field-input w-full min-w-0"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">
+            по
+          </label>
+          <input
+            type="date"
+            name="to"
+            defaultValue={to}
+            required
+            className="field-input w-full min-w-0"
+          />
+        </div>
       </div>
-      <div className="flex-1 min-w-[140px]">
-        <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">
-          по
-        </label>
-        <input
-          type="date"
-          name="to"
-          defaultValue={to}
-          required
-          className="field-input w-full min-w-0"
-        />
-      </div>
-      <button
-        type="submit"
-        disabled={isPending}
-        className="dp-btn-primary rounded-lg"
-      >
-        {isPending && (
-          <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-        )}
-        Применить
-      </button>
 
-      {/* Quick presets */}
-      <button
-        type="button"
-        disabled={isPending}
-        onClick={() => {
-          const now = new Date();
-          const first = new Date(now.getFullYear(), now.getMonth(), 1);
-          onApply(first.toISOString().split("T")[0], now.toISOString().split("T")[0]);
-        }}
-        className="dp-btn-secondary rounded-lg"
-      >
-        Этот месяц
-      </button>
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="dp-btn-primary rounded-lg"
+        >
+          {isPending && (
+            <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          )}
+          Применить
+        </button>
+
+        {/* Quick preset */}
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => {
+            const now = new Date();
+            const first = new Date(now.getFullYear(), now.getMonth(), 1);
+            onApply(first.toISOString().split("T")[0], now.toISOString().split("T")[0]);
+          }}
+          className="dp-btn-secondary rounded-lg"
+        >
+          Этот месяц
+        </button>
+      </div>
     </form>
   );
 }
