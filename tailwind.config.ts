@@ -22,9 +22,9 @@ const config: Config = {
           faint:  "#444444",
         },
         accent: {
-          DEFAULT: "#00f5c4",
-          hover:   "#00ddb3",
-          dim:     "rgba(0,245,196,0.15)",
+          DEFAULT: "#5A8DF0",
+          hover:   "#3D74E6",
+          dim:     "rgba(90,141,240,0.15)",
         },
       },
     },
