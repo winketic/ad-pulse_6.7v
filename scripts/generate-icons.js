@@ -67,14 +67,14 @@ function createIcon(size) {
   const svgPoints = [[6,32],[14,32],[18,20],[22,44],[26,28],[30,36],[34,32],[58,32]];
   const scale = size / 64;
   const thickness = Math.max(2, Math.round(size / 32));
-  // #00f5c4 = RGB(0, 245, 196)
+  // Каданс Pulse Blue #5A8DF0 = RGB(90, 141, 240)
   for (let i = 0; i < svgPoints.length - 1; i++) {
     const [x0, y0] = svgPoints[i];
     const [x1, y1] = svgPoints[i + 1];
-    drawLine(pixels, size, x0 * scale, y0 * scale, x1 * scale, y1 * scale, 0, 245, 196, thickness);
+    drawLine(pixels, size, x0 * scale, y0 * scale, x1 * scale, y1 * scale, 90, 141, 240, thickness);
   }
 
-  // Draw dot at peak: circle at (18*scale, 20*scale) r=3*scale, #00f5c4
+  // Draw dot at peak: circle at (18*scale, 20*scale) r=3*scale, Pulse Blue
   const cx = Math.round(18 * scale), cy = Math.round(20 * scale);
   const r = Math.max(2, Math.round(3 * scale));
   for (let dy = -r; dy <= r; dy++) {
@@ -83,7 +83,7 @@ function createIcon(size) {
         const px = cx + dx, py = cy + dy;
         if (px >= 0 && px < size && py >= 0 && py < size) {
           const idx = (py * size + px) * 3;
-          pixels[idx] = 0; pixels[idx + 1] = 245; pixels[idx + 2] = 196;
+          pixels[idx] = 90; pixels[idx + 1] = 141; pixels[idx + 2] = 240;
         }
       }
     }
