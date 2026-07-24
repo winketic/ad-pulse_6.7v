@@ -109,7 +109,7 @@ EMAIL_FROM=onboarding@resend.dev
 - При новой заявке — уведомление в Telegram администратору
 
 #### PWA и мобильное
-- manifest.json, иконки, theme-color #05050a
+- manifest.json, иконки, theme-color #0A0C10 (Каданс canvas)
 - Адаптивная нижняя навигация: 4 пункта + центральный FAB «Выпуск»
 - Логотип SVG во всех точках входа
 

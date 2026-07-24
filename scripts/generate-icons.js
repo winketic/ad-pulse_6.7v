@@ -56,10 +56,10 @@ function drawLine(pixels, width, x0, y0, x1, y1, r, g, b, thickness = 1) {
 }
 
 function createIcon(size) {
-  // Dark background: #05050a
+  // Каданс canvas #0A0C10 = RGB(10, 12, 16)
   const pixels = Buffer.alloc(size * size * 3, 0);
   for (let i = 0; i < size * size; i++) {
-    pixels[i * 3] = 5; pixels[i * 3 + 1] = 5; pixels[i * 3 + 2] = 10;
+    pixels[i * 3] = 10; pixels[i * 3 + 1] = 12; pixels[i * 3 + 2] = 16;
   }
 
   // Logo waveform from SVG viewBox 0 0 64 64

@@ -1,110 +1,211 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 import "driver.js/dist/driver.css";
 
+// localStorage fallback so the tour never re-fires before the DB write
+// lands (or if the tour_completed column doesn't exist yet).
 const TOUR_KEY = "ad_pulse_tour_done";
+// Custom event DashboardShell dispatches to (re)launch the tour manually.
+export const TOUR_EVENT = "adpulse:start-tour";
+// sessionStorage flag set when "Обучение" is clicked from another page —
+// picked up once we land on /dashboard.
+const FORCE_KEY = "adpulse_force_tour";
 
-const STEPS = [
+type Side = "top" | "bottom" | "left" | "right";
+
+interface StepDef {
+  /** data-tour attribute value; null → centered popover with no highlight */
+  tour: string | null;
+  title: string;
+  description: string;
+  /** roles that should SEE this step; omit = everyone */
+  roles?: string[];
+}
+
+// Roles with real access to production plans. workshop/warehouse skip the
+// Планы step per spec ("не показывать шаги про Планы если нет доступа").
+const PLANS_ROLES = ["admin", "manager"];
+
+const STEP_DEFS: StepDef[] = [
   {
-    element: "#tour-nav-overview",
-    popover: {
-      title: "Обзор",
-      description: "Главная страница: остатки, движение за день, быстрые показатели по вашему складу.",
-      side: "right" as const,
-      align: "start" as const,
-    },
+    tour: null,
+    title: "Добро пожаловать 👋",
+    description: "Это AD Pulse — здесь виден весь учёт вашего производства.",
   },
   {
-    element: "#tour-nav-materials",
-    popover: {
-      title: "Материалы",
-      description: "Справочник материалов: добавляйте позиции, задавайте единицы измерения и нормы ГОСТ.",
-      side: "right" as const,
-      align: "start" as const,
-    },
+    tour: "hero-output",
+    title: "Выпуск сегодня",
+    description: "Сколько произвели сегодня — главная цифра дня.",
   },
   {
-    element: "#tour-nav-transactions",
-    popover: {
-      title: "Движение",
-      description: "Все операции: приход, расход, брак, возврат. Можно фильтровать и экспортировать в Excel.",
-      side: "right" as const,
-      align: "start" as const,
-    },
+    tour: "stock",
+    title: "Остатки",
+    description: "Остатки сырья и продукции в реальном времени, цветом — статус: зелёный норма, жёлтый мало, красный критично.",
   },
   {
-    element: "#tour-nav-whatsapp",
-    popover: {
-      title: "WhatsApp",
-      description: "Сообщения из WhatsApp автоматически распознаются и превращаются в транзакции. Здесь — очередь на проверку.",
-      side: "right" as const,
-      align: "start" as const,
-    },
+    tour: "activity",
+    title: "Активность",
+    description: "Кто и что внёс за день — живая лента операций.",
   },
   {
-    element: "#tour-sender-col",
-    popover: {
-      title: "Разрешённые чаты",
-      description: "Нажмите на отправителя чтобы скопировать Chat ID. Добавьте его в Разрешённые чаты чтобы обрабатывать сообщения только от нужных контактов или групп.",
-      side: "bottom" as const,
-      align: "start" as const,
-    },
+    tour: "produce",
+    title: "Записать выпуск",
+    description: "Самое частое действие — записать выпуск. Выбираешь перемычку, вводишь количество, сырьё спишется автоматически по нормам.",
   },
   {
-    element: "#tour-nav-settings",
-    popover: {
-      title: "Настройки",
-      description: "Пригласите коллег, подключите Telegram-уведомления и настройте пороги остатков.",
-      side: "right" as const,
-      align: "start" as const,
-    },
+    tour: "nav-warehouse",
+    title: "Склад",
+    description: "Все остатки, критичные — сверху.",
+  },
+  {
+    tour: "nav-transactions",
+    title: "Движение",
+    description: "Приход, расход, брак — вся история.",
+  },
+  {
+    tour: "nav-plans",
+    title: "Планы",
+    description: "Производственные планы с прогрессом и дедлайнами.",
+    roles: PLANS_ROLES,
+  },
+  {
+    tour: null,
+    title: "Готово 🎉",
+    description: "Готово. Если что-то непонятно — пишите нам, поможем.",
   },
 ];
 
-export default function OnboardingTour() {
+/** First on-screen (rendered + visible) element matching the data-tour name. */
+function pickVisible(name: string): HTMLElement | null {
+  const els = Array.from(
+    document.querySelectorAll<HTMLElement>(`[data-tour="${name}"]`)
+  );
+  return els.find((el) => el.getClientRects().length > 0) ?? null;
+}
+
+interface OnboardingTourProps {
+  role?: string | null;
+  /** true → auto-launch on first dashboard visit */
+  autoStart?: boolean;
+}
+
+export default function OnboardingTour({ role, autoStart }: OnboardingTourProps) {
   const pathname = usePathname();
+  const runningRef = useRef(false);
 
   useEffect(() => {
     if (pathname !== "/dashboard") return;
     if (typeof window === "undefined") return;
-    if (localStorage.getItem(TOUR_KEY)) return;
-    if (window.innerWidth < 1024) return;
 
+    let cancelled = false;
     let driverInstance: { drive: () => void; destroy: () => void } | null = null;
+    let startTimer: ReturnType<typeof setTimeout> | null = null;
 
-    import("driver.js").then(({ driver }) => {
-      // Skip steps whose target element isn't in the DOM (e.g. table columns on other pages)
-      const availableSteps = STEPS.filter(
-        (s) => !s.element || !!document.querySelector(s.element)
-      );
-      if (availableSteps.length === 0) return;
+    async function markDone() {
+      try { localStorage.setItem(TOUR_KEY, "1"); } catch { /* ignore */ }
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        // Column may not exist before the migration is applied — ignore errors.
+        if (user) await supabase.from("profiles").update({ tour_completed: true }).eq("id", user.id);
+      } catch { /* ignore */ }
+    }
+
+    async function launch() {
+      if (cancelled || runningRef.current) return;
+      runningRef.current = true;
+
+      const { driver } = await import("driver.js");
+      if (cancelled) { runningRef.current = false; return; }
+
+      // Resolve steps against the DOM for the CURRENT viewport (mobile and
+      // desktop render different trees). Drop highlight steps whose target
+      // isn't on screen; keep the centered welcome/final steps always.
+      const steps = STEP_DEFS
+        .filter((def) => !def.roles || (role != null && def.roles.includes(role)))
+        .map((def) => {
+          if (!def.tour) {
+            return { popover: { title: def.title, description: def.description } };
+          }
+          const el = pickVisible(def.tour);
+          if (!el) return null;
+          const rect = el.getBoundingClientRect();
+          const side: Side = rect.top < window.innerHeight / 2 ? "bottom" : "top";
+          return {
+            element: el,
+            popover: { title: def.title, description: def.description, side, align: "center" as const },
+          };
+        })
+        .filter((s): s is NonNullable<typeof s> => s !== null);
+
+      if (steps.length === 0) { runningRef.current = false; return; }
 
       driverInstance = driver({
         popoverClass: "adpulse-tour",
         animate: true,
-        overlayOpacity: 0.75,
+        overlayColor: "#0A0C10",
+        overlayOpacity: 0.72,
         showProgress: true,
+        progressText: "{{current}} из {{total}}",
         nextBtnText: "Далее →",
         prevBtnText: "← Назад",
         doneBtnText: "Готово",
-        steps: availableSteps,
+        allowClose: true,
+        steps,
+        // Inject an explicit "Пропустить" button into every popover footer.
+        onPopoverRender: (popover: { footerButtons?: HTMLElement }) => {
+          if (!popover.footerButtons) return;
+          if (popover.footerButtons.querySelector(".adpulse-skip-btn")) return;
+          const skip = document.createElement("button");
+          skip.innerText = "Пропустить";
+          skip.className = "adpulse-skip-btn";
+          skip.addEventListener("click", () => driverInstance?.destroy());
+          popover.footerButtons.insertBefore(skip, popover.footerButtons.firstChild);
+        },
         onDestroyStarted: () => {
-          localStorage.setItem(TOUR_KEY, "1");
+          void markDone();
           driverInstance?.destroy();
+          runningRef.current = false;
         },
       });
 
-      // Small delay so the sidebar renders its nav items before driver tries to find them
-      const t = setTimeout(() => driverInstance?.drive(), 600);
-      return () => clearTimeout(t);
-    });
+      // Let the dashboard finish painting its nav + cards first.
+      startTimer = setTimeout(() => driverInstance?.drive(), 500);
+    }
+
+    // ── Trigger sources ─────────────────────────────────────
+    // 1) forced from another page via "Обучение"
+    let forced = false;
+    try {
+      if (sessionStorage.getItem(FORCE_KEY)) {
+        sessionStorage.removeItem(FORCE_KEY);
+        forced = true;
+      }
+    } catch { /* ignore */ }
+
+    // 2) manual re-launch on the same page
+    const onEvent = () => { void launch(); };
+    window.addEventListener(TOUR_EVENT, onEvent);
+
+    // 3) auto-start on first visit
+    let tourDone = false;
+    try { tourDone = !!localStorage.getItem(TOUR_KEY); } catch { /* ignore */ }
+
+    if (forced || (autoStart && !tourDone)) {
+      void launch();
+    }
 
     return () => {
+      cancelled = true;
+      window.removeEventListener(TOUR_EVENT, onEvent);
+      if (startTimer) clearTimeout(startTimer);
       driverInstance?.destroy();
+      runningRef.current = false;
     };
-  }, [pathname]);
+  }, [pathname, role, autoStart]);
 
   return null;
 }

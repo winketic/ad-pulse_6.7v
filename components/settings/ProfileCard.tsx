@@ -175,21 +175,21 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
 
 const BANNER_COLORS = [
   "var(--accent)",
-  "#7b5ea7",
+  "#7C6FF0",
   "#2563eb",
   "#0891b2",
   "#dc2626",
   "#f59e0b",
   "#374151",
   "#0a0a0a",
-  "linear-gradient(135deg, var(--accent), #7b5ea7)",
-  "linear-gradient(135deg, #2563eb, #7b5ea7)",
+  "linear-gradient(135deg, var(--accent), #7C6FF0)",
+  "linear-gradient(135deg, #2563eb, #7C6FF0)",
   "linear-gradient(135deg, #f59e0b, #dc2626)",
   "linear-gradient(135deg, #0891b2, var(--accent))",
 ];
 
 const inputCls =
-  "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] transition-colors";
+  "w-full px-3 py-2.5 rounded-lg border border-[var(--border)] text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] transition-colors";
 
 interface ProfileCardProps {
   fullName: string | null;

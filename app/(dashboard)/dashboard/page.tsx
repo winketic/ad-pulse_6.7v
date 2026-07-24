@@ -295,7 +295,7 @@ export default async function DashboardPage() {
 
       {/* Metric cards row */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-5">
+        <div data-tour="hero-output" className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-5">
           <p className="text-sm text-[var(--muted)]">Выпуск сегодня</p>
           <div className="flex items-baseline gap-2.5 mt-2">
             <span className="num text-3xl font-semibold text-[var(--text)]">
@@ -337,7 +337,7 @@ export default async function DashboardPage() {
       {/* Two-column: activity feed | stocks + plans */}
       <div className="grid grid-cols-[1fr_360px] gap-6 mt-6 items-start">
         {/* Activity */}
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)]">
+        <div data-tour="activity" className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)]">
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border)]">
             <h2 className="text-sm font-semibold text-[var(--text)]">Активность</h2>
             <Link href="/dashboard/transactions" className="text-xs text-[var(--accent)] hover:underline">
@@ -369,7 +369,7 @@ export default async function DashboardPage() {
         {/* Right column */}
         <div className="space-y-6">
           {/* Stocks — critical first */}
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)]">
+          <div data-tour="stock" className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)]">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border)]">
               <h2 className="text-sm font-semibold text-[var(--text)]">Остатки</h2>
               <Link href="/dashboard/warehouse" className="text-xs text-[var(--accent)] hover:underline">
@@ -454,7 +454,7 @@ export default async function DashboardPage() {
         </p>
 
         {/* ── HERO: the one number that matters today ──── */}
-        <div className="mt-4 mb-5 fade-in-up" style={{ animationDelay: "40ms" }}>
+        <div data-tour="hero-output" className="mt-4 mb-5 fade-in-up" style={{ animationDelay: "40ms" }}>
           {hasProduction ? (
             <>
               <p className="text-label mb-1.5">Выпуск сегодня</p>
@@ -500,6 +500,7 @@ export default async function DashboardPage() {
       {/* ── TICKER: 7-day-active stock, horizontal ──────── */}
       {ticker.length > 0 && (
         <div
+          data-tour="stock"
           className="flex overflow-x-auto border-y border-[var(--border)] bg-[var(--surface-1)]/60 mb-5 snap-x fade-in-up"
           style={{ animationDelay: "80ms" }}
         >
@@ -528,7 +529,7 @@ export default async function DashboardPage() {
 
       <div className="px-4 sm:px-6 pb-6">
         {/* ── TIMELINE: today's activity feed ───────────── */}
-        <section className="mb-6 fade-in-up" style={{ animationDelay: "120ms" }}>
+        <section data-tour="activity" className="mb-6 fade-in-up" style={{ animationDelay: "120ms" }}>
           <div className="flex items-baseline justify-between mb-3">
             <h2 className="text-label">Активность</h2>
             <Link href="/dashboard/transactions" className="text-xs text-[var(--accent)] hover:underline font-medium">

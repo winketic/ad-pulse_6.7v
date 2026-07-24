@@ -90,10 +90,10 @@ export default function SetupPage() {
 
         {/* Card */}
         <div className="rounded-2xl border overflow-hidden"
-          style={{ background: "#0d0d14", borderColor: "#1f1f2e" }}>
+          style={{ background: "var(--surface-1)", borderColor: "var(--border)" }}>
 
           {/* Progress */}
-          <div className="h-1 w-full" style={{ background: "#1f1f2e" }}>
+          <div className="h-1 w-full" style={{ background: "var(--surface-3)" }}>
             <div className="h-full transition-all duration-500"
               style={{ width: `${progress}%`, background: "var(--accent)" }} />
           </div>
@@ -106,7 +106,7 @@ export default function SetupPage() {
                   style={{ background: i + 1 <= step ? "var(--accent)" : "var(--border-strong)" }} />
               ))}
             </div>
-            <span className="text-xs" style={{ color: "#6b7280" }}>
+            <span className="text-xs" style={{ color: "var(--muted)" }}>
               Шаг {step} из {TOTAL_STEPS}
             </span>
           </div>
@@ -115,7 +115,7 @@ export default function SetupPage() {
             <h1 className="text-xl font-bold mb-1" style={{ color: "var(--text)" }}>
               {STEP_TITLES[step - 1]}
             </h1>
-            <p className="text-sm mb-6" style={{ color: "#6b7280" }}>
+            <p className="text-sm mb-6" style={{ color: "var(--muted)" }}>
               {STEP_SUBS[step - 1]}
             </p>
 
@@ -145,7 +145,7 @@ export default function SetupPage() {
                   </select>
                 </div>
                 {matError && (
-                  <p className="text-xs" style={{ color: "#f87171" }}>{matError}</p>
+                  <p className="text-xs" style={{ color: "var(--danger)" }}>{matError}</p>
                 )}
                 <button
                   onClick={handleAddMaterial}
@@ -157,13 +157,13 @@ export default function SetupPage() {
                 </button>
 
                 {addedMats.length > 0 && (
-                  <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #1f1f2e" }}>
+                  <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                     {addedMats.map((m) => (
                       <div key={m.id} className="flex items-center justify-between px-4 py-2.5"
-                        style={{ borderBottom: "1px solid #1f1f2e" }}>
+                        style={{ borderBottom: "1px solid var(--border)" }}>
                         <span className="text-sm" style={{ color: "var(--text)" }}>{m.name}</span>
                         <span className="text-xs px-2 py-0.5 rounded-full"
-                          style={{ background: "rgba(0,245,196,0.1)", color: "var(--accent)" }}>
+                          style={{ background: "var(--accent-15)", color: "var(--accent)" }}>
                           {m.unit}
                         </span>
                       </div>
@@ -172,7 +172,7 @@ export default function SetupPage() {
                 )}
 
                 {addedMats.length === 0 && (
-                  <p className="text-xs text-center" style={{ color: "#4b5563" }}>
+                  <p className="text-xs text-center" style={{ color: "var(--muted-2)" }}>
                     Можно добавить позже в разделе «Материалы»
                   </p>
                 )}
@@ -185,7 +185,7 @@ export default function SetupPage() {
                 <div className="rounded-xl p-4 space-y-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border-strong)" }}>
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: "rgba(0,245,196,0.1)" }}>
+                      style={{ background: "var(--accent-15)" }}>
                       <svg className="w-4 h-4" style={{ color: "var(--accent)" }} fill="currentColor" viewBox="0 0 24 24">
                         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/>
                       </svg>
@@ -241,7 +241,7 @@ export default function SetupPage() {
                     {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </div>
-                {invError && <p className="text-xs" style={{ color: "#f87171" }}>{invError}</p>}
+                {invError && <p className="text-xs" style={{ color: "var(--danger)" }}>{invError}</p>}
                 <button
                   onClick={handleInvite}
                   disabled={invSending}
@@ -252,10 +252,10 @@ export default function SetupPage() {
                 </button>
 
                 {invitedMembers.length > 0 && (
-                  <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #1f1f2e" }}>
+                  <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                     {invitedMembers.map((m, i) => (
                       <div key={i} className="flex items-center justify-between px-4 py-2.5"
-                        style={{ borderBottom: "1px solid #1f1f2e" }}>
+                        style={{ borderBottom: "1px solid var(--border)" }}>
                         <span className="text-sm" style={{ color: "var(--text)" }}>{m.email}</span>
                         <span className="text-xs" style={{ color: "var(--accent)" }}>
                           {ROLES.find((r) => r.value === m.role)?.label}
@@ -266,7 +266,7 @@ export default function SetupPage() {
                 )}
 
                 {invitedMembers.length === 0 && (
-                  <p className="text-xs text-center" style={{ color: "#4b5563" }}>
+                  <p className="text-xs text-center" style={{ color: "var(--muted-2)" }}>
                     Пригласить команду можно в любое время в «Настройках»
                   </p>
                 )}
@@ -323,7 +323,7 @@ export default function SetupPage() {
           </div>
         </div>
 
-        <p className="text-center text-xs mt-4" style={{ color: "#374151" }}>
+        <p className="text-center text-xs mt-4" style={{ color: "var(--muted-2)" }}>
           Все настройки можно изменить позже в разделе «Настройки»
         </p>
       </div>

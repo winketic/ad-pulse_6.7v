@@ -32,7 +32,7 @@ export function ApproveButton({ registrationId }: { registrationId: string }) {
       disabled={loading}
       style={{
         background: "var(--accent)",
-        color: "var(--accent)",
+        color: "var(--accent-text)",
         padding: "14px 36px",
         borderRadius: "10px",
         fontWeight: 600,

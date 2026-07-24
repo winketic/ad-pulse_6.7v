@@ -399,6 +399,22 @@ select:-webkit-autofill:active {
   padding: 6px 14px !important;
 }
 
+/* Injected "Пропустить" (skip) button — sits left of prev/next */
+.driver-popover.adpulse-tour .adpulse-skip-btn {
+  background: transparent !important;
+  color: #5C6474 !important;
+  border: none !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 6px 10px !important;
+  margin-right: auto !important;
+  cursor: pointer !important;
+  text-shadow: none !important;
+}
+.driver-popover.adpulse-tour .adpulse-skip-btn:hover {
+  color: #99A2B2 !important;
+}
+
 .driver-popover.adpulse-tour .driver-popover-close-btn {
   color: #99A2B2 !important;
   opacity: 0.7 !important;
