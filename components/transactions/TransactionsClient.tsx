@@ -1042,7 +1042,7 @@ export default function TransactionsClient({
                 className={`inline-flex items-center justify-center w-8 h-[18px] rounded-full transition-colors ${showDeleted ? "bg-[var(--accent)]" : "bg-[var(--surface-3)]"}`}
               >
                 <span
-                  className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${showDeleted ? "translate-x-[7px]" : "-translate-x-[7px]"}`}
+                  className={`w-3.5 h-3.5 rounded-full bg-[var(--text)] transition-transform ${showDeleted ? "translate-x-[7px]" : "-translate-x-[7px]"}`}
                 />
               </span>
               Показать удалённые ({deletedCount})

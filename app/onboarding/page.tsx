@@ -235,7 +235,7 @@ export default function OnboardingPage() {
                         className="h-full rounded-full transition-all"
                         style={{
                           width: `${Math.min((password.length / 12) * 100, 100)}%`,
-                          background: password.length < 8 ? "#ef4444" : password.length < 12 ? "#f59e0b" : "var(--accent)",
+                          background: password.length < 8 ? "var(--danger)" : password.length < 12 ? "var(--warning)" : "var(--success)",
                         }}
                       />
                     </div>
@@ -250,10 +250,10 @@ export default function OnboardingPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Повторите пароль"
-                    className={`field-input ${confirmPassword && confirmPassword !== password ? "border-red-400 focus:ring-red-300 focus:border-red-400" : ""}`}
+                    className={`field-input ${confirmPassword && confirmPassword !== password ? "border-[var(--danger)]" : ""}`}
                   />
                   {confirmPassword && confirmPassword === password && password.length >= 8 && (
-                    <p className="text-xs mt-1.5 text-[var(--accent)]">✓ Пароли совпадают</p>
+                    <p className="text-xs mt-1.5 text-[var(--success)]">✓ Пароли совпадают</p>
                   )}
                 </div>
               </div>

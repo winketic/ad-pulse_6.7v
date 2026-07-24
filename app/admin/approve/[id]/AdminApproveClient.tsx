@@ -65,16 +65,16 @@ export default function AdminApproveClient({ registration: reg }: { registration
   const isPending = reg.status === "pending";
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+    <div className="dp-auth-page">
+      <div className="w-full max-w-md relative z-[1]">
+        <div className="dp-auth-card">
           {!isPending && (
-            <div className="mb-5 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-700">
+            <div className="mb-5 px-4 py-3 rounded-lg bg-[var(--warning-bg)] border border-[var(--warning)]/25 text-sm text-[var(--warning)]">
               Эта заявка уже {reg.status === "approved" ? "одобрена" : "отклонена"}.
             </div>
           )}
 
-          <h2 className="text-base font-semibold text-gray-900 mb-4">Данные заявки</h2>
+          <h2 className="text-base font-semibold text-[var(--text)] mb-4">Данные заявки</h2>
 
           <div className="mb-6">
             {[
@@ -89,15 +89,15 @@ export default function AdminApproveClient({ registration: reg }: { registration
                 }),
               },
             ].map(({ label, value }) => (
-              <div key={label} className="flex justify-between items-start gap-4 py-2.5 border-b border-gray-50 last:border-0">
-                <span className="text-xs text-gray-400 shrink-0">{label}</span>
-                <span className="text-sm text-gray-800 text-right break-all">{value}</span>
+              <div key={label} className="flex justify-between items-start gap-4 py-2.5 border-b border-[var(--border)] last:border-0">
+                <span className="text-xs text-[var(--muted)] shrink-0">{label}</span>
+                <span className="text-sm text-[var(--text)] text-right break-all">{value}</span>
               </div>
             ))}
           </div>
 
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+            <div className="mb-4 px-4 py-3 rounded-lg bg-[var(--danger-bg)] border border-[var(--danger)]/25 text-sm text-[var(--danger)]">
               {error}
             </div>
           )}
@@ -107,7 +107,7 @@ export default function AdminApproveClient({ registration: reg }: { registration
               <button
                 onClick={handleReject}
                 disabled={loading}
-                className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-50 transition-colors"
+                className="dp-btn-danger flex-1"
               >
                 Отклонить
               </button>
@@ -115,19 +115,7 @@ export default function AdminApproveClient({ registration: reg }: { registration
               <button
                 onClick={handleApprove}
                 disabled={loading}
-                style={{
-                  flex: 1,
-                  background: "var(--accent)",
-                  color: "var(--accent)",
-                  padding: "14px 0",
-                  borderRadius: "10px",
-                  fontWeight: 600,
-                  fontSize: "15px",
-                  border: "none",
-                  cursor: loading ? "not-allowed" : "pointer",
-                  opacity: loading ? 0.7 : 1,
-                  transition: "opacity 0.15s",
-                }}
+                className="dp-btn-primary flex-1"
               >
                 {loading ? "Одобряем…" : "✓ Одобрить"}
               </button>
@@ -135,7 +123,7 @@ export default function AdminApproveClient({ registration: reg }: { registration
           )}
 
           <div className="mt-5 text-center">
-            <Link href="/admin/registrations" className="text-sm text-gray-400 hover:text-[#0A0C10] transition-colors">
+            <Link href="/admin/registrations" className="text-sm text-[var(--muted)] hover:text-[var(--accent)] transition-colors">
               ← Все заявки
             </Link>
           </div>

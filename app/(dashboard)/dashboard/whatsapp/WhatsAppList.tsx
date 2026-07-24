@@ -367,7 +367,7 @@ function MessageDetailDrawer({
             <a
               href={`/dashboard/transactions?wazzup_message_id=${message.id}`}
               className="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors"
-              style={{ background: "rgba(0,245,196,0.08)", border: "1px solid rgba(0,245,196,0.2)", color: "var(--accent)" }}
+              style={{ background: "rgba(90,141,240,0.08)", border: "1px solid rgba(90,141,240,0.2)", color: "var(--accent)" }}
             >
               <span>Перейти к транзакции</span>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -608,10 +608,10 @@ export default function WhatsAppList({
                       className="cursor-pointer transition-colors"
                       style={{
                         borderTop: i > 0 ? "1px solid var(--border)" : undefined,
-                        background: isSelected ? "rgba(0,245,196,0.04)" : undefined,
+                        background: isSelected ? "rgba(90,141,240,0.04)" : undefined,
                       }}
                       onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "var(--bg3)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = isSelected ? "rgba(0,245,196,0.04)" : ""; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = isSelected ? "rgba(90,141,240,0.04)" : ""; }}
                     >
                       <td className="px-4 py-3 text-[var(--muted)] text-xs whitespace-nowrap">
                         {formatDate(msg.created_at)}
@@ -687,7 +687,7 @@ export default function WhatsAppList({
                           <button
                             onClick={(e) => { e.stopPropagation(); setConfirmingId(msg.id); }}
                             className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                            style={{ background: "rgba(0,245,196,0.1)", color: "var(--accent)", border: "1px solid rgba(0,245,196,0.2)" }}
+                            style={{ background: "rgba(90,141,240,0.1)", color: "var(--accent)", border: "1px solid rgba(90,141,240,0.2)" }}
                           >
                             Проверить
                           </button>

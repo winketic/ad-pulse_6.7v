@@ -45,6 +45,21 @@ export default async function DashboardLayout({
 
   const displayName = profile?.full_name || user.email || "Пользователь";
 
+  // Onboarding tour flag — read defensively: the tour_completed column may
+  // not exist yet (migration applied manually). On any error, treat as
+  // completed so we never break the dashboard or spam the tour.
+  let tourCompleted = true;
+  try {
+    const { data: tourRow, error: tourErr } = await supabase
+      .from("profiles")
+      .select("tour_completed")
+      .eq("id", user.id)
+      .single();
+    if (!tourErr) tourCompleted = tourRow?.tour_completed ?? false;
+  } catch {
+    tourCompleted = true;
+  }
+
   // Count WhatsApp messages awaiting manual confirmation
   let whatsappBadge = 0;
   if (profile?.company_id) {
@@ -66,6 +81,8 @@ export default async function DashboardLayout({
       userName={displayName}
       whatsappBadge={whatsappBadge}
       avatarUrl={profile?.avatar_url ?? null}
+      role={profile?.role ?? null}
+      tourCompleted={tourCompleted}
     >
       {children}
     </DashboardShell>

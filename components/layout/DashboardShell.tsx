@@ -15,21 +15,22 @@ import {
   MessageCircle,
   MoreVertical,
   Factory,
+  GraduationCap,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Logo } from "@/components/Logo";
-import OnboardingTour from "@/components/OnboardingTour";
+import OnboardingTour, { TOUR_EVENT } from "@/components/OnboardingTour";
 
 const NAV_ITEMS = [
-  { href: "/dashboard",              label: "Обзор",      Icon: LayoutDashboard, tourId: "tour-nav-overview"     },
-  { href: "/dashboard/materials",    label: "Материалы",  Icon: Package,         tourId: "tour-nav-materials"    },
-  { href: "/dashboard/warehouse",   label: "Склад",      Icon: Warehouse,       tourId: undefined               },
-  { href: "/dashboard/transactions", label: "Движение",   Icon: ArrowLeftRight,  tourId: "tour-nav-transactions" },
-  { href: "/dashboard/plans",        label: "Планы",      Icon: ClipboardList,   tourId: undefined               },
-  { href: "/dashboard/reports",      label: "Отчёты",     Icon: BarChart2,       tourId: undefined               },
-  { href: "/dashboard/whatsapp",     label: "WhatsApp",   Icon: MessageCircle,   tourId: "tour-nav-whatsapp"     },
-  { href: "/dashboard/settings",     label: "Настройки",  Icon: Settings,        tourId: "tour-nav-settings"     },
-  { href: "/dashboard/produce",      label: "Выпуск",     Icon: Factory,         tourId: undefined               },
+  { href: "/dashboard",              label: "Обзор",      Icon: LayoutDashboard, tour: undefined              },
+  { href: "/dashboard/materials",    label: "Материалы",  Icon: Package,         tour: undefined              },
+  { href: "/dashboard/warehouse",   label: "Склад",      Icon: Warehouse,       tour: "nav-warehouse"        },
+  { href: "/dashboard/transactions", label: "Движение",   Icon: ArrowLeftRight,  tour: "nav-transactions"     },
+  { href: "/dashboard/plans",        label: "Планы",      Icon: ClipboardList,   tour: "nav-plans"            },
+  { href: "/dashboard/reports",      label: "Отчёты",     Icon: BarChart2,       tour: undefined              },
+  { href: "/dashboard/whatsapp",     label: "WhatsApp",   Icon: MessageCircle,   tour: undefined              },
+  { href: "/dashboard/settings",     label: "Настройки",  Icon: Settings,        tour: undefined              },
+  { href: "/dashboard/produce",      label: "Выпуск",     Icon: Factory,         tour: "produce"              },
 ];
 
 // Mobile bottom nav — 2 + FAB + 2. The center FAB is the primary
@@ -71,7 +72,7 @@ function NavTab({
   item,
   active,
 }: {
-  item: { href: string; label: string; Icon: React.ElementType };
+  item: { href: string; label: string; Icon: React.ElementType; tour?: string };
   active: boolean;
 }) {
   const { href, label, Icon } = item;
@@ -79,6 +80,7 @@ function NavTab({
     <Link
       href={href}
       prefetch
+      data-tour={item.tour}
       className="flex-1 min-h-[64px] flex flex-col items-center justify-center gap-1 relative py-1.5 tap-scale"
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
@@ -107,6 +109,8 @@ interface DashboardShellProps {
   userName: string;
   whatsappBadge?: number;
   avatarUrl?: string | null;
+  role?: string | null;
+  tourCompleted?: boolean;
 }
 
 export default function DashboardShell({
@@ -114,6 +118,8 @@ export default function DashboardShell({
   userName,
   whatsappBadge = 0,
   avatarUrl,
+  role,
+  tourCompleted = true,
 }: DashboardShellProps) {
   const pathname = usePathname();
   const router   = useRouter();
@@ -121,6 +127,19 @@ export default function DashboardShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Launch the onboarding tour. If we're not on the dashboard yet, flag it
+  // and navigate there — OnboardingTour picks the flag up on arrival.
+  const startTour = () => {
+    setMenuOpen(false);
+    setMoreOpen(false);
+    if (pathname !== "/dashboard") {
+      try { sessionStorage.setItem("adpulse_force_tour", "1"); } catch { /* ignore */ }
+      router.push("/dashboard");
+    } else {
+      window.dispatchEvent(new CustomEvent(TOUR_EVENT));
+    }
+  };
 
   // Close "more" sheet on navigation
   useEffect(() => { setMoreOpen(false); setMenuOpen(false); }, [pathname]);
@@ -180,7 +199,7 @@ export default function DashboardShell({
                 key={item.href}
                 href={item.href}
                 prefetch
-                id={item.tourId}
+                data-tour={item.tour}
                 className="relative flex items-center px-3.5 text-sm transition-colors duration-150"
                 style={{
                   color: active ? "var(--text)" : "var(--muted)",
@@ -207,6 +226,7 @@ export default function DashboardShell({
         <Link
           href="/dashboard/produce"
           prefetch
+          data-tour="produce"
           className="flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-sm font-semibold transition-colors duration-150 mr-3"
           style={{ background: "var(--accent)", color: "var(--accent-text)" }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--accent-hover)"; }}
@@ -276,6 +296,16 @@ export default function DashboardShell({
                   </Link>
                 );
               })}
+              <div className="my-1.5" style={{ borderTop: "1px solid var(--border)" }} />
+              <button
+                onClick={startTour}
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-sm transition-colors duration-150 hover:bg-[var(--surface-3)]"
+                style={{ color: "var(--text)" }}
+                role="menuitem"
+              >
+                <GraduationCap size={15} strokeWidth={1.8} style={{ color: "var(--muted)" }} />
+                Обучение
+              </button>
               <div className="my-1.5" style={{ borderTop: "1px solid var(--border)" }} />
               <button
                 onClick={handleLogout}
@@ -371,6 +401,14 @@ export default function DashboardShell({
                     </Link>
                   );
                 })}
+                <button
+                  onClick={startTour}
+                  className="flex items-center gap-3.5 w-full px-3 py-3 rounded-xl text-sm font-medium transition-colors"
+                  style={{ color: "var(--text)" }}
+                >
+                  <GraduationCap size={20} strokeWidth={1.6} style={{ color: "var(--muted)" }} />
+                  Обучение
+                </button>
               </nav>
             </div>
           </>
@@ -392,7 +430,7 @@ export default function DashboardShell({
         </main>
       </div>
 
-      <OnboardingTour />
+      <OnboardingTour role={role} autoStart={!tourCompleted} />
 
       {/* ── Mobile bottom nav (icons only) ──────────────────── */}
       <nav
@@ -413,6 +451,7 @@ export default function DashboardShell({
             <Link
               href={FAB_HREF}
               prefetch
+              data-tour="produce"
               aria-label="Записать выпуск"
               className="absolute -top-5 w-16 h-16 rounded-full flex items-center justify-center tap-scale"
               style={{
