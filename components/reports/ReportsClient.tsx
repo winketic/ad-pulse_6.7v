@@ -53,6 +53,16 @@ export type ProductionRow = {
   rebar: number;
 };
 
+export type FinanceData = {
+  revenueByCounterparty: { counterparty: string; revenue: number }[];
+  revenueTotal: number;
+  rawCostByMaterial: { material_name: string; unit: string; qty: number; cost: number }[];
+  rawCostTotal: number;
+  productionRawCost: number;
+  materialMargin: number;
+  hasAnyPrice: boolean;
+};
+
 // ─── Helpers ──────────────────────────────────────────────
 
 function fmtDate(s: string) {
@@ -67,6 +77,34 @@ function fmtQty(n: number) {
 // Compact: up to 2 decimals, no trailing zeros; dash for zero.
 function fmt2(n: number) {
   return n === 0 ? "—" : parseFloat(n.toFixed(2)).toString();
+}
+
+// Деньги (тг) — целые с разделителями тысяч. NaN/пусто → 0.
+function money(n: number): string {
+  const v = Number.isFinite(n) ? n : 0;
+  return Math.round(v).toLocaleString("ru-RU") + " тг";
+}
+
+// ─── Mobile card primitives (label: value row) ────────────
+// Каждая строка таблицы = карточка; поля идут вертикально, 2 колонки внутри.
+// Только вертикальный скролл — никакого горизонтального переполнения.
+function CardField({
+  label,
+  value,
+  cls = "text-[var(--text)]",
+  full = false,
+}: {
+  label: string;
+  value: string;
+  cls?: string;
+  full?: boolean;
+}) {
+  return (
+    <div className={`flex items-baseline justify-between gap-2 min-w-0 ${full ? "col-span-2" : ""}`}>
+      <span className="text-xs text-[var(--muted)] shrink-0">{label}</span>
+      <span className={`tabular-nums font-mono text-sm truncate ${cls}`}>{value}</span>
+    </div>
+  );
 }
 
 function pluralCases(n: number) {
@@ -96,6 +134,7 @@ async function exportExcel(
   allTransactions: AllTxRow[],
   byCounterparty: CounterpartyRow[],
   production: ProductionRow[],
+  finance: FinanceData,
   concreteUnit: string,
   rebarUnit: string,
   from: string,
@@ -219,6 +258,26 @@ async function exportExcel(
   ws5["!cols"] = [{ wch: 20 }, { wch: 16 }, { wch: 16 }, { wch: 16 }];
   XLSX.utils.book_append_sheet(wb, ws5, "Производство");
 
+  // Sheet 6: Финансы — выручка по контрагентам, затраты на сырьё, маржа
+  const s6Data: Record<string, string | number>[] = [];
+  s6Data.push({ "Показатель": "ВЫРУЧКА (расход / отгрузка продукции)", "Сумма, тг": "" });
+  for (const r of finance.revenueByCounterparty) {
+    s6Data.push({ "Показатель": `  ${r.counterparty}`, "Сумма, тг": Math.round(r.revenue) });
+  }
+  s6Data.push({ "Показатель": "Выручка — ИТОГО", "Сумма, тг": Math.round(finance.revenueTotal) });
+  s6Data.push({ "Показатель": "", "Сумма, тг": "" });
+  s6Data.push({ "Показатель": "ЗАТРАТЫ НА СЫРЬЁ (приход сырья)", "Сумма, тг": "" });
+  for (const r of finance.rawCostByMaterial) {
+    s6Data.push({ "Показатель": `  ${r.material_name}`, "Сумма, тг": Math.round(r.cost) });
+  }
+  s6Data.push({ "Показатель": "Затраты на сырьё — ИТОГО", "Сумма, тг": Math.round(finance.rawCostTotal) });
+  s6Data.push({ "Показатель": "", "Сумма, тг": "" });
+  s6Data.push({ "Показатель": "Стоимость списанного в производстве сырья", "Сумма, тг": Math.round(finance.productionRawCost) });
+  s6Data.push({ "Показатель": "МАРЖА ПО МАТЕРИАЛАМ (без зарплат, энергии, амортизации — НЕ чистая прибыль)", "Сумма, тг": Math.round(finance.materialMargin) });
+  const ws6 = XLSX.utils.json_to_sheet(s6Data);
+  ws6["!cols"] = [{ wch: 68 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, ws6, "Финансы");
+
   const filename = `AD_Pulse_${from}_${to}.xlsx`;
   XLSX.writeFile(wb, filename);
 }
@@ -326,8 +385,14 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
     );
   }
 
+  const balColor = (b: number) =>
+    b > 0 ? "text-[var(--accent)]" : b < 0 ? "text-[var(--danger)]" : "text-[var(--muted)]";
+  const balStr = (b: number) => (b === 0 ? "0" : `${b > 0 ? "+" : ""}${parseFloat(b.toFixed(4))}`);
+
   return (
-    <div className="overflow-x-auto">
+    <>
+    {/* Desktop table */}
+    <div className="hidden md:block overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-[var(--bg3)] border-b border-[var(--border)]">
@@ -430,6 +495,40 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
         )}
       </table>
     </div>
+
+    {/* Mobile cards */}
+    <div className="md:hidden divide-y divide-[var(--border)]">
+      {rows.map((row) => (
+        <div key={row.material_id} className="px-4 py-3">
+          <div className="flex items-center justify-between gap-2 mb-2 min-w-0">
+            <span className="font-medium text-[var(--text)] truncate">{row.material_name}</span>
+            <span className="inline-flex shrink-0 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--accent)]/10 text-[var(--accent)]">
+              {row.unit}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+            <CardField label="Приход" value={fmtQty(row.income)} cls="text-[var(--success)]" />
+            <CardField label="Возврат" value={fmtQty(row.return_qty)} cls="text-[var(--info)]" />
+            <CardField label="Расход" value={fmtQty(row.expense)} cls="text-[var(--danger)]" />
+            <CardField label="Брак" value={fmtQty(row.defect)} cls="text-[var(--warning)]" />
+            <CardField label="Остаток" value={balStr(row.balance)} cls={`font-bold ${balColor(row.balance)}`} full />
+          </div>
+        </div>
+      ))}
+      {rows.length > 1 && (
+        <div className="px-4 py-3 bg-[var(--bg3)]">
+          <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide mb-2">Итого</p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+            <CardField label="Приход" value={totalIncome.toFixed(2)} cls="font-bold text-[var(--success)]" />
+            <CardField label="Возврат" value={totalReturn.toFixed(2)} cls="font-bold text-[var(--info)]" />
+            <CardField label="Расход" value={totalExpense.toFixed(2)} cls="font-bold text-[var(--danger)]" />
+            <CardField label="Брак" value={totalDefect.toFixed(2)} cls="font-bold text-[var(--warning)]" />
+            <CardField label="Остаток" value={balStr(totalBalance)} cls={`font-bold ${balColor(totalBalance)}`} full />
+          </div>
+        </div>
+      )}
+    </div>
+    </>
   );
 }
 
@@ -450,7 +549,9 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <>
+    {/* Desktop table */}
+    <div className="hidden md:block overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-[var(--bg3)] border-b border-[var(--border)]">
@@ -503,6 +604,28 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
         </tbody>
       </table>
     </div>
+
+    {/* Mobile cards */}
+    <div className="md:hidden divide-y divide-[var(--border)]">
+      {rows.map((row) => (
+        <div key={row.id} className="px-4 py-3">
+          <div className="flex items-center justify-between gap-2 mb-1.5 min-w-0">
+            <span className="font-medium text-[var(--text)] truncate">{row.material_name}</span>
+            <span className="text-xs text-[var(--muted)] tabular-nums shrink-0">{fmtDate(row.transaction_date)}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-1.5">
+            <CardField label="Количество" value={`${row.quantity.toFixed(2)} ${row.material_unit}`} cls="font-semibold text-[var(--warning)]" />
+            <CardField label="Добавил" value={row.creator_name} cls="text-[var(--muted)]" />
+          </div>
+          {row.note && (
+            <p className="text-xs text-[var(--muted)] whitespace-pre-line break-words">
+              {row.note}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+    </>
   );
 }
 
@@ -514,6 +637,7 @@ export default function ReportsClient({
   allTransactions,
   byCounterparty,
   production,
+  finance,
   concreteUnit,
   rebarUnit,
   from,
@@ -524,6 +648,7 @@ export default function ReportsClient({
   allTransactions: AllTxRow[];
   byCounterparty: CounterpartyRow[];
   production: ProductionRow[];
+  finance: FinanceData;
   concreteUnit: string;
   rebarUnit: string;
   from: string;
@@ -554,6 +679,7 @@ export default function ReportsClient({
         allTransactions,
         byCounterparty,
         production,
+        finance,
         concreteUnit,
         rebarUnit,
         from,
@@ -600,6 +726,109 @@ export default function ReportsClient({
         <FilterBar from={from} to={to} onApply={handleApply} isPending={isPending} />
       </div>
 
+      {/* ── Финансы за период ───────────────────────────── */}
+      <div className={`bg-[var(--card)] rounded-xl border border-[var(--border)] mb-4 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
+        <div className="px-5 py-4 border-b border-[var(--border)]">
+          <h2 className="text-sm font-semibold text-[var(--text)]">Финансы за период</h2>
+          <p className="text-xs text-[var(--muted)] mt-0.5">
+            Выручка, затраты на сырьё и маржа по материалам
+          </p>
+        </div>
+
+        {!finance.hasAnyPrice ? (
+          <p className="text-sm text-[var(--muted)] text-center py-8 px-5">
+            Укажите цены в транзакциях (приход сырья и отгрузка продукции) —
+            здесь появятся выручка и маржа.
+          </p>
+        ) : (
+          <div className="p-4 sm:p-5 space-y-5">
+            {/* 3 stat tiles */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--bg3)] px-4 py-3">
+                <p className="text-xs text-[var(--muted)]">Выручка</p>
+                <p className="num text-lg font-bold text-[var(--success)] mt-1 tabular-nums break-words">
+                  {money(finance.revenueTotal)}
+                </p>
+                <p className="text-[11px] text-[var(--muted-2)] mt-0.5">расход / отгрузка продукции</p>
+              </div>
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--bg3)] px-4 py-3">
+                <p className="text-xs text-[var(--muted)]">Затраты на сырьё</p>
+                <p className="num text-lg font-bold text-[var(--danger)] mt-1 tabular-nums break-words">
+                  {money(finance.rawCostTotal)}
+                </p>
+                <p className="text-[11px] text-[var(--muted-2)] mt-0.5">приход сырья</p>
+              </div>
+              <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-3">
+                <p className="text-xs text-[var(--muted)]">Маржа по материалам</p>
+                <p className={`num text-lg font-bold mt-1 tabular-nums break-words ${finance.materialMargin >= 0 ? "text-[var(--accent)]" : "text-[var(--danger)]"}`}>
+                  {money(finance.materialMargin)}
+                </p>
+                <p className="text-[11px] text-[var(--muted-2)] mt-0.5">выручка − списанное сырьё</p>
+              </div>
+            </div>
+
+            {/* Выручка по контрагентам */}
+            {finance.revenueByCounterparty.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide mb-2">
+                  Выручка по контрагентам
+                </p>
+                <div className="rounded-lg border border-[var(--border)] divide-y divide-[var(--border)]">
+                  {finance.revenueByCounterparty.map((r) => (
+                    <div key={r.counterparty} className="flex items-center justify-between gap-2 px-3.5 py-2 min-w-0">
+                      <span className="text-sm text-[var(--text)] truncate">{r.counterparty}</span>
+                      <span className="num text-sm font-semibold text-[var(--success)] tabular-nums shrink-0">
+                        {money(r.revenue)}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-[var(--bg3)]">
+                    <span className="text-sm font-semibold text-[var(--text)]">Итого</span>
+                    <span className="num text-sm font-bold text-[var(--success)] tabular-nums shrink-0">
+                      {money(finance.revenueTotal)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Затраты на сырьё по материалам */}
+            {finance.rawCostByMaterial.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide mb-2">
+                  Затраты на сырьё
+                </p>
+                <div className="rounded-lg border border-[var(--border)] divide-y divide-[var(--border)]">
+                  {finance.rawCostByMaterial.map((r) => (
+                    <div key={r.material_name} className="flex items-center justify-between gap-2 px-3.5 py-2 min-w-0">
+                      <span className="text-sm text-[var(--text)] truncate">
+                        {r.material_name} <span className="text-xs text-[var(--muted-2)]">{r.unit}</span>
+                      </span>
+                      <span className="num text-sm font-semibold text-[var(--danger)] tabular-nums shrink-0">
+                        {money(r.cost)}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between gap-2 px-3.5 py-2 bg-[var(--bg3)]">
+                    <span className="text-sm font-semibold text-[var(--text)]">Итого</span>
+                    <span className="num text-sm font-bold text-[var(--danger)] tabular-nums shrink-0">
+                      {money(finance.rawCostTotal)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Пояснение к марже */}
+            <p className="text-xs text-[var(--muted-2)] leading-relaxed">
+              Маржа по материалам = выручка − стоимость списанного в производстве сырья
+              ({money(finance.productionRawCost)}). Считается <b>без учёта зарплат, энергии,
+              амортизации</b> — это <b>не чистая прибыль</b>.
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* ── Summary table ───────────────────────────────── */}
       <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] mb-4">
         <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
@@ -635,7 +864,9 @@ export default function ReportsClient({
         {byCounterparty.length === 0 ? (
           <p className="text-sm text-[var(--muted)] text-center py-10">Нет данных за период</p>
         ) : (
-          <div className={`overflow-x-auto ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
+          <div className={isPending ? "opacity-60 pointer-events-none" : ""}>
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm min-w-[560px]">
               <thead>
                 <tr className="border-b border-[var(--border)]">
@@ -666,6 +897,35 @@ export default function ReportsClient({
               </tbody>
             </table>
           </div>
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-[var(--border)]">
+            {byCounterparty.map((cp) => (
+              <div key={cp.counterparty} className="px-4 py-3">
+                <p className="font-semibold text-[var(--text)] truncate mb-2">{cp.counterparty}</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-2">
+                  <CardField label="Приход" value={fmt2(cp.incomeTotal)} cls="font-semibold text-[var(--success)]" />
+                  <CardField label="Расход" value={fmt2(cp.expenseTotal)} cls="font-semibold text-[var(--danger)]" />
+                </div>
+                {cp.materials.length > 0 && (
+                  <div className="space-y-1 border-t border-[var(--border)] pt-2">
+                    {cp.materials.map((m) => (
+                      <div key={m.material_name} className="flex items-baseline justify-between gap-2 text-xs min-w-0">
+                        <span className="text-[var(--muted)] truncate">
+                          {m.material_name} <span className="text-[var(--muted-2)]">{m.unit}</span>
+                        </span>
+                        <span className="shrink-0 tabular-nums font-mono">
+                          <span className="text-[var(--success)]">{fmt2(m.income)}</span>
+                          <span className="text-[var(--muted-2)]"> / </span>
+                          <span className="text-[var(--danger)]">{fmt2(m.expense)}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          </div>
         )}
       </div>
 
@@ -680,7 +940,9 @@ export default function ReportsClient({
         {production.length === 0 ? (
           <p className="text-sm text-[var(--muted)] text-center py-10">Нет выпуска за период</p>
         ) : (
-          <div className={`overflow-x-auto ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
+          <div className={isPending ? "opacity-60 pointer-events-none" : ""}>
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm min-w-[520px]">
               <thead>
                 <tr className="border-b border-[var(--border)]">
@@ -717,6 +979,36 @@ export default function ReportsClient({
                 })()}
               </tbody>
             </table>
+          </div>
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-[var(--border)]">
+            {production.map((r) => (
+              <div key={r.lintel_name} className="px-4 py-3">
+                <p className="font-medium text-[var(--text)] truncate mb-2">{r.lintel_name}</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                  <CardField label="Выпущено" value={`${fmt2(r.produced)} ${r.unit}`} cls="font-semibold text-[var(--info)]" />
+                  <CardField label={`Бетон, ${concreteUnit}`} value={fmt2(r.concrete)} cls="text-[var(--muted)]" />
+                  <CardField label={`Арматура, ${rebarUnit}`} value={fmt2(r.rebar)} cls="text-[var(--muted)]" />
+                </div>
+              </div>
+            ))}
+            {(() => {
+              const t = production.reduce(
+                (a, r) => ({ p: a.p + r.produced, c: a.c + r.concrete, r: a.r + r.rebar }),
+                { p: 0, c: 0, r: 0 }
+              );
+              return (
+                <div className="px-4 py-3 bg-[var(--bg3)]">
+                  <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide mb-2">Итого</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    <CardField label="Выпущено" value={`${fmt2(t.p)} шт`} cls="font-bold text-[var(--text)]" />
+                    <CardField label={`Бетон, ${concreteUnit}`} value={fmt2(t.c)} cls="font-bold text-[var(--text)]" />
+                    <CardField label={`Арматура, ${rebarUnit}`} value={fmt2(t.r)} cls="font-bold text-[var(--text)]" />
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
           </div>
         )}
       </div>

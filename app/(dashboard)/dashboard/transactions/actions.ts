@@ -14,6 +14,7 @@ export type TransactionInput = {
   note: string | null;
   transaction_date: string;
   counterparty?: string | null;
+  unit_price?: number | null;
 };
 
 async function getSupabaseAndUser() {
@@ -101,7 +102,9 @@ export async function createTransaction(input: TransactionInput) {
   if (input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
   if (input.quantity > 999999999) throw new Error("Количество превышает максимально допустимое значение");
 
-  const { error } = await supabase.from("material_transactions").insert({
+  // unit_price only included when provided, so inserts still work in the
+  // window before migration 038 is applied (an unknown column would error).
+  const insertRow: Record<string, unknown> = {
     company_id,
     material_id: input.material_id,
     type: input.type,
@@ -110,12 +113,16 @@ export async function createTransaction(input: TransactionInput) {
     counterparty: input.counterparty ?? null,
     transaction_date: input.transaction_date,
     created_by: user.id,
-  });
+  };
+  if (input.unit_price != null) insertRow.unit_price = input.unit_price;
+
+  const { error } = await supabase.from("material_transactions").insert(insertRow);
 
   if (error) throw new Error(error.message);
 
   revalidatePath("/dashboard/transactions");
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/reports");
 
   // Fire alerts after successful insert — non-blocking
   void fireAlerts({ supabase, company_id, input }).catch((e) =>
