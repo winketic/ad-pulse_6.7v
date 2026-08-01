@@ -7,6 +7,7 @@ import type {
   AllTxRow,
   CounterpartyRow,
   ProductionRow,
+  FinanceData,
 } from "@/components/reports/ReportsClient";
 import NoCompanyState from "@/components/ui/NoCompanyState";
 
@@ -49,12 +50,15 @@ export default async function ReportsPage({
   const [matsResult, txResult, profilesResult] = await Promise.all([
     supabase
       .from("materials")
-      .select("id, name, unit")
+      .select("id, name, unit, norm_concrete, norm_rebar")
       .eq("company_id", company_id)
       .order("name"),
+    // select("*") so unit_price is read when present but the query still
+    // works in the window before migration 038 is applied (missing column
+    // would otherwise error). Absent/empty price is treated as 0 below.
     supabase
       .from("material_transactions")
-      .select("id, material_id, type, quantity, note, counterparty, transaction_date, created_by")
+      .select("*")
       .eq("company_id", company_id)
       .is("deleted_at", null)
       .gte("transaction_date", from)
@@ -249,6 +253,81 @@ export default async function ReportsPage({
     .filter((r) => r.produced > 0)
     .sort((a, b) => b.produced - a.produced);
 
+  // ── Финансы: выручка / затраты на сырьё / маржа по материалам ────────
+  // Цена = unit_price (nullable). Пустая/нулевая цена трактуется как 0 (не NaN).
+  const priceOf = (tx: Record<string, unknown>) => Number(tx.unit_price) || 0;
+  const productIds = new Set(
+    materials.filter((m) => m.norm_concrete != null && m.norm_rebar != null).map((m) => m.id)
+  );
+
+  const revenueCpMap = new Map<string, number>();
+  let revenueTotal = 0;
+  const rawBuy = new Map<string, { cost: number; qty: number }>(); // взвеш. цена закупки сырья
+  const rawCostMap = new Map<string, { unit: string; qty: number; cost: number }>();
+  let rawCostTotal = 0;
+  let hasAnyPrice = false;
+
+  for (const tx of txs as Record<string, unknown>[]) {
+    const p = priceOf(tx);
+    if (p > 0) hasAnyPrice = true;
+    const mid = tx.material_id as string;
+    const qty = Number(tx.quantity) || 0;
+    const isProduct = productIds.has(mid);
+    const type = tx.type as string;
+    const line = p * qty;
+    // (а) Выручка — расход/отгрузка продукции
+    if (type === "expense" && isProduct) {
+      revenueTotal += line;
+      const cp = (tx.counterparty as string | null)?.trim() || "Без контрагента";
+      revenueCpMap.set(cp, (revenueCpMap.get(cp) ?? 0) + line);
+    }
+    // (б) Затраты на сырьё — приход сырья
+    if (type === "income" && !isProduct) {
+      rawCostTotal += line;
+      const mat = matMap.get(mid);
+      const key = mat?.name ?? "—";
+      const e = rawCostMap.get(key) ?? { unit: mat?.unit ?? "", qty: 0, cost: 0 };
+      e.qty += qty; e.cost += line; rawCostMap.set(key, e);
+      if (p > 0) {
+        const rb = rawBuy.get(mid) ?? { cost: 0, qty: 0 };
+        rb.cost += line; rb.qty += qty; rawBuy.set(mid, rb);
+      }
+    }
+  }
+
+  // (в) Стоимость списанного в производстве сырья — по средней цене закупки
+  let productionRawCost = 0;
+  for (const tx of txs as Record<string, unknown>[]) {
+    if (tx.type !== "expense") continue;
+    const note = tx.note as string | null;
+    if (!note?.startsWith("Производство:")) continue;
+    const mid = tx.material_id as string;
+    if (productIds.has(mid)) continue; // только сырьё
+    const rb = rawBuy.get(mid);
+    const avg = rb && rb.qty > 0 ? rb.cost / rb.qty : 0;
+    productionRawCost += (Number(tx.quantity) || 0) * avg;
+  }
+
+  const finance: FinanceData = {
+    revenueByCounterparty: Array.from(revenueCpMap.entries())
+      .map(([counterparty, revenue]) => ({ counterparty, revenue }))
+      .filter((r) => r.revenue !== 0)
+      .sort((a, b) => {
+        if (a.counterparty === "Без контрагента") return 1;
+        if (b.counterparty === "Без контрагента") return -1;
+        return b.revenue - a.revenue;
+      }),
+    revenueTotal,
+    rawCostByMaterial: Array.from(rawCostMap.entries())
+      .map(([material_name, e]) => ({ material_name, ...e }))
+      .filter((r) => r.cost !== 0)
+      .sort((a, b) => b.cost - a.cost),
+    rawCostTotal,
+    productionRawCost,
+    materialMargin: revenueTotal - productionRawCost,
+    hasAnyPrice,
+  };
+
   return (
     <ReportsClient
       summary={summary}
@@ -256,6 +335,7 @@ export default async function ReportsPage({
       allTransactions={allTransactions}
       byCounterparty={byCounterparty}
       production={production}
+      finance={finance}
       concreteUnit={concreteUnit}
       rebarUnit={rebarUnit}
       from={from}

@@ -8,6 +8,7 @@ import {
   useEffect,
 } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 import { type BalanceData } from "@/components/BalanceCard";
 import {
   createTransaction,
@@ -32,7 +33,7 @@ const TX_PENDING_KEY = "tx_form";
 function buildTxInput(
   form: FormState,
   materials: Material[]
-): { type: TxType; material_id: string; quantity: number; note: string | null; counterparty: string | null; transaction_date: string } {
+): { type: TxType; material_id: string; quantity: number; note: string | null; counterparty: string | null; transaction_date: string; unit_price: number | null } {
   const noteBase =
     form.type === "defect"
       ? form.defect_reason.trim() +
@@ -50,6 +51,16 @@ function buildTxInput(
   const kgNote = kgPerMeter ? `(введено: ${rawQty} кг)` : null;
   const note = kgNote ? (noteBase ? `${noteBase}\n${kgNote}` : kgNote) : noteBase;
 
+  // Цена относится к единице хранения (для «Арматуры» — за метр). Только для
+  // прихода/расхода; для остальных типов поле скрыто и остаётся пустым → null.
+  const priceRaw = parseFloat(form.unit_price);
+  const unit_price =
+    (form.type === "income" || form.type === "expense") &&
+    Number.isFinite(priceRaw) &&
+    priceRaw > 0
+      ? Math.round(priceRaw * 100) / 100
+      : null;
+
   return {
     type: form.type as TxType,
     material_id: form.material_id,
@@ -57,6 +68,7 @@ function buildTxInput(
     note,
     counterparty: form.counterparty.trim() || null,
     transaction_date: form.date,
+    unit_price,
   };
 }
 
@@ -92,6 +104,7 @@ export type Transaction = {
   material_unit: string;
   creator_name: string;
   source: string;
+  unit_price?: number | null;
   deleted_at?: string | null;
   deleted_by_name?: string | null;
 };
@@ -116,6 +129,7 @@ type FormState = {
   note: string;
   counterparty: string;
   date: string;
+  unit_price: string; // цена за ед. (тг), строка ввода; "" = не указана
 };
 
 // ─── Config ───────────────────────────────────────────────
@@ -174,6 +188,11 @@ const TX_TYPES = Object.keys(TYPE_CONFIG) as UiTxType[];
 const DB_TX_TYPES = TX_TYPES.filter((t) => t !== "production") as TxType[];
 
 const todayStr = () => new Date().toISOString().split("T")[0];
+
+// Деньги (тг) — до 2 знаков, разделители тысяч, без лишних нулей.
+function formatMoney(n: number): string {
+  return Number(n.toFixed(2)).toLocaleString("ru-RU");
+}
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -341,8 +360,11 @@ function AddTransactionForm({
     note: "",
     counterparty: "",
     date: todayStr(),
+    unit_price: "",
   });
   const [quantityError, setQuantityError] = useState("");
+  // Last price used for this material+type (suggestion chip). null = none/loading.
+  const [lastPrice, setLastPrice] = useState<number | null>(null);
 
   const set =
     (k: keyof FormState) =>
@@ -401,6 +423,40 @@ function AddTransactionForm({
     isProduction && selectedMaterial?.norm_rebar != null
       ? qtyNum * selectedMaterial.norm_rebar
       : null;
+
+  // ── Price (задача: цена за ед. только для прихода/расхода) ──────────
+  const showPrice = form.type === "income" || form.type === "expense";
+  // Количество в единице ХРАНЕНИЯ (для «Арматуры» — метры): цена за метр.
+  const priceQty = kgPerMeter ? (qtyNum > 0 ? qtyNum / kgPerMeter : 0) : qtyNum;
+  const unitPriceNum = Number(form.unit_price) || 0;
+  const lineTotal = unitPriceNum > 0 && priceQty > 0 ? unitPriceNum * priceQty : 0;
+
+  // Suggest the last used price for this material+type (fail-open: the
+  // unit_price column may not exist yet before migration 038 is applied).
+  useEffect(() => {
+    if (!showPrice || !form.material_id) { setLastPrice(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("material_transactions")
+          .select("unit_price")
+          .eq("material_id", form.material_id)
+          .eq("type", form.type)
+          .not("unit_price", "is", null)
+          .order("transaction_date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (cancelled) return;
+        const v = !error && data?.[0] ? (data[0] as { unit_price: number | null }).unit_price : null;
+        setLastPrice(v != null ? Number(v) : null);
+      } catch {
+        if (!cancelled) setLastPrice(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [form.material_id, form.type, showPrice]);
 
   const canSubmit =
     !!form.material_id &&
@@ -601,6 +657,46 @@ function AddTransactionForm({
             maxLength={200}
             className="field-input"
           />
+        </div>
+      )}
+
+      {/* Цена за единицу — только приход сырья / расход-отгрузка (не производство/брак/возврат) */}
+      {showPrice && (
+        <div>
+          <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
+            Цена за ед.{selectedMaterial ? `, тг/${selectedMaterial.unit}` : ", тг"}
+            <span className="ml-1.5 text-xs font-normal text-[var(--muted)]">(необязательно)</span>
+          </label>
+          {kgPerMeter && (
+            <p className="mb-1.5 text-xs text-[var(--muted)]">Цена за метр (не за кг)</p>
+          )}
+          {lastPrice != null && (
+            <div className="mb-1.5 flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-[var(--muted)]">Ранее: {formatMoney(lastPrice)} тг</span>
+              <button
+                type="button"
+                onClick={() => setForm((p) => ({ ...p, unit_price: String(lastPrice) }))}
+                className="px-2 py-0.5 rounded-full border border-[var(--accent)]/40 text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors font-medium tap-scale"
+              >
+                поставить {formatMoney(lastPrice)}
+              </button>
+            </div>
+          )}
+          <input
+            type="number"
+            inputMode="decimal"
+            value={form.unit_price}
+            onChange={set("unit_price")}
+            placeholder="0"
+            min="0"
+            step="0.01"
+            className="field-input"
+          />
+          {lineTotal > 0 && (
+            <p className="mt-1.5 text-sm font-semibold text-[var(--text)] tabular-nums">
+              Итого: {formatMoney(lineTotal)} тг
+            </p>
+          )}
         </div>
       )}
 
@@ -914,6 +1010,7 @@ export default function TransactionsClient({
         material_unit: mat?.unit ?? "",
         creator_name: "Вы",
         source: "manual",
+        unit_price: input.unit_price,
       };
       setOptimistic((prev) => [temp, ...prev]);
       closeModal();
