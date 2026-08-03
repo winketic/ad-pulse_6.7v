@@ -341,12 +341,14 @@ function Modal({
 
 function AddTransactionForm({
   materials,
+  balances,
   onSubmit,
   onCancel,
   isPending,
   error,
 }: {
   materials: Material[];
+  balances: Record<string, number>;
   onSubmit: (form: FormState) => void;
   onCancel: () => void;
   isPending: boolean;
@@ -424,6 +426,20 @@ function AddTransactionForm({
       ? qtyNum * selectedMaterial.norm_rebar
       : null;
 
+  // ── Stock guard (задача #1): warn before производство drives raw stock < 0.
+  const concreteHave = concreteMaterial ? balances[concreteMaterial.id] ?? 0 : 0;
+  const rebarHave = rebarMaterial ? balances[rebarMaterial.id] ?? 0 : 0;
+  const concreteShort =
+    isProduction && concreteAmount != null && concreteHave - concreteAmount < 0;
+  const rebarShort =
+    isProduction && rebarAmount != null && rebarHave - rebarAmount < 0;
+  // Hard-block only when a required raw is already at/below zero (nothing to
+  // consume at all); otherwise allow submit — the server RPC is authoritative
+  // and rejects an actual negative with a friendly message.
+  const rawDepleted =
+    isProduction &&
+    (!concreteMaterial || !rebarMaterial || concreteHave <= 0 || rebarHave <= 0);
+
   // ── Price (задача: цена за ед. только для прихода/расхода) ──────────
   const showPrice = form.type === "income" || form.type === "expense";
   // Количество в единице ХРАНЕНИЯ (для «Арматуры» — метры): цена за метр.
@@ -466,7 +482,9 @@ function AddTransactionForm({
     !!form.date &&
     (!isDefect || !!form.defect_reason.trim()) &&
     (!isProduction ||
-      (selectedMaterial?.norm_concrete != null && selectedMaterial?.norm_rebar != null));
+      (selectedMaterial?.norm_concrete != null &&
+        selectedMaterial?.norm_rebar != null &&
+        !rawDepleted));
 
   const inputCls = "field-input";
 
@@ -603,6 +621,24 @@ function AddTransactionForm({
               Спишется: бетон {concreteAmount.toFixed(2)} {concreteMaterial?.unit ?? "м³"}, {rebarMaterialName.toLowerCase()} {rebarAmount.toFixed(2)} {rebarMaterial?.unit ?? "кг"}
             </p>
           </div>
+        )}
+
+        {/* Stock shortage warnings (задача #1) — soft, saving still allowed
+            unless a raw material is fully depleted (rawDepleted). */}
+        {isProduction && qtyNum > 0 && concreteShort && (
+          <p className="mt-1.5 text-xs font-medium text-[var(--danger)]">
+            Не хватит бетона (нужно {concreteAmount?.toFixed(2)}, есть {concreteHave.toFixed(2)} {concreteMaterial?.unit ?? "м³"})
+          </p>
+        )}
+        {isProduction && qtyNum > 0 && rebarShort && (
+          <p className="mt-1 text-xs font-medium text-[var(--danger)]">
+            Не хватит {rebarMaterialName.toLowerCase()} (нужно {rebarAmount?.toFixed(2)}, есть {rebarHave.toFixed(2)} {rebarMaterial?.unit ?? "кг"})
+          </p>
+        )}
+        {rawDepleted && (
+          <p className="mt-1.5 text-xs font-medium text-[var(--danger)]">
+            Нет остатка сырья — сначала оформите приход бетона/{rebarMaterialName.toLowerCase()}
+          </p>
         )}
       </div>
 
@@ -851,6 +887,7 @@ function Pagination({
 export default function TransactionsClient({
   transactions,
   materials,
+  balancesByMaterial = {},
   page,
   totalPages,
   totalCount,
@@ -860,6 +897,7 @@ export default function TransactionsClient({
   transactions: Transaction[];
   materials: Material[];
   initialBalances?: BalanceData[];
+  balancesByMaterial?: Record<string, number>;
   page?: number;
   totalPages?: number;
   totalCount?: number;
@@ -1366,6 +1404,7 @@ export default function TransactionsClient({
         <Modal title="Добавить запись движения" onClose={closeModal}>
           <AddTransactionForm
             materials={materials}
+            balances={balancesByMaterial}
             onSubmit={handleAdd}
             onCancel={closeModal}
             isPending={isPending}

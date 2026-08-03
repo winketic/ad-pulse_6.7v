@@ -179,11 +179,17 @@ export default async function TransactionsPage({
     .filter((b) => b.totalIn > 0 || b.totalOut > 0)
     .sort((a, b) => a.name.localeCompare(b.name, "ru"));
 
+  // Full balance per material (incl. zero-movement rows) — the production form
+  // uses these to warn before a выпуск would drive raw stock negative.
+  const balancesByMaterial: Record<string, number> = {};
+  for (const b of Array.from(balMap.values())) balancesByMaterial[b.material_id] = b.balance;
+
   return (
     <TransactionsClient
       transactions={transactions}
       materials={materials}
       initialBalances={initialBalances}
+      balancesByMaterial={balancesByMaterial}
       page={page}
       totalPages={totalPages}
       totalCount={totalCount}
