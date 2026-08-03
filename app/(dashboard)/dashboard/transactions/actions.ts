@@ -142,7 +142,7 @@ async function fireAlerts({
   // Fetch material info
   const { data: material, error: materialError } = await supabase
     .from("materials")
-    .select("name, unit, gost_norm")
+    .select("name, unit")
     .eq("id", input.material_id)
     .single();
 
@@ -160,7 +160,20 @@ async function fireAlerts({
     );
   }
 
-  // 2. Critical balance alert
+  // 2. Critical balance alert — threshold comes from material_thresholds
+  // (задача #3). Previously it read materials.gost_norm × 0.1, which had
+  // nothing to do with the min-остаток the user actually configures. No
+  // threshold set → no alert.
+  const { data: threshold } = await supabase
+    .from("material_thresholds")
+    .select("min_quantity")
+    .eq("company_id", company_id)
+    .eq("material_id", input.material_id)
+    .maybeSingle();
+
+  const minQty = threshold?.min_quantity != null ? Number(threshold.min_quantity) : null;
+  if (minQty == null || minQty <= 0) return;
+
   const { data: txs } = await supabase
     .from("material_transactions")
     .select("quantity, type")
@@ -174,7 +187,7 @@ async function fireAlerts({
       return t.type === "income" || t.type === "return" ? sum + q : sum - q;
     }, 0) ?? 0;
 
-  if (material.gost_norm && currentBalance < Number(material.gost_norm) * 0.1) {
+  if (currentBalance <= minQty) {
     const { data: companySettings } = await supabase
       .from("companies")
       .select("stock_alerts_enabled")
@@ -187,7 +200,7 @@ async function fireAlerts({
         `📦 <b>Критический остаток</b>\n\n` +
           `Материал: ${material.name}\n` +
           `Остаток: ${currentBalance.toFixed(2)} ${material.unit}\n` +
-          `Норма: ${material.gost_norm} ${material.unit}`
+          `Порог: ${minQty} ${material.unit}`
       );
     }
   }
