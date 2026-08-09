@@ -25,14 +25,21 @@ export default async function ProducePage() {
   const company_id = profile?.company_id as string | undefined;
   if (!company_id) return <NoCompanyState />;
 
-  // Production materials = those with both norms set
-  const { data: rawMats } = await supabase
+  // All company materials. Products = everything that isn't a raw material.
+  // Raw = "Бетон" + whatever is referenced as a rebar target (Арматура/Проволока).
+  // Products include category-Б перемычки that have NO norms yet — they can still
+  // be produced (штука only, no auto-deduction).
+  const { data: allMats } = await supabase
     .from("materials")
     .select("id, name, unit, norm_concrete, norm_rebar, rebar_material_name")
     .eq("company_id", company_id)
-    .not("norm_concrete", "is", null)
-    .not("norm_rebar", "is", null)
     .order("name");
+
+  const rawNames = new Set<string>(["Бетон"]);
+  for (const m of allMats ?? []) {
+    if (m.rebar_material_name) rawNames.add(m.rebar_material_name as string);
+  }
+  const rawMats = (allMats ?? []).filter((m) => !rawNames.has(m.name));
 
   if (!rawMats || rawMats.length === 0) {
     return (
@@ -68,14 +75,28 @@ export default async function ProducePage() {
   since.setDate(since.getDate() - 14);
   const sinceStr = since.toISOString().split("T")[0];
 
-  const { data: freqRows } = await supabase
-    .from("material_transactions")
-    .select("material_id, quantity")
-    .eq("company_id", company_id)
-    .is("deleted_at", null)
-    .eq("type", "income")
-    .in("material_id", matIds)
-    .gte("transaction_date", sinceStr);
+  const rawList = (allMats ?? []).filter((m) => rawNames.has(m.name));
+  const rawIds = rawList.map((m) => m.id);
+
+  const [{ data: freqRows }, { data: rawTx }] = await Promise.all([
+    supabase
+      .from("material_transactions")
+      .select("material_id, quantity")
+      .eq("company_id", company_id)
+      .is("deleted_at", null)
+      .eq("type", "income")
+      .in("material_id", matIds)
+      .gte("transaction_date", sinceStr),
+    // Raw stock balances (concrete + each rebar target) for the cart's soft check
+    rawIds.length > 0
+      ? supabase
+          .from("material_transactions")
+          .select("material_id, type, quantity")
+          .eq("company_id", company_id)
+          .is("deleted_at", null)
+          .in("material_id", rawIds)
+      : Promise.resolve({ data: [] as { material_id: string; type: string; quantity: number }[] }),
+  ]);
 
   // Aggregate frequency counts
   const freqMap = new Map<string, number>();
@@ -83,33 +104,40 @@ export default async function ProducePage() {
     freqMap.set(row.material_id, (freqMap.get(row.material_id) ?? 0) + Number(row.quantity));
   }
 
-  // Also get all company materials for the preview calculation (need Бетон/rebar units)
-  const { data: allMats } = await supabase
-    .from("materials")
-    .select("id, name, unit")
-    .eq("company_id", company_id);
+  // Raw balances by material id → then by name
+  const balById = new Map<string, number>();
+  for (const t of rawTx ?? []) {
+    const q = Number(t.quantity);
+    const delta = t.type === "income" || t.type === "return" ? q : -q;
+    balById.set(t.material_id, (balById.get(t.material_id) ?? 0) + delta);
+  }
 
-  const allMatsMap = new Map((allMats ?? []).map((m) => [m.name, { id: m.id, unit: m.unit }]));
+  const rawStock = rawList.map((m) => ({
+    name: m.name,
+    unit: m.unit,
+    balance: balById.get(m.id) ?? 0,
+  }));
+  const rebarUnitByName = new Map(rawList.map((m) => [m.name, m.unit]));
+  const concreteUnit = rebarUnitByName.get("Бетон") ?? "м³";
 
   const materials: ProduceMaterial[] = rawMats
     .map((m) => {
-      const rebarName = (m as Record<string, unknown>).rebar_material_name as string | null ?? "Арматура";
-      const concreteUnit = allMatsMap.get("Бетон")?.unit ?? "м³";
-      const rebarUnit = allMatsMap.get(rebarName)?.unit ?? "кг";
+      const rebarName =
+        ((m as Record<string, unknown>).rebar_material_name as string | null) ?? "Арматура";
       return {
         id: m.id,
         name: m.name,
         unit: m.unit,
-        norm_concrete: Number(m.norm_concrete),
-        norm_rebar: Number(m.norm_rebar),
+        norm_concrete: m.norm_concrete == null ? null : Number(m.norm_concrete),
+        norm_rebar: m.norm_rebar == null ? null : Number(m.norm_rebar),
         rebar_material_name: rebarName,
         concrete_unit: concreteUnit,
-        rebar_unit: rebarUnit,
+        rebar_unit: rebarUnitByName.get(rebarName) ?? "кг",
         freq14d: freqMap.get(m.id) ?? 0,
       };
     })
-    // Sort by 14-day usage descending, then alphabetically
-    .sort((a, b) => b.freq14d - a.freq14d || a.name.localeCompare(b.name, "ru"));
+    // Sort by 14-day usage descending, then alphabetically (numeric-aware)
+    .sort((a, b) => b.freq14d - a.freq14d || a.name.localeCompare(b.name, "ru", { numeric: true }));
 
-  return <ProduceClient materials={materials} />;
+  return <ProduceClient materials={materials} rawStock={rawStock} />;
 }
