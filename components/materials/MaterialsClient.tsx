@@ -15,6 +15,7 @@ import {
 } from "@/app/(dashboard)/dashboard/materials/actions";
 import { getLastChange, type LastChange } from "@/lib/audit/getLastChange";
 import ChangedFooter from "@/components/ui/ChangedFooter";
+import { Modal, ModalBody, ModalFooter } from "@/components/ui/Modal";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -65,63 +66,6 @@ function pluralMaterials(n: number) {
   return "позиций";
 }
 
-// ─── Modal ────────────────────────────────────────────────
-
-function Modal({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  // Lock body scroll while open — prevents the page behind from scrolling/
-  // bouncing (and the modal appearing to "jump") when the mobile keyboard opens.
-  useEffect(() => {
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = original;
-    };
-  }, []);
-
-  return (
-    <div className="fixed inset-0 h-[100dvh] z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-        onTouchMove={(e) => e.preventDefault()}
-      />
-      <div className="relative bg-[var(--card)] w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-2xl shadow-2xl z-10 flex flex-col">
-        {/* Modal header */}
-        <div
-          className="flex items-center justify-between px-4 shrink-0"
-          style={{ minHeight: "56px", paddingTop: "env(safe-area-inset-top, 0px)" }}
-        >
-          <h2 className="text-lg font-semibold text-[var(--text)]">{title}</h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-[var(--bg3)] text-[var(--muted)] hover:text-[var(--muted)] transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div className="p-4 overflow-y-auto flex-1 min-h-0">{children}</div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Material Form ────────────────────────────────────────
 
@@ -161,11 +105,9 @@ function MaterialForm({
         e.preventDefault();
         onSubmit(form);
       }}
-      className="flex flex-col min-h-full"
+      className="flex flex-col flex-1 min-h-0"
     >
-      {/* Fields — flex-1 so the button row below is pushed flush to the
-          bottom of the modal even when there isn't enough content to scroll. */}
-      <div className="flex-1 space-y-4">
+      <ModalBody className="space-y-4">
       {/* Name */}
       <div>
         <label
@@ -260,10 +202,10 @@ function MaterialForm({
       )}
 
       {editingId && <ChangedFooter change={lastChange} />}
-      </div>
+      </ModalBody>
 
-      {/* Buttons — sticky to bottom of scroll area so they're always reachable without scrolling */}
-      <div className="flex gap-3 pt-3 sticky bottom-0 -mx-4 -mb-4 px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-4 bg-[var(--card)] border-t border-[var(--border)]">
+      <ModalFooter>
+      <div className="flex gap-3">
         <button
           type="button"
           onClick={onCancel}
@@ -301,6 +243,7 @@ function MaterialForm({
           {isPending ? "Сохранение..." : submitLabel}
         </button>
       </div>
+      </ModalFooter>
     </form>
   );
 }
@@ -792,6 +735,7 @@ export default function MaterialsClient({
           title={
             modalMode === "create" ? "Добавить материал" : "Редактировать материал"
           }
+          size="md"
           onClose={closeModal}
         >
           <MaterialForm
