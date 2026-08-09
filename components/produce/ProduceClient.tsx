@@ -1,45 +1,41 @@
 "use client";
 
 import { useState, useMemo, useRef, useTransition, useCallback } from "react";
-import { createProductionTransaction } from "@/app/(dashboard)/dashboard/transactions/actions";
+import { useRouter } from "next/navigation";
+import {
+  createProductionTransaction,
+  createTransaction,
+} from "@/app/(dashboard)/dashboard/transactions/actions";
 import { useToast } from "@/components/ui/Toast";
-import { formatQuantity } from "@/lib/utils/format";
-import { isNetworkError, savePending, clearPending } from "@/lib/hooks/useOfflineRetry";
-import { OfflineRetryBanner } from "@/components/ui/OfflineRetryBanner";
 
 export type ProduceMaterial = {
   id: string;
   name: string;
   unit: string;
-  norm_concrete: number;
-  norm_rebar: number;
-  rebar_material_name: string;
+  // Category-Б перемычки have no norms yet → null. Produced штука only, no deduction.
+  norm_concrete: number | null;
+  norm_rebar: number | null;
+  rebar_material_name: string; // 'Арматура' | 'Проволока'
   concrete_unit: string;
   rebar_unit: string;
   freq14d: number;
 };
 
-type PendingProduction = { material_id: string; quantity: number; transaction_date: string; label: string };
+export type RawStock = { name: string; unit: string; balance: number };
 
-const PENDING_KEY = "quick_produce";
+type CartItem = { material_id: string; qty: number };
+
 const MAX_DIGITS = 6;
 
-async function retryProduction(payload: PendingProduction) {
-  await createProductionTransaction({
-    material_id: payload.material_id,
-    quantity: payload.quantity,
-    transaction_date: payload.transaction_date,
-  });
-}
-
-// Series prefix for anchor chips: "2ПБ-16-2п" → "2ПБ"
+// Series prefix for anchor chips: "2ПБ16-2" → "2ПБ"
 function seriesOf(name: string): string {
   const m = name.match(/^(\d+\s?ПБ)/i);
   return m ? m[1].replace(/\s/g, "").toUpperCase() : "ДР";
 }
 
-// ─── Numpad key ───────────────────────────────────────────
+const fmt = (n: number) => Number(n.toFixed(2)).toLocaleString("ru-RU");
 
+// ─── Numpad key ───────────────────────────────────────────
 function Key({
   children,
   onPress,
@@ -59,7 +55,7 @@ function Key({
       onClick={onPress}
       disabled={disabled}
       aria-label={ariaLabel}
-      className={`h-14 rounded-xl text-xl font-semibold select-none tap-scale transition-colors disabled:opacity-35 ${
+      className={`h-12 rounded-xl text-xl font-semibold select-none tap-scale transition-colors disabled:opacity-35 ${
         variant === "submit"
           ? "bg-[var(--accent)] text-[var(--accent-text)] shadow-[var(--glow-accent)]"
           : variant === "action"
@@ -74,16 +70,31 @@ function Key({
 }
 
 // ─── Main ─────────────────────────────────────────────────
-
-export default function ProduceClient({ materials }: { materials: ProduceMaterial[] }) {
+export default function ProduceClient({
+  materials,
+  rawStock,
+}: {
+  materials: ProduceMaterial[];
+  rawStock: RawStock[];
+}) {
   const { toast } = useToast();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selectedId, setSelectedId] = useState<string | null>(materials[0]?.id ?? null);
   const [qty, setQty] = useState("");
+  const [cart, setCart] = useState<CartItem[]>([]);
+  // Positions the last "Записать всё" could not record (raw depleted / error) —
+  // kept in the cart and highlighted.
+  const [heldIds, setHeldIds] = useState<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Frequent (used in last 14d) on top, then everything alphabetically —
-  // alphabetical order keeps series contiguous so anchors work.
+  const byId = useMemo(() => new Map(materials.map((m) => [m.id, m])), [materials]);
+  const concreteStock = rawStock.find((r) => r.name === "Бетон");
+  const rebarStock = useMemo(
+    () => new Map(rawStock.filter((r) => r.name !== "Бетон").map((r) => [r.name, r])),
+    [rawStock],
+  );
+
   const { frequent, rest, seriesList } = useMemo(() => {
     const frequent = materials.filter((m) => m.freq14d > 0).slice(0, 5);
     const freqIds = new Set(frequent.map((m) => m.id));
@@ -96,65 +107,150 @@ export default function ProduceClient({ materials }: { materials: ProduceMateria
 
   const selected = materials.find((m) => m.id === selectedId) ?? null;
   const qtyNum = parseInt(qty || "0", 10);
+  const isNormed = (m: ProduceMaterial) => m.norm_concrete != null && m.norm_rebar != null;
 
-  const concreteAmount = selected && qtyNum > 0 ? qtyNum * selected.norm_concrete : null;
-  const rebarAmount = selected && qtyNum > 0 ? qtyNum * selected.norm_rebar : null;
+  // ── Live cart aggregate + per-item soft flags (running balances) ──────────
+  const analysis = useMemo(() => {
+    let runConc = concreteStock?.balance ?? 0;
+    const runReb = new Map<string, number>(
+      Array.from(rebarStock.entries()).map(([n, r]) => [n, r.balance]),
+    );
+    let concreteTotal = 0;
+    const rebarTotals = new Map<string, number>();
+    let bCount = 0;
+    const flags = new Map<string, "ok" | "warn" | "critical" | "b">();
 
-  const jumpToSeries = (s: string) => {
+    for (const item of cart) {
+      const mat = byId.get(item.material_id);
+      if (!mat) continue;
+      if (!isNormed(mat)) {
+        bCount++;
+        flags.set(mat.id, "b");
+        continue;
+      }
+      const cNeed = item.qty * (mat.norm_concrete as number);
+      const rNeed = item.qty * (mat.norm_rebar as number);
+      const rn = mat.rebar_material_name;
+      concreteTotal += cNeed;
+      rebarTotals.set(rn, (rebarTotals.get(rn) ?? 0) + rNeed);
+
+      const rebarHave = runReb.get(rn) ?? 0;
+      if (runConc <= 0 || rebarHave <= 0) flags.set(mat.id, "critical");
+      else if (runConc - cNeed < 0 || rebarHave - rNeed < 0) flags.set(mat.id, "warn");
+      else flags.set(mat.id, "ok");
+
+      runConc -= cNeed;
+      runReb.set(rn, rebarHave - rNeed);
+    }
+    return { concreteTotal, rebarTotals, bCount, flags };
+  }, [cart, byId, concreteStock, rebarStock]);
+
+  const jumpToSeries = (s: string) =>
     listRef.current
       ?.querySelector(`[data-series="${s}"]`)
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
 
-  const pressDigit = (d: string) => {
-    setQty((prev) => {
-      if (prev.length >= MAX_DIGITS) return prev;
-      if (prev === "" && d === "0") return prev; // no leading zeros
-      return prev + d;
+  const pressDigit = (d: string) =>
+    setQty((p) => (p.length >= MAX_DIGITS ? p : p === "" && d === "0" ? p : p + d));
+  const backspace = () => setQty((p) => p.slice(0, -1));
+
+  // Add current selection+qty to the cart (merge same material), keep selection.
+  const addToCart = useCallback(() => {
+    if (!selected || qtyNum <= 0) return;
+    const id = selected.id;
+    setCart((prev) => {
+      const existing = prev.find((c) => c.material_id === id);
+      if (existing)
+        return prev.map((c) => (c.material_id === id ? { ...c, qty: c.qty + qtyNum } : c));
+      return [...prev, { material_id: id, qty: qtyNum }];
     });
-  };
-  const backspace = () => setQty((prev) => prev.slice(0, -1));
-
-  const submit = useCallback(() => {
-    if (!selected || qtyNum <= 0 || isPending) return;
-    const mat = selected;
-    const n = qtyNum;
-    const today = new Date().toISOString().split("T")[0];
-    const label = `${formatQuantity(n)} ${mat.unit} — ${mat.name}`;
-
-    // Optimistic: clear input immediately, material stays for serial entry
+    setHeldIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     setQty("");
-    toast(`✓ Записано: ${label}`, "success");
+  }, [selected, qtyNum]);
+
+  const bumpQty = (id: string, delta: number) =>
+    setCart((prev) =>
+      prev.flatMap((c) => {
+        if (c.material_id !== id) return [c];
+        const q = c.qty + delta;
+        return q <= 0 ? [] : [{ ...c, qty: q }];
+      }),
+    );
+  const removeItem = (id: string) => setCart((prev) => prev.filter((c) => c.material_id !== id));
+
+  // ── Record the whole cart. Soft mode: items that would go negative still
+  // record (with a warning); an item whose required raw is already ≤0 is held
+  // back (highlighted), the rest go through. Partial success is expected. ──
+  const submitAll = useCallback(() => {
+    if (cart.length === 0 || isPending) return;
+    const items = [...cart];
+    const today = new Date().toISOString().split("T")[0];
 
     startTransition(async () => {
-      try {
-        await createProductionTransaction({
-          material_id: mat.id,
-          quantity: n,
-          transaction_date: today,
-        });
-        clearPending(PENDING_KEY);
-      } catch (err) {
-        if (isNetworkError(err)) {
-          savePending<PendingProduction>(
-            PENDING_KEY,
-            { material_id: mat.id, quantity: n, transaction_date: today, label },
-            label
-          );
-          toast("Нет связи — данные сохранены локально", "info");
-        } else {
-          toast(
-            err instanceof Error ? `Не записано: ${err.message}` : "Ошибка записи",
-            "error"
-          );
+      let runConc = concreteStock?.balance ?? 0;
+      const runReb = new Map<string, number>(
+        Array.from(rebarStock.entries()).map(([n, r]) => [n, r.balance]),
+      );
+      const recorded: string[] = [];
+      const held: string[] = [];
+      const failed: string[] = [];
+
+      for (const item of items) {
+        const mat = byId.get(item.material_id);
+        if (!mat) continue;
+        try {
+          if (isNormed(mat)) {
+            const rn = mat.rebar_material_name;
+            const rebarHave = runReb.get(rn) ?? 0;
+            // Hard floor: nothing to consume → hold this position, keep others.
+            if (runConc <= 0 || rebarHave <= 0) {
+              held.push(item.material_id);
+              continue;
+            }
+            await createProductionTransaction({
+              material_id: mat.id,
+              quantity: item.qty,
+              transaction_date: today,
+            });
+            runConc -= item.qty * (mat.norm_concrete as number);
+            runReb.set(rn, rebarHave - item.qty * (mat.norm_rebar as number));
+          } else {
+            // Category Б — record выпуск only, no raw deduction.
+            await createTransaction({
+              type: "income",
+              material_id: mat.id,
+              quantity: item.qty,
+              note: `Производство: ${mat.name} ${item.qty} шт (без списания — нормы не заданы)`,
+              counterparty: null,
+              transaction_date: today,
+              unit_price: null,
+            });
+          }
+          recorded.push(item.material_id);
+        } catch (e) {
+          failed.push(item.material_id);
+          // eslint-disable-next-line no-console
+          console.error("[produce] record failed", mat.name, e);
         }
       }
+
+      const keep = new Set([...held, ...failed]);
+      setCart((prev) => prev.filter((c) => keep.has(c.material_id)));
+      setHeldIds(keep);
+
+      if (recorded.length) toast(`✓ Записано ${recorded.length} ${plural(recorded.length)}`, "success");
+      if (held.length) toast(`${held.length} отложено — нет остатка сырья`, "info");
+      if (failed.length) toast(`${failed.length} не записано — ошибка`, "error");
+      router.refresh();
     });
-  }, [selected, qtyNum, isPending, toast]);
+  }, [cart, isPending, byId, concreteStock, rebarStock, toast, router]);
 
-  const todayLabel = new Date().toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "numeric" });
-
-  if (materials.length === 0) return null; // page handles the empty state
+  if (materials.length === 0) return null;
 
   const renderItem = (m: ProduceMaterial, opts?: { series?: boolean }) => {
     const active = m.id === selectedId;
@@ -164,42 +260,52 @@ export default function ProduceClient({ materials }: { materials: ProduceMateria
         type="button"
         onClick={() => setSelectedId(m.id)}
         data-series={opts?.series ? seriesOf(m.name) : undefined}
-        className={`w-full min-h-[48px] px-3 py-2.5 rounded-xl text-left snap-start transition-colors tap-scale ${
+        className={`w-full min-h-[44px] px-3 py-2 rounded-xl text-left snap-start transition-colors tap-scale ${
           active
             ? "bg-[var(--accent-15)] border border-[var(--accent)]/50"
             : "border border-transparent hover:bg-[var(--surface-2)]"
         }`}
         style={{ WebkitTapHighlightColor: "transparent" }}
       >
-        <span className={`block text-sm font-bold leading-tight ${active ? "text-[var(--accent)]" : "text-[var(--text)]"}`}>
+        <span
+          className={`block text-sm font-bold leading-tight ${active ? "text-[var(--accent)]" : "text-[var(--text)]"}`}
+        >
           {m.name}
         </span>
-        {m.freq14d > 0 && (
-          <span className="num text-[10px] text-[var(--muted)]">×{Math.round(m.freq14d)} за 14д</span>
-        )}
+        <span className="num text-[10px] text-[var(--muted)]">
+          {isNormed(m) ? (m.freq14d > 0 ? `×${Math.round(m.freq14d)} за 14д` : "") : "без норм · штука"}
+        </span>
       </button>
     );
   };
 
-  return (
-    <div className="max-w-lg mx-auto flex flex-col" style={{ height: "calc(100dvh - 56px - 72px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))" }}>
-      <OfflineRetryBanner<PendingProduction> pendingKey={PENDING_KEY} onRetry={retryProduction} />
+  const cartCount = cart.length;
 
-      {/* Compact header */}
-      <div className="flex items-baseline justify-between px-4 pt-3 pb-2 shrink-0">
+  return (
+    <div
+      className="max-w-lg mx-auto flex flex-col"
+      style={{
+        height:
+          "calc(100dvh - 56px - 72px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-baseline justify-between px-4 pt-2.5 pb-1.5 shrink-0">
         <h1 className="text-label">Выпуск</h1>
-        <span className="num text-[11px] text-[var(--muted-2)] capitalize">{todayLabel}</span>
+        <span className="num text-[11px] text-[var(--muted-2)]">
+          {new Date().toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "numeric" })}
+        </span>
       </div>
 
-      {/* Series anchor chips */}
+      {/* Series anchors */}
       {seriesList.length > 1 && (
-        <div className="flex gap-1.5 px-4 pb-2 overflow-x-auto shrink-0">
+        <div className="flex gap-1.5 px-4 pb-1.5 overflow-x-auto shrink-0">
           {seriesList.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => jumpToSeries(s)}
-              className="num px-3 py-1.5 rounded-lg bg-[var(--surface-2)] text-xs font-bold text-[var(--muted)] hover:text-[var(--accent)] whitespace-nowrap tap-scale"
+              className="num px-3 py-1 rounded-lg bg-[var(--surface-2)] text-xs font-bold text-[var(--muted)] hover:text-[var(--accent)] whitespace-nowrap tap-scale"
             >
               {s}
             </button>
@@ -207,32 +313,37 @@ export default function ProduceClient({ materials }: { materials: ProduceMateria
         </div>
       )}
 
-      {/* Main: list | numpad */}
-      <div className="flex-1 min-h-0 grid grid-cols-[44%_1fr] gap-2 px-3">
-        {/* Left: scrollable material list */}
-        <div ref={listRef} className="overflow-y-auto snap-y pr-0.5 space-y-1 pb-2">
+      {/* Entry: list | numpad — fixed height, cart takes the rest */}
+      <div className="grid grid-cols-[42%_1fr] gap-2 px-3 shrink-0" style={{ height: 274 }}>
+        <div ref={listRef} className="overflow-y-auto snap-y pr-0.5 space-y-0.5 pb-1">
           {frequent.length > 0 && (
             <>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-2)] px-3 pt-1">Частые</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-2)] px-3 pt-0.5">
+                Частые
+              </p>
               {frequent.map((m) => renderItem(m))}
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-2)] px-3 pt-2">Все</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-2)] px-3 pt-1.5">
+                Все
+              </p>
             </>
           )}
           {rest.map((m) => renderItem(m, { series: true }))}
         </div>
 
-        {/* Right: entered qty + numpad */}
         <div className="flex flex-col min-h-0">
-          <div className="flex items-baseline justify-center gap-1.5 py-2 shrink-0">
-            <span className={`num text-5xl font-bold leading-none tracking-tighter ${qty ? "text-[var(--text)]" : "text-[var(--muted-2)]"}`}>
+          <div className="flex items-baseline justify-center gap-1.5 pb-1.5 shrink-0">
+            <span
+              className={`num text-4xl font-bold leading-none tracking-tighter ${qty ? "text-[var(--text)]" : "text-[var(--muted-2)]"}`}
+            >
               {qty || "0"}
             </span>
             <span className="text-sm text-[var(--muted)]">{selected?.unit ?? "шт"}</span>
           </div>
-
           <div className="grid grid-cols-3 gap-1.5 content-start">
             {["7", "8", "9", "4", "5", "6", "1", "2", "3"].map((d) => (
-              <Key key={d} onPress={() => pressDigit(d)}>{d}</Key>
+              <Key key={d} onPress={() => pressDigit(d)}>
+                {d}
+              </Key>
             ))}
             <Key onPress={backspace} variant="action" ariaLabel="Стереть">
               <svg className="w-5 h-5 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -240,31 +351,129 @@ export default function ProduceClient({ materials }: { materials: ProduceMateria
               </svg>
             </Key>
             <Key onPress={() => pressDigit("0")}>0</Key>
-            <Key onPress={submit} variant="submit" disabled={!selected || qtyNum <= 0} ariaLabel="Записать">
+            <Key onPress={addToCart} variant="submit" disabled={!selected || qtyNum <= 0} ariaLabel="Добавить в список">
               <svg className="w-6 h-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.6}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
             </Key>
           </div>
         </div>
       </div>
 
-      {/* Live result strip */}
-      <div className="shrink-0 border-t border-[var(--border)] bg-[var(--surface-1)] px-4 py-3">
-        {selected && qtyNum > 0 && concreteAmount != null && rebarAmount != null ? (
-          <p className="text-sm text-[var(--text)] leading-snug">
-            <span className="num font-bold text-[var(--accent)]">{qtyNum} {selected.unit}</span>{" "}
-            {selected.name} →{" "}
-            <span className="num">бетон {concreteAmount.toFixed(2)} {selected.concrete_unit}</span>
-            {" · "}
-            <span className="num">{selected.rebar_material_name.toLowerCase()} {rebarAmount.toFixed(2)} {selected.rebar_unit}</span>
-          </p>
+      {/* Add hint */}
+      <p className="px-4 pt-1.5 pb-1 text-[11px] text-[var(--muted-2)] shrink-0">
+        {selected
+          ? `Выбрано: ${selected.name}${qtyNum > 0 ? ` — ${qtyNum} шт. Нажмите + чтобы добавить в список.` : " — наберите количество"}`
+          : "Выберите перемычку"}
+      </p>
+
+      {/* Cart (scrolls) */}
+      <div className="flex-1 min-h-0 overflow-y-auto border-t border-[var(--border)] bg-[var(--surface-1)]/40">
+        {cartCount === 0 ? (
+          <div className="h-full flex items-center justify-center px-4">
+            <p className="text-xs text-[var(--muted-2)] text-center">
+              Список пуст. Выберите перемычку, наберите количество и нажмите +.
+            </p>
+          </div>
         ) : (
-          <p className="text-xs text-[var(--muted-2)]">
-            {selected ? `${selected.name} — наберите количество` : "Выберите перемычку"}
+          <div className="divide-y divide-[var(--border)]">
+            {cart.map((item) => {
+              const mat = byId.get(item.material_id);
+              if (!mat) return null;
+              const flag = analysis.flags.get(mat.id);
+              const held = heldIds.has(mat.id);
+              return (
+                <div
+                  key={item.material_id}
+                  className={`flex items-center gap-2 px-3 py-2 ${held ? "bg-[var(--danger-bg)]" : ""}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[var(--text)] leading-tight truncate">
+                      {mat.name}
+                      <span className="text-[var(--muted)] font-normal"> — {item.qty} шт</span>
+                    </p>
+                    {flag === "b" && (
+                      <p className="text-[10px] text-[var(--muted-2)]">без списания сырья</p>
+                    )}
+                    {flag === "warn" && (
+                      <p className="text-[10px] text-[var(--warning)]">спишет сырьё в минус</p>
+                    )}
+                    {(flag === "critical" || held) && (
+                      <p className="text-[10px] text-[var(--danger)]">нет остатка сырья — не запишется</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => bumpQty(item.material_id, -1)}
+                      aria-label="Меньше"
+                      className="w-8 h-8 rounded-lg bg-[var(--surface-2)] text-[var(--text)] text-lg font-bold tap-scale"
+                    >
+                      −
+                    </button>
+                    <span className="num min-w-[32px] px-1 text-center text-sm font-bold text-[var(--text)] tabular-nums">
+                      {item.qty}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => bumpQty(item.material_id, 1)}
+                      aria-label="Больше"
+                      className="w-8 h-8 rounded-lg bg-[var(--surface-2)] text-[var(--text)] text-lg font-bold tap-scale"
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.material_id)}
+                      aria-label="Удалить из списка"
+                      className="w-8 h-8 rounded-lg text-[var(--muted)] hover:text-[var(--danger)] tap-scale flex items-center justify-center"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Aggregate + record — sticky bottom of the (nav-clearing) container */}
+      <div className="shrink-0 border-t border-[var(--border)] bg-[var(--surface-1)] px-4 py-2.5">
+        {cartCount > 0 && (
+          <p className="text-xs text-[var(--text)] leading-snug mb-2">
+            <span className="text-[var(--muted)]">Итого спишется: </span>
+            <span className="num font-semibold">
+              бетон {fmt(analysis.concreteTotal)} {concreteStock?.unit ?? "м³"}
+            </span>
+            {Array.from(analysis.rebarTotals.entries()).map(([name, val]) => (
+              <span key={name} className="num font-semibold">
+                {" · "}
+                {name.toLowerCase()} {fmt(val)} {rebarStock.get(name)?.unit ?? "кг"}
+              </span>
+            ))}
+            {analysis.bCount > 0 && (
+              <span className="text-[var(--muted-2)]"> · +{analysis.bCount} без списания</span>
+            )}
           </p>
         )}
+        <button
+          type="button"
+          onClick={submitAll}
+          disabled={cartCount === 0 || isPending}
+          className="dp-btn-primary w-full min-h-[52px] rounded-xl text-base disabled:opacity-40"
+        >
+          {isPending ? "Запись…" : `Записать всё${cartCount > 0 ? ` (${cartCount})` : ""}`}
+        </button>
       </div>
     </div>
   );
+}
+
+function plural(n: number) {
+  if (n % 10 === 1 && n % 100 !== 11) return "позиция";
+  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return "позиции";
+  return "позиций";
 }
