@@ -5,12 +5,12 @@ import {
   useTransition,
   useMemo,
   useCallback,
-  useEffect,
 } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createPlan, type PlanStatus } from "@/app/(dashboard)/dashboard/plans/actions";
 import { formatCompact } from "@/lib/utils/format";
+import { Modal, ModalBody, ModalFooter } from "@/components/ui/Modal";
 // Minimal material shape needed for the plans form
 export type PlanMaterial = {
   id: string;
@@ -164,60 +164,6 @@ function PlanCard({
   );
 }
 
-// ─── Modal ────────────────────────────────────────────────
-
-function Modal({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [onClose]);
-
-  // Lock body scroll while open — prevents the page behind from scrolling/
-  // bouncing (and the modal appearing to "jump") when the mobile keyboard opens.
-  useEffect(() => {
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = original;
-    };
-  }, []);
-
-  return (
-    <div className="fixed inset-0 h-[100dvh] z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-        onTouchMove={(e) => e.preventDefault()}
-      />
-      <div className="relative bg-[var(--card)] w-full h-full sm:h-auto sm:max-h-[94dvh] sm:max-w-2xl sm:rounded-2xl shadow-2xl z-10 flex flex-col">
-        <div
-          className="flex items-center justify-between px-4 shrink-0 border-b border-[var(--border)]"
-          style={{ minHeight: "56px", paddingTop: "env(safe-area-inset-top, 0px)" }}
-        >
-          <h2 className="text-lg font-semibold text-[var(--text)]">{title}</h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-[var(--bg3)] text-[var(--muted)] hover:text-[var(--muted)] transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div className="p-4 overflow-y-auto flex-1 min-h-0">{children}</div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Create Plan Form ─────────────────────────────────────
 
@@ -324,10 +270,8 @@ function CreatePlanForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col min-h-full">
-      {/* Fields — flex-1 so the button row below is pushed flush to the
-          bottom of the modal even when there isn't enough content to scroll. */}
-      <div className="flex-1 space-y-5">
+    <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+      <ModalBody className="space-y-5">
       {/* Name */}
       <div>
         <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
@@ -489,32 +433,33 @@ function CreatePlanForm({
           <span className="text-sm text-red-700">{error}</span>
         </div>
       )}
-      </div>
+      </ModalBody>
 
-      {/* Buttons — sticky to bottom of scroll area so they're always reachable without scrolling */}
-      <div className="flex gap-3 pt-3 sticky bottom-0 -mx-4 -mb-4 px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-5 bg-[var(--card)] border-t border-[var(--border)]">
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={isPending}
-          className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50 min-h-[48px]"
-        >
-          Отмена
-        </button>
-        <button
-          type="submit"
-          disabled={isPending || !canSubmit}
-          className="dp-btn-primary flex-1 rounded-lg"
-        >
-          {isPending && (
-            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          )}
-          {isPending ? "Создание..." : "Создать план"}
-        </button>
-      </div>
+      <ModalFooter>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isPending}
+            className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50 min-h-[48px]"
+          >
+            Отмена
+          </button>
+          <button
+            type="submit"
+            disabled={isPending || !canSubmit}
+            className="dp-btn-primary flex-1 rounded-lg"
+          >
+            {isPending && (
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            )}
+            {isPending ? "Создание..." : "Создать план"}
+          </button>
+        </div>
+      </ModalFooter>
     </form>
   );
 }
@@ -686,7 +631,7 @@ export default function PlansClient({
 
       {/* ── Create Plan Modal ───────────────────────────── */}
       {modalOpen && (
-        <Modal title="Новый производственный план" onClose={() => setModalOpen(false)}>
+        <Modal title="Новый производственный план" size="xl" onClose={() => setModalOpen(false)}>
           <CreatePlanForm
             materials={materials}
             users={users}
