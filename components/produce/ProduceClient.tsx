@@ -82,6 +82,7 @@ export default function ProduceClient({
   const [isPending, startTransition] = useTransition();
   const [selectedId, setSelectedId] = useState<string | null>(materials[0]?.id ?? null);
   const [qty, setQty] = useState("");
+  const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   // Positions the last "Записать всё" could not record (raw depleted / error) —
   // kept in the cart and highlighted.
@@ -104,6 +105,14 @@ export default function ProduceClient({
     const seriesList = Array.from(new Set(rest.map((m) => seriesOf(m.name))));
     return { frequent, rest, seriesList };
   }, [materials]);
+
+  // Search: normalize away case / spaces / dashes / ё so "3пб18" matches "3ПБ18-8".
+  const normalize = (s: string) => s.toLowerCase().replace(/ё/g, "е").replace(/[\s-]/g, "");
+  const q = normalize(search);
+  const filtered = useMemo(
+    () => (q ? materials.filter((m) => normalize(m.name).includes(q)) : null),
+    [materials, q],
+  );
 
   const selected = materials.find((m) => m.id === selectedId) ?? null;
   const qtyNum = parseInt(qty || "0", 10);
@@ -273,7 +282,7 @@ export default function ProduceClient({
           {m.name}
         </span>
         <span className="num text-[10px] text-[var(--muted)]">
-          {isNormed(m) ? (m.freq14d > 0 ? `×${Math.round(m.freq14d)} за 14д` : "") : "без норм · штука"}
+          {isNormed(m) ? (m.freq14d > 0 ? `${Math.round(m.freq14d)} шт · 14д` : "") : "без норм · штука"}
         </span>
       </button>
     );
@@ -313,21 +322,70 @@ export default function ProduceClient({
         </div>
       )}
 
+      {/* Search — filters the list below; no layout jumps */}
+      <div className="px-3 pb-1.5 shrink-0">
+        <div className="relative">
+          <svg
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-2)] pointer-events-none"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Поиск марки: 3пб18…"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="search"
+            aria-label="Поиск марки"
+            className="w-full h-9 pl-8 pr-8 rounded-lg bg-[var(--surface-1)] border border-[var(--border)] text-sm text-[var(--text)] placeholder:text-[var(--muted-2)] focus:outline-none focus:border-[var(--accent)]"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Очистить поиск"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center text-[var(--muted)] hover:text-[var(--text)]"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Entry: list | numpad — fixed height, cart takes the rest */}
       <div className="grid grid-cols-[42%_1fr] gap-2 px-3 shrink-0" style={{ height: 274 }}>
         <div ref={listRef} className="overflow-y-auto snap-y pr-0.5 space-y-0.5 pb-1">
-          {frequent.length > 0 && (
+          {filtered ? (
+            filtered.length === 0 ? (
+              <p className="text-xs text-[var(--muted-2)] px-3 py-3">Ничего не найдено</p>
+            ) : (
+              filtered.map((m) => renderItem(m))
+            )
+          ) : (
             <>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-2)] px-3 pt-0.5">
-                Частые
-              </p>
-              {frequent.map((m) => renderItem(m))}
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-2)] px-3 pt-1.5">
-                Все
-              </p>
+              {frequent.length > 0 && (
+                <>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-2)] px-3 pt-0.5">
+                    Частые
+                  </p>
+                  {frequent.map((m) => renderItem(m))}
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--muted-2)] px-3 pt-1.5">
+                    Все
+                  </p>
+                </>
+              )}
+              {rest.map((m) => renderItem(m, { series: true }))}
             </>
           )}
-          {rest.map((m) => renderItem(m, { series: true }))}
         </div>
 
         <div className="flex flex-col min-h-0">
