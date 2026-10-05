@@ -15,6 +15,10 @@ export type TransactionInput = {
   transaction_date: string;
   counterparty?: string | null;
   unit_price?: number | null;
+  // Фаза 6: индекс нагрузки — атрибут ОТГРУЗКИ (только type='expense'),
+  // и ссылка на справочник контрагентов. Обе колонки появляются в миграции 042.
+  load_index?: string | null;
+  counterparty_id?: string | null;
 };
 
 async function getSupabaseAndUser() {
@@ -115,6 +119,13 @@ export async function createTransaction(input: TransactionInput) {
     created_by: user.id,
   };
   if (input.unit_price != null) insertRow.unit_price = input.unit_price;
+  // Так же условно, чтобы INSERT работал в окне до применения миграции 042:
+  // неизвестная колонка уронила бы весь запрос. Индекс нагрузки допустим
+  // только на расходе — это же требует CHECK-констрейнт в 042.
+  if (input.load_index != null && input.type === "expense") {
+    insertRow.load_index = input.load_index;
+  }
+  if (input.counterparty_id != null) insertRow.counterparty_id = input.counterparty_id;
 
   const { error } = await supabase.from("material_transactions").insert(insertRow);
 

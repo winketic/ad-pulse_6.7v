@@ -1,7 +1,12 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import TransactionsClient from "@/components/transactions/TransactionsClient";
-import type { Transaction, Material } from "@/components/transactions/TransactionsClient";
+import type {
+  Transaction,
+  Material,
+  Counterparty,
+  PriceRow,
+} from "@/components/transactions/TransactionsClient";
 import type { BalanceData } from "@/components/BalanceCard";
 import type { TxType } from "./actions";
 import NoCompanyState from "@/components/ui/NoCompanyState";
@@ -44,9 +49,9 @@ export default async function TransactionsPage({
       // "показать удалённые"; the client hides them by default.
       supabase
         .from("material_transactions")
-        .select(
-          "id, type, quantity, note, counterparty, transaction_date, created_at, material_id, created_by, source, wazzup_message_id, deleted_at, deleted_by"
-        )
+        // select("*") по правилу проекта: явный список колонок ломается в окне
+        // до применения миграции (unit_price/load_index/counterparty_id)
+        .select("*")
         .eq("company_id", company_id)
         .order("transaction_date", { ascending: false })
         .order("created_at", { ascending: false })
@@ -82,6 +87,27 @@ export default async function TransactionsPage({
         .eq("company_id", company_id)
         .is("deleted_at", null),
     ]);
+
+  // ── Фаза 6: справочник контрагентов и прайс ──────────────────────────
+  // Fail-open: таблицы появляются только в миграции 042/045. Пока их нет,
+  // запрос вернёт error — отдаём пустые массивы, и форма отгрузки тихо
+  // откатывается на прежнее поведение (свободный текст + подсказка цены).
+  const [cpResult, priceResult] = await Promise.all([
+    supabase.from("counterparties").select("*").eq("company_id", company_id).order("name"),
+    supabase.from("price_list").select("*").eq("company_id", company_id),
+  ]);
+
+  const counterparties: Counterparty[] = (cpResult.data ?? []).map((c) => ({
+    id: c.id as string,
+    name: c.name as string,
+  }));
+
+  const priceList: PriceRow[] = (priceResult.data ?? []).map((r) => ({
+    material_id: r.material_id as string,
+    counterparty_id: r.counterparty_id as string,
+    load_index: String(r.load_index),
+    price: Number(r.price),
+  }));
 
   const totalCount = countResult.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -137,6 +163,10 @@ export default async function TransactionsPage({
       material_unit: matMap.get(tx.material_id)?.unit ?? "",
       creator_name: creatorName,
       source: tx.source ?? "manual",
+      // Новые колонки читаем через rawTx: до применения миграций их нет,
+      // обращение к tx.* напрямую не прошло бы типизацию
+      unit_price: rawTx.unit_price != null ? Number(rawTx.unit_price) : null,
+      load_index: (rawTx.load_index as string | null) ?? null,
       deleted_at: deletedAt,
       deleted_by_name: deletedBy ? profileMap.get(deletedBy)?.full_name ?? "—" : null,
     };
@@ -195,6 +225,8 @@ export default async function TransactionsPage({
       totalCount={totalCount}
       initialMaterialId={searchParams.material_id}
       isAdmin={isAdmin}
+      counterparties={counterparties}
+      priceList={priceList}
     />
   );
 }
