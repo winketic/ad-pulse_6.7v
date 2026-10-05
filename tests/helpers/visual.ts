@@ -30,6 +30,47 @@ export async function expectInViewport(locator: Locator, label = "element") {
   ).toBeLessThanOrEqual(vp.width + 1);
 }
 
+/**
+ * Assert that nothing escapes the viewport horizontally.
+ *
+ * Deliberately not a screenshot: a baseline snapped from an already-broken
+ * screen is green forever, while this fails the moment an element crosses the
+ * right edge. It is what caught the banner-colour swatches being unreachable
+ * on a 320px phone — a bug the whole snapshot suite had been green on.
+ *
+ * Skips two legitimate cases:
+ *   · position:fixed — off-canvas drawers and nav live outside the flow;
+ *   · anything inside a horizontally scrollable ancestor — a wide table in an
+ *     overflow-x:auto wrapper is a deliberate design choice, not a defect.
+ */
+export async function expectNoOverflowingElements(page: Page, label = "page") {
+  const offenders = await page.evaluate(() => {
+    const vw = document.documentElement.clientWidth;
+    const out: string[] = [];
+    document.querySelectorAll("body *").forEach((el) => {
+      const box = el.getBoundingClientRect();
+      if (box.width <= 0 || box.right <= vw + 2) return;
+      const cs = getComputedStyle(el);
+      if (cs.position === "fixed") return;
+      if (cs.overflowX === "auto" || cs.overflowX === "scroll") return;
+      for (let a = el.parentElement; a; a = a.parentElement) {
+        const as = getComputedStyle(a);
+        if (as.overflowX === "auto" || as.overflowX === "scroll") return;
+      }
+      const cls =
+        typeof el.className === "string" && el.className
+          ? "." + el.className.trim().split(/\s+/).slice(0, 2).join(".")
+          : "";
+      out.push(`${el.tagName.toLowerCase()}${cls} (+${Math.round(box.right - vw)}px)`);
+    });
+    return [...new Set(out)].slice(0, 5);
+  });
+  expect(
+    offenders,
+    `${label}: элементы выходят за правый край экрана — ${offenders.join("; ")}`,
+  ).toEqual([]);
+}
+
 /** Assert two boxes do not overlap (e.g. modal action row must clear the nav). */
 export async function expectNotOverlapping(a: Locator, b: Locator, label = "elements") {
   const [ba, bb] = await Promise.all([a.boundingBox(), b.boundingBox()]);
