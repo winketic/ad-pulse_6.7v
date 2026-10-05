@@ -87,6 +87,7 @@ export async function createProductionTransaction(input: ProductionTransactionIn
 
   if (input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
   if (input.quantity > 999999999) throw new Error("Количество превышает максимально допустимое значение");
+  await assertWholeUnitQuantity(supabase, input.material_id, input.quantity);
 
   const { error } = await supabase.rpc("create_production_transaction", {
     p_product_material_id: input.material_id,
@@ -100,11 +101,41 @@ export async function createProductionTransaction(input: ProductionTransactionIn
   revalidatePath("/dashboard");
 }
 
+/**
+ * Штучные позиции не бывают дробными. Клиент это уже проверяет, но форма —
+ * не граница доверия: та же RPC и те же экшены доступны напрямую. У СаттиГрупп
+ * дробь уже просочилась — остаток 11.5 шт по 1ПБ10-1.
+ *
+ * Для материалов с kg_per_meter (Арматура) проверки нет: там вводят килограммы,
+ * а хранят метры, и дробное значение штатно.
+ */
+async function assertWholeUnitQuantity(
+  supabase: Awaited<ReturnType<typeof import("@/utils/supabase/server").createClient>>,
+  materialId: string,
+  quantity: number,
+) {
+  const { data: material } = await supabase
+    .from("materials")
+    .select("*")
+    .eq("id", materialId)
+    .maybeSingle();
+  if (!material) return;
+  const raw = material as Record<string, unknown>;
+  const kgPerMeter = raw.kg_per_meter != null ? Number(raw.kg_per_meter) : null;
+  const unit = String(raw.unit ?? "").toLowerCase();
+  if (unit === "шт" && !(kgPerMeter && kgPerMeter > 0) && !Number.isInteger(quantity)) {
+    throw new Error(
+      `Количество в штуках должно быть целым: получено ${quantity} для «${String(raw.name ?? "")}»`,
+    );
+  }
+}
+
 export async function createTransaction(input: TransactionInput) {
   const { supabase, user, company_id } = await getSupabaseAndUser();
 
   if (input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
   if (input.quantity > 999999999) throw new Error("Количество превышает максимально допустимое значение");
+  await assertWholeUnitQuantity(supabase, input.material_id, input.quantity);
 
   // unit_price only included when provided, so inserts still work in the
   // window before migration 038 is applied (an unknown column would error).

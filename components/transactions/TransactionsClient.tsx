@@ -382,7 +382,7 @@ function AddTransactionForm({
       if (k === "unit_price") setPriceTouched(true);
       if (k === "quantity") {
         const val = Number(e.target.value);
-        setQuantityError(val > 999999999 ? "Максимальное количество: 999 999 999" : "");
+        setQuantityError(quantityProblem(val));
       }
     };
 
@@ -428,6 +428,21 @@ function AddTransactionForm({
     selectedMaterial.kg_per_meter > 0
       ? selectedMaterial.kg_per_meter
       : null;
+
+  // Штучные позиции не бывают дробными: половины перемычки не существует.
+  // У СаттиГрупп так уже появился остаток 11.5 шт по 1ПБ10-1 — опечатка,
+  // которую форма пропустила. Для «Арматуры» ввод в кг остаётся дробным:
+  // туда уходит конвертация кг→м, и единица хранения там метры, не штуки.
+  const wholeUnitOnly =
+    !kgPerMeter && (selectedMaterial?.unit ?? "").toLowerCase() === "шт";
+
+  const quantityProblem = (val: number): string => {
+    if (val > 999999999) return "Максимальное количество: 999 999 999";
+    if (wholeUnitOnly && Number.isFinite(val) && !Number.isInteger(val)) {
+      return "Количество в штуках должно быть целым";
+    }
+    return "";
+  };
 
   const qtyNum = Number(form.quantity) || 0;
   const concreteAmount =
@@ -548,7 +563,7 @@ function AddTransactionForm({
     !!form.material_id &&
     !!form.quantity &&
     Number(form.quantity) > 0 &&
-    Number(form.quantity) <= 999999999 &&
+    !quantityProblem(Number(form.quantity)) &&
     !!form.date &&
     (!isDefect || !!form.defect_reason.trim()) &&
     (!isProduction ||
