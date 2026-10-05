@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { createInviteAndSendEmail } from "@/lib/supabase/inviteHelper";
 import { revalidatePath } from "next/cache";
 
 async function getAdminSession() {
@@ -56,29 +57,10 @@ export async function inviteSetupMember(
 
     const service = createServiceClient();
     const cleanEmail = email.trim().toLowerCase();
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://ad-pulse-eight.vercel.app").replace(/\/$/, "");
 
-    const { data: inviteData, error: inviteError } = await service.auth.admin.inviteUserByEmail(
-      cleanEmail,
-      { redirectTo: `${appUrl}/auth/confirm?next=/invite` }
-    );
-
-    let userId: string;
-    if (inviteError) {
-      const alreadyExists =
-        inviteError.message.toLowerCase().includes("already registered") ||
-        inviteError.message.toLowerCase().includes("already in use") ||
-        inviteError.status === 422;
-      if (!alreadyExists) return { error: inviteError.message };
-
-      const { data: authList } = await service.auth.admin.listUsers({ perPage: 1000 });
-      const found = (authList?.users ?? []).find((u) => u.email?.toLowerCase() === cleanEmail);
-      if (!found) return { error: "Пользователь не найден" };
-      userId = found.id;
-    } else {
-      if (!inviteData?.user) return { error: "Ошибка создания пользователя" };
-      userId = inviteData.user.id;
-    }
+    // См. комментарий в settings/actions.ts: встроенная почта Supabase
+    // не доставляет приглашения людям вне проекта, поэтому идём через Resend.
+    const { userId, emailSent } = await createInviteAndSendEmail(cleanEmail);
 
     const { error: profileError } = await service.from("profiles").upsert(
       { id: userId, company_id: companyId, role, full_name: cleanEmail },
@@ -87,7 +69,7 @@ export async function inviteSetupMember(
     if (profileError) return { error: profileError.message };
 
     revalidatePath("/dashboard/settings");
-    return { ok: true, emailSent: true };
+    return { ok: true, emailSent };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Ошибка" };
   }

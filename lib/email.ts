@@ -9,13 +9,11 @@ export async function sendEmail({
 }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
 
-  console.log("[email] RESEND_API_KEY exists:", !!apiKey);
-  console.log("[email] EMAIL_FROM:", process.env.EMAIL_FROM);
-  console.log("[email] Sending email to:", to);
-
   if (!apiKey) {
-    console.log("[email] RESEND_API_KEY not set — skipping send");
-    return;
+    // Бросаем, а не возвращаемся молча: иначе вызывающий код считает, что
+    // письмо ушло, и пользователь видит «приглашение отправлено» при пустом
+    // почтовом ящике. Именно так баг жил месяцами незамеченным.
+    throw new Error("RESEND_API_KEY не задан — письмо не отправлено");
   }
 
   const payload = {
@@ -24,8 +22,6 @@ export async function sendEmail({
     subject,
     html,
   };
-
-  console.log("[email] Resend payload:", JSON.stringify({ ...payload, html: "[omitted]" }));
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -37,9 +33,13 @@ export async function sendEmail({
   });
 
   const result = await res.json().catch(() => res.text());
-  console.log("[email] Resend result:", JSON.stringify(result));
 
   if (!res.ok) {
-    console.error(`[email] Resend error [${res.status}]:`, JSON.stringify(result));
+    const detail =
+      typeof result === "object" && result && "message" in result
+        ? String((result as { message: unknown }).message)
+        : JSON.stringify(result);
+    console.error(`[email] Resend error [${res.status}]:`, detail);
+    throw new Error(`Resend [${res.status}]: ${detail}`);
   }
 }
