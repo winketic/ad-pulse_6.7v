@@ -36,6 +36,16 @@ export default async function ReportsPage({
   const company_id = profile?.company_id as string | undefined;
   if (!company_id) return <NoCompanyState />;
 
+  // Справочник контрагентов (миграции 042/046). Fail-open: пока таблицы нет,
+  // запрос вернёт ошибку, и группировка откатится на текстовое поле.
+  const { data: cpRows } = await supabase
+    .from("counterparties")
+    .select("*")
+    .eq("company_id", company_id);
+  const cpNameById = new Map<string, string>(
+    (cpRows ?? []).map((c) => [c.id as string, c.name as string]),
+  );
+
   // ── Default: last 30 days ────────────────────────────────
   const todayDate = new Date();
   const defaultTo = todayDate.toISOString().split("T")[0];
@@ -261,6 +271,7 @@ export default async function ReportsPage({
   );
 
   const revenueCpMap = new Map<string, number>();
+  const idxMap = new Map<string, { qty: number; revenue: number }>();
   let revenueTotal = 0;
   const rawBuy = new Map<string, { cost: number; qty: number }>(); // взвеш. цена закупки сырья
   const rawCostMap = new Map<string, { unit: string; qty: number; cost: number }>();
@@ -278,8 +289,24 @@ export default async function ReportsPage({
     // (а) Выручка — расход/отгрузка продукции
     if (type === "expense" && isProduct) {
       revenueTotal += line;
-      const cp = (tx.counterparty as string | null)?.trim() || "Без контрагента";
-      revenueCpMap.set(cp, (revenueCpMap.get(cp) ?? 0) + line);
+      // Ключ — каноническое имя из справочника. Раньше группировали по
+      // текстовому полю, и одна компания разъезжалась на несколько строк:
+      // «G tech Stroy», «G-Tech Stroy», «G-Tech stroy», «G-tech Stroy».
+      // Текст остаётся запасным вариантом для записей без привязки.
+      const cpId = tx.counterparty_id as string | null;
+      const cp =
+        (cpId ? cpNameById.get(cpId) : null) ??
+        (tx.counterparty as string | null)?.trim() ??
+        "";
+      const cpKey = cp || "Без контрагента";
+      revenueCpMap.set(cpKey, (revenueCpMap.get(cpKey) ?? 0) + line);
+
+      // Разрез по индексу нагрузки — ради него и строилась модель цен.
+      const idx = (tx.load_index as string | null)?.trim() || "без индекса";
+      const bi = idxMap.get(idx) ?? { qty: 0, revenue: 0 };
+      bi.qty += qty;
+      bi.revenue += line;
+      idxMap.set(idx, bi);
     }
     // (б) Затраты на сырьё — приход сырья
     if (type === "income" && !isProduct) {
@@ -326,6 +353,14 @@ export default async function ReportsPage({
     productionRawCost,
     materialMargin: revenueTotal - productionRawCost,
     hasAnyPrice,
+    shipmentsByIndex: Array.from(idxMap.entries())
+      .map(([load_index, e]) => ({ load_index, ...e }))
+      .filter((r) => r.qty > 0)
+      .sort((a, b) => {
+        if (a.load_index === "без индекса") return 1;
+        if (b.load_index === "без индекса") return -1;
+        return Number(a.load_index) - Number(b.load_index);
+      }),
   };
 
   return (

@@ -61,6 +61,8 @@ export type FinanceData = {
   productionRawCost: number;
   materialMargin: number;
   hasAnyPrice: boolean;
+  /** Отгрузки в разрезе индекса нагрузки. Индекс — атрибут отгрузки, не марки. */
+  shipmentsByIndex: { load_index: string; qty: number; revenue: number }[];
 };
 
 // ─── Helpers ──────────────────────────────────────────────
@@ -265,6 +267,17 @@ async function exportExcel(
     s6Data.push({ "Показатель": `  ${r.counterparty}`, "Сумма, тг": Math.round(r.revenue) });
   }
   s6Data.push({ "Показатель": "Выручка — ИТОГО", "Сумма, тг": Math.round(finance.revenueTotal) });
+  if (finance.shipmentsByIndex.length > 0) {
+    s6Data.push({ "Показатель": "", "Сумма, тг": "" });
+    s6Data.push({ "Показатель": "ОТГРУЗКИ ПО ИНДЕКСАМ НАГРУЗКИ", "Сумма, тг": "" });
+    for (const r of finance.shipmentsByIndex) {
+      const label = r.load_index === "без индекса" ? "Без индекса" : `−${r.load_index}`;
+      s6Data.push({
+        "Показатель": `  ${label} — ${fmtQty(r.qty)} шт`,
+        "Сумма, тг": Math.round(r.revenue),
+      });
+    }
+  }
   s6Data.push({ "Показатель": "", "Сумма, тг": "" });
   s6Data.push({ "Показатель": "ЗАТРАТЫ НА СЫРЬЁ (приход сырья)", "Сумма, тг": "" });
   for (const r of finance.rawCostByMaterial) {
@@ -789,6 +802,39 @@ export default function ReportsClient({
                     </span>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Отгрузки по индексам нагрузки */}
+            {finance.shipmentsByIndex.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide mb-2">
+                  Отгрузки по индексам нагрузки
+                </p>
+                <div className="rounded-lg border border-[var(--border)] divide-y divide-[var(--border)]">
+                  {finance.shipmentsByIndex.map((r) => (
+                    <div
+                      key={r.load_index}
+                      className="flex items-center justify-between gap-2 px-3.5 py-2 min-w-0"
+                    >
+                      <span className="text-sm text-[var(--text)] truncate">
+                        {r.load_index === "без индекса" ? "Без индекса" : `−${r.load_index}`}
+                      </span>
+                      <span className="flex items-baseline gap-3 shrink-0">
+                        <span className="num text-sm text-[var(--muted)] tabular-nums">
+                          {fmtQty(r.qty)} шт
+                        </span>
+                        <span className="num text-sm font-semibold text-[var(--success)] tabular-nums">
+                          {money(r.revenue)}
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-[var(--muted-2)] mt-1.5">
+                  Индекс проставляется при отгрузке: завод льёт базовую марку,
+                  класс нагрузки появляется при продаже.
+                </p>
               </div>
             )}
 
