@@ -11,6 +11,7 @@ import {
 import {
   resetTransactions,
   LINTEL_NORM_CONCRETE,
+  E2E_COUNTERPARTIES,
   type E2EMeta,
 } from "../fixtures/seed";
 
@@ -38,7 +39,7 @@ async function addRegular(
     materialId: string;
     qty: number | string;
     price?: number;
-    counterparty?: string;
+    counterpartyId?: string; // E2E_TEST has a counterparty directory → <select>
     defectReason?: string;
     note?: string;
   },
@@ -50,7 +51,7 @@ async function addRegular(
   await f.quantity.fill(String(o.qty));
   if (o.defectReason) await f.defectReason.fill(o.defectReason);
   if (o.note) await f.note.fill(o.note);
-  if (o.counterparty) await f.counterparty.fill(o.counterparty);
+  if (o.counterpartyId) await f.counterpartyRef.selectOption(o.counterpartyId);
   if (o.price != null) await f.price.fill(String(o.price));
   await f.submit.click();
 }
@@ -286,17 +287,22 @@ test("цена: живой итог, подсказка последней це�
 
 // ─── Counterparty ────────────────────────────────────────────────────────
 
-test("контрагент сохраняется и виден в списке", async ({ page }) => {
+// The seed fills E2E_TEST's directory, so the form offers a <select> instead of
+// free text. The text fallback (empty directory) is no longer e2e-covered — by
+// decision; a buildTxInput unit test replaces it in task 2.
+test("контрагент из справочника сохраняется и виден в списке", async ({ page }) => {
   await gotoTx(page);
   await addRegular(page, {
     type: "income",
     materialId: M.materials.concrete,
     qty: 6,
-    counterparty: "ООО Ромашка",
+    counterpartyId: M.counterparties.a,
   });
   await expect.poll(async () => (await latestTx(M.materials.concrete, "income"))?.counterparty)
-    .toBe("ООО Ромашка");
-  await expect(page.getByRole("cell", { name: "ООО Ромашка" })).toBeVisible();
+    .toBe(E2E_COUNTERPARTIES.a);
+  const tx = await latestTx(M.materials.concrete, "income");
+  expect(tx?.counterparty_id).toBe(M.counterparties.a);
+  await expect(page.getByRole("cell", { name: E2E_COUNTERPARTIES.a })).toBeVisible();
 });
 
 // ─── Delete + roles ──────────────────────────────────────────────────────
@@ -395,14 +401,16 @@ test.describe("мобильный разворот строки", () => {
       type: "income",
       materialId: M.materials.concrete,
       qty: 8,
-      counterparty: "ООО Тест-Разворот",
+      counterpartyId: M.counterparties.b,
     });
     // Mobile compact list: tap the specific +8 row to expand
     await page.getByRole("button").filter({ hasText: "+8" }).first().click();
     // The counterparty label + value live together in the mobile detail <p>;
     // the (display:none) desktop table also holds the bare value, so match the
     // combined "Контрагент: …" text to stay unambiguous.
-    await expect(page.getByText(/Контрагент:\s*ООО Тест-Разворот/)).toBeVisible();
+    await expect(
+      page.getByText(new RegExp(`Контрагент:\\s*${E2E_COUNTERPARTIES.b}`)),
+    ).toBeVisible();
   });
 });
 

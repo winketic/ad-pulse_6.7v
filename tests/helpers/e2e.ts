@@ -37,6 +37,8 @@ type TxRow = {
   note: string | null;
   counterparty: string | null;
   unit_price: number | null;
+  load_index: string | null;
+  counterparty_id: string | null;
   deleted_at: string | null;
   transaction_date: string;
   created_at: string;
@@ -51,7 +53,9 @@ export async function latestTx(
   const sb = getServiceClient();
   let q = sb
     .from("material_transactions")
-    .select("id, type, quantity, note, counterparty, unit_price, deleted_at, transaction_date, created_at")
+    .select(
+      "id, type, quantity, note, counterparty, unit_price, load_index, counterparty_id, deleted_at, transaction_date, created_at",
+    )
     .eq("company_id", m.companyId)
     .eq("material_id", materialId)
     .order("created_at", { ascending: false })
@@ -111,11 +115,22 @@ export async function openTxModal(page: Page) {
   }).toPass({ timeout: 15_000 });
 }
 
-/** Stable locators for the modal's fields. Only 2 <select>s exist on the page. */
+/**
+ * Stable locators for the modal's fields. `type` and `material` are always the
+ * first two <select>s. The Phase 6 selects (counterparty directory, load index)
+ * only render once E2E_TEST has refs/prices, and their <label>s aren't bound
+ * to the control — so they're found by their unique empty option instead.
+ */
 export function txForm(page: Page) {
+  const selectWithOption = (text: string) =>
+    page.locator("select").filter({ has: page.locator("option", { hasText: text }) });
   return {
     type: page.locator("select").first(),
     material: page.locator("select").nth(1),
+    counterpartyRef: selectWithOption("— не указан —"),
+    loadIndex: selectWithOption("— без индекса —"),
+    priceHint: page.getByText(/^По прайсу:/),
+    priceMissing: page.getByText("Цены на эту связку нет в прайсе"),
     quantity: page.getByPlaceholder("0.0000"),
     date: page.locator('input[type="date"]'),
     price: page.getByPlaceholder("0", { exact: true }),
