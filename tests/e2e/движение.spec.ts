@@ -198,15 +198,13 @@ test("производство в минус записывается: сырь�
   expect(await balanceOf(M.materials.concrete)).toBeLessThan(0);
 });
 
-// Вторая половина контракта 041: когда сырья уже ≤ 0, списывать нечего и
-// выпуск должен отклоняться сервером.
+// Вторая половина контракта 041: когда сырья уже ≤ 0, выпуск не проходит.
 //
-// ⚠️ fixme, а не skip: поведение ОЖИДАЕМОЕ, но миграция 041 в базе не применена
-// — у функции create_production_transaction нет гарда вообще (проверено
-// 06.10.2026: в теле нет ни одного «Недостаточно»). Снять fixme сразу после
-// применения 041. Файл в режиме serial, поэтому красный тест обрывал бы все
-// последующие — отсюда fixme, а не оставленное падение.
-test.fixme("производство при нулевом сырье отклоняется (ждёт миграции 041)", async ({ page }) => {
+// На практике до серверного отказа интерфейс не доходит: форма сама гасит
+// кнопку и пишет «Нет остатка сырья». Проверяем именно это — то, что увидит
+// мастер. Серверный гард (041, применён 06.10.2026) остаётся вторым рубежом
+// на случай прямого вызова экшена в обход формы, и из UI недостижим.
+test("производство при нулевом сырье не отправляется", async ({ page }) => {
   await gotoTx(page);
   const concreteBefore = await balanceOf(M.materials.concrete);
 
@@ -218,18 +216,22 @@ test.fixme("производство при нулевом сырье откло
   await f1.material.selectOption(M.materials.lintel);
   await f1.quantity.fill(String(drain));
   await f1.submit.click();
-  await expect.poll(() => balanceOf(M.materials.concrete)).toBeLessThan(0);
+  await expect
+    .poll(() => balanceOf(M.materials.concrete), { timeout: 20_000 })
+    .toBeLessThan(0);
 
-  // Шаг 2: теперь сырья ≤ 0 — любой выпуск должен быть отклонён.
+  // Шаг 2: сырья ≤ 0 — форма обязана остановить на входе.
   const afterDrain = await balanceOf(M.materials.concrete);
+  await gotoTx(page);
   await openTxModal(page);
   const f2 = txForm(page);
   await f2.type.selectOption("production");
   await f2.material.selectOption(M.materials.lintel);
   await f2.quantity.fill("1");
-  await f2.submit.click();
 
-  await expect(page.getByText(/Недостаточно бетона/)).toBeVisible();
+  await expect(page.getByText(/Нет остатка сырья/)).toBeVisible();
+  await expect(f2.submit).toBeDisabled();
+
   // И ничего не записано: остаток не сдвинулся.
   expect(await balanceOf(M.materials.concrete)).toBe(afterDrain);
 });
