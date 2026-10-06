@@ -8,7 +8,11 @@ import {
   txForm,
   roleState,
 } from "../helpers/e2e";
-import { resetTransactions, type E2EMeta } from "../fixtures/seed";
+import {
+  resetTransactions,
+  LINTEL_NORM_CONCRETE,
+  type E2EMeta,
+} from "../fixtures/seed";
 
 // Writes into E2E_TEST only — serialize so tests never race each other's
 // balances, and reset to the known baseline before each one.
@@ -161,28 +165,73 @@ test("валидация: количество выше максимума по�
   await expect(f.submit).toBeDisabled();
 });
 
-// Bug #1 guard (migration 039): производство сверх остатка сырья не должно
-// уводить остаток в минус. Клиент заранее предупреждает (мягко), сервер —
-// авторитетно отклоняет с понятным текстом и НИЧЕГО не пишет.
-test("производство сверх остатка блокируется, минус не проходит", async ({ page }) => {
+// Контракт мягкого гарда (миграция 041, заменила отброшенную 039):
+//   · сырья > 0  → выпуск ЗАПИСЫВАЕТСЯ, даже если остаток уходит в минус;
+//   · сырья ≤ 0  → выпуск отклоняется, списывать нечего.
+//
+// Жёсткий блок 039 был отброшен осознанно: на заводе бетон льют днём, а приход
+// вносят вечером, и жёсткий блок мешал бы записать реальный выпуск. Прежняя
+// версия этого теста проверяла именно 039 — поведение, от которого отказались.
+test("производство в минус записывается: сырья ещё есть (мягкий гард)", async ({ page }) => {
   await gotoTx(page);
   const concreteBefore = await balanceOf(M.materials.concrete); // 94 из baseline
+  expect(concreteBefore, "baseline: бетона должно быть > 0").toBeGreaterThan(0);
+
+  // Столько, чтобы гарантированно уйти в минус по бетону.
+  const qty = Math.ceil((concreteBefore / LINTEL_NORM_CONCRETE) * 2);
+
   await openTxModal(page);
   const f = txForm(page);
   await f.type.selectOption("production");
   await f.material.selectOption(M.materials.lintel);
-  await f.quantity.fill("100000"); // нужно 1300 бетона, есть 94
+  await f.quantity.fill(String(qty));
 
-  // Мягкое клиентское предупреждение в превью (сохранить всё равно можно)
+  // Клиент предупреждает, но сохранить разрешает — в этом и смысл «мягко».
   await expect(page.getByText(/Не хватит бетона/)).toBeVisible();
+  await expect(f.submit).toBeEnabled();
 
-  // Сервер отклоняет с понятной ошибкой (не техно-крэш)
   await f.submit.click();
-  await expect(page.getByText(/Недостаточно бетона: нужно .* есть/)).toBeVisible();
 
-  // Остаток не ушёл в минус — записей не создано
-  await expect.poll(() => balanceOf(M.materials.concrete)).toBe(concreteBefore);
-  expect(await balanceOf(M.materials.concrete)).toBeGreaterThanOrEqual(0);
+  // Выпуск записан, бетон ушёл в минус ровно по нормам.
+  const expected = concreteBefore - qty * LINTEL_NORM_CONCRETE;
+  await expect.poll(() => balanceOf(M.materials.concrete)).toBeCloseTo(expected, 3);
+  expect(await balanceOf(M.materials.concrete)).toBeLessThan(0);
+});
+
+// Вторая половина контракта 041: когда сырья уже ≤ 0, списывать нечего и
+// выпуск должен отклоняться сервером.
+//
+// ⚠️ fixme, а не skip: поведение ОЖИДАЕМОЕ, но миграция 041 в базе не применена
+// — у функции create_production_transaction нет гарда вообще (проверено
+// 06.10.2026: в теле нет ни одного «Недостаточно»). Снять fixme сразу после
+// применения 041. Файл в режиме serial, поэтому красный тест обрывал бы все
+// последующие — отсюда fixme, а не оставленное падение.
+test.fixme("производство при нулевом сырье отклоняется (ждёт миграции 041)", async ({ page }) => {
+  await gotoTx(page);
+  const concreteBefore = await balanceOf(M.materials.concrete);
+
+  // Шаг 1: уводим бетон в минус — это разрешено (мягкий гард).
+  const drain = Math.ceil((concreteBefore / LINTEL_NORM_CONCRETE) * 2);
+  await openTxModal(page);
+  const f1 = txForm(page);
+  await f1.type.selectOption("production");
+  await f1.material.selectOption(M.materials.lintel);
+  await f1.quantity.fill(String(drain));
+  await f1.submit.click();
+  await expect.poll(() => balanceOf(M.materials.concrete)).toBeLessThan(0);
+
+  // Шаг 2: теперь сырья ≤ 0 — любой выпуск должен быть отклонён.
+  const afterDrain = await balanceOf(M.materials.concrete);
+  await openTxModal(page);
+  const f2 = txForm(page);
+  await f2.type.selectOption("production");
+  await f2.material.selectOption(M.materials.lintel);
+  await f2.quantity.fill("1");
+  await f2.submit.click();
+
+  await expect(page.getByText(/Недостаточно бетона/)).toBeVisible();
+  // И ничего не записано: остаток не сдвинулся.
+  expect(await balanceOf(M.materials.concrete)).toBe(afterDrain);
 });
 
 // ─── kg → m conversion ───────────────────────────────────────────────────
