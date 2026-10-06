@@ -492,6 +492,16 @@ function AddTransactionForm({
     return Array.from(pool).sort((a, b) => Number(a) - Number(b));
   }, [priceList, form.material_id, hasPriceList]);
 
+  // Смена марки (или уход с расхода продукции) — индекс от прежней марки к
+  // новой не относится: сбрасываем его, иначе в отгрузку уйдёт чужой индекс,
+  // которого даже нет в списке.
+  useEffect(() => {
+    if (!form.load_index) return;
+    if (showLoadIndex && loadIndexOptions.includes(form.load_index)) return;
+    setForm((p) => ({ ...p, load_index: "" }));
+    setPriceTouched(false);
+  }, [showLoadIndex, loadIndexOptions, form.load_index]);
+
   // Цена из прайса по связке марка + индекс + контрагент.
   const pricedRow = useMemo(() => {
     if (!isProductExpense || !form.counterparty_id || !form.load_index) return null;

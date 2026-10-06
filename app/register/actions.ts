@@ -39,7 +39,19 @@ export async function submitRegistration(data: {
       `<a href="${appUrl}/admin/registrations">👉 Открыть заявки</a>`
   );
 
-  await sendEmail({
+  // Заявка уже сохранена и Telegram-алерт ушёл: сбой письма админу не должен
+  // показывать клиенту ошибку — иначе он отправит заявку повторно.
+  await sendAdminEmail(data, appUrl, reg.id).catch((e) =>
+    console.error("[submitRegistration] admin email failed:", e)
+  );
+}
+
+function sendAdminEmail(
+  data: { company_name: string; contact_name: string; email: string; phone: string },
+  appUrl: string,
+  registrationId: string,
+): Promise<void> {
+  return sendEmail({
     to: ADMIN_EMAIL,
     subject: `Новая заявка — ${data.company_name}`,
     html: `<!DOCTYPE html>
@@ -75,7 +87,7 @@ export async function submitRegistration(data: {
       </td></tr>
     </table>
     <div style="margin-top:32px;text-align:center;">
-      <a href="${appUrl}/admin/approve/${reg.id}"
+      <a href="${appUrl}/admin/approve/${registrationId}"
          style="display:inline-block;background:#05050a;color:#00f5c4;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:10px;">
         ✓ Одобрить
       </a>

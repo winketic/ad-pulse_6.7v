@@ -83,11 +83,11 @@ export type ProductionTransactionInput = {
 // product + expense of concrete/rebar by its norms. See migration
 // 023_create_production_transaction.sql.
 export async function createProductionTransaction(input: ProductionTransactionInput) {
-  const { supabase } = await getSupabaseAndUser();
+  const { supabase, company_id } = await getSupabaseAndUser();
 
   if (input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
   if (input.quantity > 999999999) throw new Error("Количество превышает максимально допустимое значение");
-  await assertWholeUnitQuantity(supabase, input.material_id, input.quantity);
+  await assertWholeUnitQuantity(supabase, company_id, input.material_id, input.quantity);
 
   const { error } = await supabase.rpc("create_production_transaction", {
     p_product_material_id: input.material_id,
@@ -109,17 +109,24 @@ export async function createProductionTransaction(input: ProductionTransactionIn
  * Для материалов с kg_per_meter (Арматура) проверки нет: там вводят килограммы,
  * а хранят метры, и дробное значение штатно.
  */
+type ServerSupabase = Awaited<ReturnType<typeof import("@/utils/supabase/server").createClient>>;
+
 async function assertWholeUnitQuantity(
-  supabase: Awaited<ReturnType<typeof import("@/utils/supabase/server").createClient>>,
+  supabase: ServerSupabase,
+  companyId: string,
   materialId: string,
   quantity: number,
 ) {
-  const { data: material } = await supabase
+  // company_id в фильтре явно: RLS — второй уровень защиты, не единственный.
+  // Чужой или несуществующий материал отклоняем, а не пропускаем молча.
+  const { data: material, error } = await supabase
     .from("materials")
     .select("*")
     .eq("id", materialId)
+    .eq("company_id", companyId)
     .maybeSingle();
-  if (!material) return;
+  if (error) throw new Error(`DB error: ${error.message}`);
+  if (!material) throw new Error("Материал не найден");
   const raw = material as Record<string, unknown>;
   const kgPerMeter = raw.kg_per_meter != null ? Number(raw.kg_per_meter) : null;
   const unit = String(raw.unit ?? "").toLowerCase();
@@ -130,12 +137,32 @@ async function assertWholeUnitQuantity(
   }
 }
 
+// FK counterparty_id не проверяет принадлежность компании, а экшен вызывается
+// с произвольным телом — проверяем, что контрагент свой.
+async function assertOwnCounterparty(
+  supabase: ServerSupabase,
+  companyId: string,
+  counterpartyId: string,
+) {
+  const { data, error } = await supabase
+    .from("counterparties")
+    .select("id")
+    .eq("id", counterpartyId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (error) throw new Error(`DB error: ${error.message}`);
+  if (!data) throw new Error("Контрагент не найден");
+}
+
 export async function createTransaction(input: TransactionInput) {
   const { supabase, user, company_id } = await getSupabaseAndUser();
 
   if (input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
   if (input.quantity > 999999999) throw new Error("Количество превышает максимально допустимое значение");
-  await assertWholeUnitQuantity(supabase, input.material_id, input.quantity);
+  await assertWholeUnitQuantity(supabase, company_id, input.material_id, input.quantity);
+  if (input.counterparty_id != null) {
+    await assertOwnCounterparty(supabase, company_id, input.counterparty_id);
+  }
 
   // unit_price only included when provided, so inserts still work in the
   // window before migration 038 is applied (an unknown column would error).
