@@ -535,6 +535,15 @@ function AddTransactionForm({
     !!form.load_index &&
     !pricedRow;
 
+  // Связки нет в прайсе, а в поле осталась автоподставленная цена ПРЕЖНЕЙ
+  // связки — убираем её, иначе рядом с «введи вручную» стоит валидная на вид
+  // цифра и при сохранении уходит чужая цена. Введённое руками не трогаем.
+  useEffect(() => {
+    if (priceMissingInList && !priceTouched) {
+      setForm((p) => (p.unit_price === "" ? p : { ...p, unit_price: "" }));
+    }
+  }, [priceMissingInList, priceTouched]);
+
   // ── Price (задача: цена за ед. только для прихода/расхода) ──────────
   const showPrice = form.type === "income" || form.type === "expense";
   // Количество в единице ХРАНЕНИЯ (для «Арматуры» — метры): цена за метр.
