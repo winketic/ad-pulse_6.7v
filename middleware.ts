@@ -15,6 +15,10 @@ const PUBLIC_PATHS = [
   "/api/telegram/setup",
   "/api/wazzup/webhook",
   "/api/wazzup/callback",
+  // Vercel Cron приходит без пользовательской сессии: без этого middleware
+  // редиректил его на /login, и cron-маршруты ни разу не выполнялись.
+  // Сами маршруты проверяют CRON_SECRET.
+  "/api/cron/",
 ];
 
 export async function middleware(request: NextRequest) {

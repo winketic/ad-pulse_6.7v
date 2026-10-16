@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/refresh-wazzup-token",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/keepalive",
+      "schedule": "0 9 * * *"
     }
   ]
 }
