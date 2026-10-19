@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Building2, Clock3, Search, Users } from "lucide-react";
 
 export type PlatformCompany = {
@@ -10,9 +10,10 @@ export type PlatformCompany = {
   users: number;
   lastSeen: string | null;
   activeThisWeek: boolean;
+  needsAttention: boolean;
 };
 
-type Filter = "all" | "active" | "inactive";
+type Filter = "all" | "active" | "inactive" | "attention";
 
 function formatDate(value: string | null) {
   if (!value) return "Пока не входили";
@@ -26,13 +27,22 @@ function formatDate(value: string | null) {
   });
 }
 
-export default function PlatformCompaniesClient({ companies }: { companies: PlatformCompany[] }) {
+export default function PlatformCompaniesClient({ companies, id }: { companies: PlatformCompany[]; id?: string }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
+  useEffect(() => {
+    const focusAttention = () => {
+      if (window.location.hash === "#companies") setFilter("attention");
+    };
+    focusAttention();
+    window.addEventListener("hashchange", focusAttention);
+    return () => window.removeEventListener("hashchange", focusAttention);
+  }, []);
   const visibleCompanies = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase("ru");
     return companies.filter((company) => {
-      const matchesFilter = filter === "all" || company.activeThisWeek === (filter === "active");
+      const matchesFilter = filter === "all"
+        || (filter === "attention" ? company.needsAttention : company.activeThisWeek === (filter === "active"));
       return matchesFilter && company.name.toLocaleLowerCase("ru").includes(normalizedQuery);
     });
   }, [companies, filter, query]);
@@ -41,10 +51,11 @@ export default function PlatformCompaniesClient({ companies }: { companies: Plat
     { id: "all", label: "Все", count: companies.length },
     { id: "active", label: "Активны за 7 дней", count: companies.filter((item) => item.activeThisWeek).length },
     { id: "inactive", label: "Без активности", count: companies.filter((item) => !item.activeThisWeek).length },
+    { id: "attention", label: "Нужно внимание", count: companies.filter((item) => item.needsAttention).length },
   ];
 
   return (
-    <section aria-label="Компании">
+    <section id={id} aria-label="Компании" className="scroll-mt-5">
       <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2" aria-label="Фильтр компаний">
           {filters.map((item) => (
@@ -96,9 +107,9 @@ export default function PlatformCompaniesClient({ companies }: { companies: Plat
                 </div>
                 <p className="flex items-center gap-2 text-sm text-[var(--muted)]"><Clock3 size={15} className="shrink-0" /><span>{formatDate(company.lastSeen)}</span></p>
                 <p className="flex items-center gap-2 text-sm text-[var(--muted)]"><Users size={15} className="shrink-0" /><span>{company.users} сотрудников</span></p>
-                <span className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${company.activeThisWeek ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" : "border-amber-500/20 bg-amber-500/10 text-amber-300"}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${company.activeThisWeek ? "bg-emerald-400" : "bg-amber-300"}`} />
-                  {company.activeThisWeek ? "Активна" : "Нет входов 7 дней"}
+                <span className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${company.needsAttention ? "border-amber-500/20 bg-amber-500/10 text-amber-300" : "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${company.needsAttention ? "bg-amber-300" : "bg-emerald-400"}`} />
+                  {company.users === 0 ? "Нет сотрудников" : company.needsAttention ? "Нет входов 30+ дней" : company.activeThisWeek ? "Активна" : "Неактивна за неделю"}
                 </span>
               </li>
             ))}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Building2, CalendarClock, ChevronRight, CircleCheck } from "lucide-react";
+import { ArrowLeft, Building2, CalendarClock, ChevronRight, CircleCheck, TrendingUp, TriangleAlert } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isPlatformOwnerEmail } from "@/lib/auth/platform-owner";
@@ -22,7 +22,7 @@ export default async function PlatformOverviewPage() {
   const [companiesResult, profilesResult, registrationsResult] = await Promise.all([
     service.from("companies").select("id, name, created_at").order("created_at", { ascending: false }),
     service.from("profiles").select("id, company_id"),
-    service.from("registrations").select("id, status"),
+    service.from("registrations").select("id, status, created_at"),
   ]);
   if (companiesResult.error) throw new Error(`Не удалось загрузить список компаний: ${companiesResult.error.message}`);
   if (profilesResult.error) throw new Error(`Не удалось загрузить сводку сотрудников: ${profilesResult.error.message}`);
@@ -51,13 +51,33 @@ export default async function PlatformOverviewPage() {
     statsByCompany.set(profile.company_id, current);
   }
 
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const now = new Date();
+  const weekAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+  const monthAgo = now.getTime() - 30 * 24 * 60 * 60 * 1000;
+  const monthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
+  const previousMonthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1);
   const companies = (companiesResult.data ?? [] as CompanyRow[]).map((company) => {
     const stats = statsByCompany.get(company.id) ?? { users: 0, lastSeen: null };
-    return { ...company, ...stats, activeThisWeek: !!stats.lastSeen && Date.parse(stats.lastSeen) >= weekAgo };
+    const lastSeenTime = stats.lastSeen ? Date.parse(stats.lastSeen) : null;
+    return {
+      ...company,
+      ...stats,
+      activeThisWeek: lastSeenTime !== null && lastSeenTime >= weekAgo,
+      needsAttention: stats.users === 0 || lastSeenTime === null || lastSeenTime < monthAgo,
+    };
   });
   const activeCount = companies.filter((company) => company.activeThisWeek).length;
-  const pendingCount = (registrationsResult.data ?? []).filter((registration) => registration.status === "pending").length;
+  const attentionCount = companies.filter((company) => company.needsAttention).length;
+  const registrations = registrationsResult.data ?? [];
+  const pendingCount = registrations.filter((registration) => registration.status === "pending").length;
+  const stalePendingCount = registrations.filter((registration) =>
+    registration.status === "pending" && Date.parse(registration.created_at) < now.getTime() - 48 * 60 * 60 * 1000,
+  ).length;
+  const newThisMonth = companies.filter((company) => Date.parse(company.created_at) >= monthStart).length;
+  const newPreviousMonth = companies.filter((company) => {
+    const createdAt = Date.parse(company.created_at);
+    return createdAt >= previousMonthStart && createdAt < monthStart;
+  }).length;
 
   return (
     <div className="min-h-full px-4 py-6 sm:px-6 sm:py-8 lg:px-8" style={{ background: "var(--bg)" }}>
@@ -82,11 +102,35 @@ export default async function PlatformOverviewPage() {
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
           <SummaryCard icon={<Building2 size={18} />} label="Всего компаний" value={companies.length} />
           <SummaryCard icon={<CircleCheck size={18} />} label="Активны за 7 дней" value={activeCount} />
-          <SummaryCard icon={<CalendarClock size={18} />} label="Новые заявки" value={pendingCount} href="/admin/registrations" />
+          <SummaryCard icon={<TrendingUp size={18} />} label="Новые за месяц" value={newThisMonth} detail={`В прошлом месяце: ${newPreviousMonth}`} />
+          <SummaryCard icon={<CalendarClock size={18} />} label="Ждут решения" value={pendingCount} detail={stalePendingCount > 0 ? `${stalePendingCount} ждут больше 48 часов` : "Все заявки в сроке"} href="/admin/registrations" />
         </div>
+
+        {(attentionCount > 0 || stalePendingCount > 0) && (
+          <section aria-labelledby="attention-heading" className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4 sm:p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <TriangleAlert size={18} className="text-amber-300" />
+              <h2 id="attention-heading" className="text-sm font-semibold text-[var(--text)]">Требуют внимания</h2>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              {attentionCount > 0 && (
+                <a href="#companies" className="inline-flex min-h-11 items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 text-sm text-[var(--text)] transition hover:border-amber-400/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+                  <span>Компании, требующие внимания: <strong className="tabular-nums">{attentionCount}</strong></span>
+                  <span className="text-xs text-[var(--muted)]">Нет входов 30 дней или сотрудников · список ниже</span>
+                </a>
+              )}
+              {stalePendingCount > 0 && (
+                <Link href="/admin/registrations" className="inline-flex min-h-11 items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 text-sm text-[var(--text)] transition hover:border-amber-400/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">
+                  <span>Заявок без решения более 48 часов: <strong className="tabular-nums">{stalePendingCount}</strong></span>
+                  <span className="text-xs font-medium text-[var(--accent)]">Открыть заявки <ChevronRight size={14} className="inline" /></span>
+                </Link>
+              )}
+            </div>
+          </section>
+        )}
 
         {companies.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--card)] px-6 py-16 text-center">
@@ -95,17 +139,18 @@ export default async function PlatformOverviewPage() {
             <p className="mt-1 text-sm text-[var(--muted)]">После одобрения первой заявки компания появится здесь.</p>
           </div>
         ) : (
-          <PlatformCompaniesClient companies={companies} />
+          <PlatformCompaniesClient id="companies" companies={companies} />
         )}
       </div>
     </div>
   );
 }
 
-function SummaryCard({ icon, label, value, href }: { icon: React.ReactNode; label: string; value: number; href?: string }) {
+function SummaryCard({ icon, label, value, detail, href }: { icon: React.ReactNode; label: string; value: number; detail?: string; href?: string }) {
   const content = <div className="h-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 transition-colors sm:p-5">
     <div className="mb-3 flex items-center gap-2 text-[var(--muted)]"><span className="text-[var(--accent)]">{icon}</span><span className="text-sm">{label}</span></div>
     <p className="text-3xl font-bold tabular-nums text-[var(--text)]">{value}</p>
+    {detail && <p className="mt-1 text-xs text-[var(--muted)]">{detail}</p>}
   </div>;
   return href ? <Link href={href} className="rounded-2xl hover:[&>div]:border-[var(--accent)]/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]">{content}</Link> : content;
 }
