@@ -469,9 +469,11 @@ function CreatePlanForm({
 function EmptyState({
   onAdd,
   isFiltered,
+  canAdd,
 }: {
   onAdd: () => void;
   isFiltered: boolean;
+  canAdd: boolean;
 }) {
   if (isFiltered)
     return (
@@ -491,9 +493,9 @@ function EmptyState({
         Планов пока нет
       </h3>
       <p className="text-sm text-[var(--muted)] mb-6 max-w-xs">
-        Создайте производственный план и привяжите к нему материалы
+        {canAdd ? "Создайте производственный план и привяжите к нему материалы" : "Планы, назначенные вашему цеху, появятся здесь"}
       </p>
-      <button
+      {canAdd && <button
         onClick={onAdd}
         className="dp-btn-primary rounded-xl"
       >
@@ -501,7 +503,7 @@ function EmptyState({
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
         </svg>
         Создать план
-      </button>
+      </button>}
     </div>
   );
 }
@@ -512,10 +514,12 @@ export default function PlansClient({
   plans,
   materials,
   users,
+  canManage = true,
 }: {
   plans: Plan[];
   materials: PlanMaterial[];
   users: PlanUser[];
+  canManage?: boolean;
 }) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
@@ -560,7 +564,7 @@ export default function PlansClient({
               : `${plans.length} план${plans.length === 1 ? "" : plans.length < 5 ? "а" : "ов"}`}
           </p>
         </div>
-        <button
+        {canManage && <button
           onClick={() => setModalOpen(true)}
           className="dp-btn-primary rounded-xl self-start sm:self-auto"
         >
@@ -568,12 +572,12 @@ export default function PlansClient({
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
           Новый план
-        </button>
+        </button>}
       </div>
 
       {/* ── Empty ───────────────────────────────────────── */}
       {plans.length === 0 && (
-        <EmptyState onAdd={() => setModalOpen(true)} isFiltered={false} />
+        <EmptyState onAdd={() => setModalOpen(true)} isFiltered={false} canAdd={canManage} />
       )}
 
       {/* ── Zone: overdue — screams on top ──────────────── */}
@@ -630,7 +634,7 @@ export default function PlansClient({
       )}
 
       {/* ── Create Plan Modal ───────────────────────────── */}
-      {modalOpen && (
+      {modalOpen && canManage && (
         <Modal title="Новый производственный план" size="xl" onClose={() => setModalOpen(false)}>
           <CreatePlanForm
             materials={materials}

@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { sendTelegramAlert } from "@/lib/telegram/send";
+import { canManagePlans } from "@/lib/auth/role-permissions";
 
 export type PlanStatus = "active" | "completed" | "cancelled";
 
@@ -32,20 +33,21 @@ async function getCtx() {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("company_id")
+    .select("company_id, role")
     .eq("id", user.id)
     .single();
 
   if (profileError) throw new Error(`DB error: ${profileError.message}`);
   if (!profile?.company_id) throw new Error("Компания не найдена");
 
-  return { supabase, user, company_id: profile.company_id as string };
+  return { supabase, user, company_id: profile.company_id as string, role: profile.role as string };
 }
 
 export async function createPlan(input: CreatePlanInput): Promise<string> {
-  const { supabase, user, company_id } = await getCtx();
+  const { supabase, user, company_id, role } = await getCtx();
+  if (!canManagePlans(role)) throw new Error("Нет прав для создания планов");
 
-  if (!input.name.trim()) throw new Error("Укажите название плана");
+  if (typeof input.name !== "string" || !input.name.trim()) throw new Error("Укажите название плана");
   if (!input.start_date || !input.end_date)
     throw new Error("Укажите период плана");
   if (input.end_date < input.start_date)
@@ -56,6 +58,18 @@ export async function createPlan(input: CreatePlanInput): Promise<string> {
   const uniqueIds = new Set(input.materials.map((m) => m.material_id));
   if (uniqueIds.size !== input.materials.length)
     throw new Error("Один и тот же материал указан несколько раз");
+  if (input.materials.some((m) => !Number.isFinite(m.planned_quantity) || m.planned_quantity <= 0))
+    throw new Error("Количество материала должно быть больше нуля");
+
+  const { data: ownMaterials, error: materialsError } = await supabase
+    .from("materials")
+    .select("id")
+    .eq("company_id", company_id)
+    .in("id", Array.from(uniqueIds));
+  if (materialsError) throw new Error(`DB error: ${materialsError.message}`);
+  if ((ownMaterials ?? []).length !== uniqueIds.size) {
+    throw new Error("Один или несколько материалов не найдены в вашей компании");
+  }
 
   const assigned_to = input.assigned_to || null;
 
@@ -137,6 +151,7 @@ async function notifyPlanCreated({
   const { data: rows, error } = await supabase
     .from("materials")
     .select("id, name")
+    .eq("company_id", company_id)
     .in("id", materials.map((m) => m.material_id));
 
   if (error) throw new Error(`DB error: ${error.message}`);
@@ -168,7 +183,9 @@ async function notifyPlanCreated({
 }
 
 export async function updatePlanStatus(id: string, status: PlanStatus) {
-  const { supabase, company_id } = await getCtx();
+  const { supabase, company_id, role } = await getCtx();
+  if (!canManagePlans(role)) throw new Error("Нет прав для изменения планов");
+  if (!["active", "completed", "cancelled"].includes(status)) throw new Error("Неизвестный статус плана");
 
   const { error } = await supabase
     .from("production_plans")

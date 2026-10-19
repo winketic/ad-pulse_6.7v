@@ -7,6 +7,8 @@ import type { PlanStatus } from "./actions";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 import NoCompanyState from "@/components/ui/NoCompanyState";
+import { redirect } from "next/navigation";
+import { canAccessCompanyPage, defaultDashboardPath } from "@/lib/auth/role-permissions";
 
 export default async function PlansPage() {
   const cookieStore = await cookies();
@@ -19,31 +21,38 @@ export default async function PlansPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("company_id")
+    .select("company_id, role")
     .eq("id", user.id)
     .single();
 
   const company_id = profile?.company_id as string | undefined;
   if (!company_id) return <NoCompanyState />;
+  if (!canAccessCompanyPage(profile?.role ?? "", "/dashboard/plans")) {
+    redirect(defaultDashboardPath(profile?.role ?? ""));
+  }
+
+  let plansQuery = supabase
+    .from("production_plans")
+    .select(
+      "id, name, planned_quantity, actual_quantity, start_date, end_date, status, created_at, assigned_to"
+    )
+    .eq("company_id", company_id);
+  if (profile?.role === "workshop") plansQuery = plansQuery.eq("assigned_to", user.id);
 
   const [plansResult, matsResult, usersResult] = await Promise.all([
-    supabase
-      .from("production_plans")
-      .select(
-        "id, name, planned_quantity, actual_quantity, start_date, end_date, status, created_at, assigned_to"
-      )
-      .eq("company_id", company_id)
-      .order("created_at", { ascending: false }),
+    plansQuery.order("created_at", { ascending: false }),
     supabase
       .from("materials")
       .select("id, name, unit")
       .eq("company_id", company_id)
       .order("name"),
-    supabase
-      .from("profiles")
-      .select("id, full_name")
-      .eq("company_id", company_id)
-      .order("full_name"),
+    profile?.role === "admin" || profile?.role === "manager"
+      ? supabase
+          .from("profiles")
+          .select("id, full_name")
+          .eq("company_id", company_id)
+          .order("full_name")
+      : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
   ]);
 
   // Plan line items for the card summary ("2ПБ-16 ×120 · ...")
@@ -89,5 +98,5 @@ export default async function PlansPage() {
     full_name: u.full_name,
   }));
 
-  return <PlansClient plans={plans} materials={materials} users={users} />;
+  return <PlansClient plans={plans} materials={materials} users={users} canManage={profile?.role === "admin" || profile?.role === "manager"} />;
 }

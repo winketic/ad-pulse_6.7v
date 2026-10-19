@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/server";
 
 export async function setInitialStock(materialId: string, quantity: number) {
   if (!materialId) throw new Error("Не указан материал");
+  if (!Number.isFinite(quantity)) throw new Error("Количество должно быть числом");
   if (quantity <= 0) throw new Error("Количество должно быть больше нуля");
   if (quantity > 999999999) throw new Error("Количество превышает допустимый предел");
 
@@ -20,24 +21,33 @@ export async function setInitialStock(materialId: string, quantity: number) {
 
   const { data: profile, error: profileErr } = await supabase
     .from("profiles")
-    .select("company_id")
+    .select("company_id, role")
     .eq("id", user.id)
     .single();
 
   if (profileErr) throw new Error(`DB error: ${profileErr.message}`);
   if (!profile?.company_id) throw new Error("Компания не найдена");
+  if (profile.role !== "admin" && profile.role !== "manager" && profile.role !== "warehouse") {
+    throw new Error("Нет прав для изменения остатков");
+  }
+  if (!Number.isFinite(quantity)) throw new Error("Количество должно быть числом");
 
   const company_id = profile.company_id as string;
 
   // Verify material belongs to this company — materialId is client-supplied.
   const { data: material } = await supabase
     .from("materials")
-    .select("id")
+    .select("*")
     .eq("id", materialId)
     .eq("company_id", company_id)
     .maybeSingle();
 
   if (!material) throw new Error("Материал не найден");
+  const materialRow = material as Record<string, unknown>;
+  const kgPerMeter = materialRow.kg_per_meter == null ? null : Number(materialRow.kg_per_meter);
+  if (String(materialRow.unit ?? "").toLowerCase() === "шт" && !(kgPerMeter && kgPerMeter > 0) && !Number.isInteger(quantity)) {
+    throw new Error("Количество в штуках должно быть целым");
+  }
 
   const today = new Date().toISOString().split("T")[0];
 

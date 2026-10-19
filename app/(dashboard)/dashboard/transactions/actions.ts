@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { sendTelegramAlert } from "@/lib/telegram/send";
+import { canCreateTransaction, canManagePlans } from "@/lib/auth/role-permissions";
 
 export type TxType = "income" | "expense" | "return" | "defect";
 
@@ -83,9 +84,11 @@ export type ProductionTransactionInput = {
 // product + expense of concrete/rebar by its norms. See migration
 // 023_create_production_transaction.sql.
 export async function createProductionTransaction(input: ProductionTransactionInput) {
-  const { supabase, company_id } = await getSupabaseAndUser();
+  const { supabase, company_id, role } = await getSupabaseAndUser();
 
-  if (input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
+  if (!canManagePlans(role)) throw new Error("Нет прав для записи выпуска");
+
+  if (!Number.isFinite(input.quantity) || input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
   if (input.quantity > 999999999) throw new Error("Количество превышает максимально допустимое значение");
   await assertWholeUnitQuantity(supabase, company_id, input.material_id, input.quantity);
 
@@ -155,9 +158,13 @@ async function assertOwnCounterparty(
 }
 
 export async function createTransaction(input: TransactionInput) {
-  const { supabase, user, company_id } = await getSupabaseAndUser();
+  const { supabase, user, company_id, role } = await getSupabaseAndUser();
 
-  if (input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
+  const validTypes: TxType[] = ["income", "expense", "return", "defect"];
+  if (!validTypes.includes(input.type)) throw new Error("Неизвестный тип операции");
+  if (!canCreateTransaction(role, input.type)) throw new Error("Нет прав для этого типа операции");
+
+  if (!Number.isFinite(input.quantity) || input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
   if (input.quantity > 999999999) throw new Error("Количество превышает максимально допустимое значение");
   await assertWholeUnitQuantity(supabase, company_id, input.material_id, input.quantity);
   if (input.counterparty_id != null) {
@@ -213,6 +220,7 @@ async function fireAlerts({
     .from("materials")
     .select("name, unit")
     .eq("id", input.material_id)
+    .eq("company_id", company_id)
     .single();
 
   if (materialError) throw new Error(`DB error: ${materialError.message}`);

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { approveRegistration, rejectRegistration } from "@/app/admin/actions";
 
 type Registration = {
@@ -16,6 +17,7 @@ type Registration = {
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
   pending:  { bg: "bg-amber-100",  text: "text-amber-700",  label: "Ожидает" },
+  processing: { bg: "bg-blue-100", text: "text-blue-700", label: "Обрабатывается" },
   approved: { bg: "bg-green-100",  text: "text-green-700",  label: "Одобрено" },
   rejected: { bg: "bg-red-100",    text: "text-red-700",    label: "Отклонено" },
 };
@@ -58,9 +60,14 @@ export default function AdminRegistrationsClient({ registrations }: { registrati
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Заявки на подключение</h1>
-        <p className="text-sm text-gray-400 mt-0.5">{registrations.length} заявок</p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Заявки на подключение</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{registrations.length} заявок</p>
+        </div>
+        <Link href="/admin/platform" className="inline-flex min-h-11 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Обзор компаний
+        </Link>
       </div>
 
       {actionError && (
@@ -105,14 +112,14 @@ export default function AdminRegistrationsClient({ registrations }: { registrati
                       <button
                         onClick={() => handleApprove(reg.id)}
                         disabled={isLoading}
-                        className="px-3 py-1.5 rounded-lg bg-[#05050a] text-[#00f5c4] text-xs font-semibold hover:bg-[#1a1a2e] disabled:opacity-50 transition-colors"
+                        className="min-h-11 px-3 rounded-lg bg-[#05050a] text-[#00f5c4] text-xs font-semibold hover:bg-[#1a1a2e] disabled:opacity-50 transition-colors"
                       >
                         {isLoading ? "…" : "Одобрить"}
                       </button>
                       <button
                         onClick={() => handleReject(reg.id)}
                         disabled={isLoading}
-                        className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-50 transition-colors"
+                        className="min-h-11 px-3 rounded-lg border border-gray-300 text-xs text-gray-700 hover:bg-red-50 hover:text-red-700 hover:border-red-300 disabled:opacity-50 transition-colors"
                       >
                         Отклонить
                       </button>

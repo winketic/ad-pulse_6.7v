@@ -19,6 +19,13 @@ const FORBIDDEN_PREFIXES = ["ab426af3"];
 // The dedicated test tenant. Everything that writes lives here.
 export const E2E_COMPANY_NAME = "E2E_TEST";
 
+// Second test tenant: the "foreign company" for cross-tenant isolation tests.
+// Pinned to an exact, hard-coded id — it is allow-listed below by this id only,
+// never by name or pattern, so the guard can't be widened by accident.
+export const E2E_OTHER_COMPANY_ID = "e2e00000-0000-4000-8000-0000000e2e02";
+export const E2E_OTHER_COMPANY_NAME = "E2E_OTHER";
+const EXTRA_TEST_COMPANY_IDS: ReadonlyArray<string> = [E2E_OTHER_COMPANY_ID];
+
 /** Throw if the base URL looks like production. */
 export function assertNotProd(url = baseURL()): void {
   if (/pulse\.altaidynamics\.kz/i.test(url) || /--prod|production/i.test(url)) {
@@ -30,9 +37,9 @@ export function assertNotProd(url = baseURL()): void {
 }
 
 /**
- * Throw unless `companyId` is the known E2E_TEST company. Blocks SattyGroup by
- * both full id and prefix, and blocks any id that doesn't match the E2E tenant
- * resolved at seed time.
+ * Throw unless `companyId` is a known test company: the E2E_TEST tenant
+ * resolved at seed time, or one of the exact ids in EXTRA_TEST_COMPANY_IDS
+ * (E2E_OTHER). Blocks SattyGroup by both full id and prefix first.
  */
 export function assertTestCompany(
   companyId: string | null | undefined,
@@ -46,10 +53,11 @@ export function assertTestCompany(
     throw new Error(`[GUARD] company_id ${companyId} is on the forbidden list.`);
   }
   if (!expectedE2EId) throw new Error("[GUARD] E2E company id not resolved");
-  if (companyId !== expectedE2EId) {
+  if (companyId !== expectedE2EId && !EXTRA_TEST_COMPANY_IDS.includes(companyId)) {
     throw new Error(
       `[GUARD] company_id ${companyId} is not the E2E_TEST company ` +
-        `(${expectedE2EId}). Writes are only allowed in E2E_TEST.`,
+        `(${expectedE2EId}) or E2E_OTHER (${E2E_OTHER_COMPANY_ID}). ` +
+        `Writes are only allowed in the test tenants.`,
     );
   }
 }

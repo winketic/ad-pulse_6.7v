@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import NoCompanyState from "@/components/ui/NoCompanyState";
 import WarehouseClient from "@/components/warehouse/WarehouseClient";
+import { redirect } from "next/navigation";
+import { canAccessCompanyPage, defaultDashboardPath } from "@/lib/auth/role-permissions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -38,12 +40,15 @@ export default async function WarehousePage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("company_id")
+    .select("company_id, role")
     .eq("id", user.id)
     .single();
 
   const company_id = profile?.company_id as string | undefined;
   if (!company_id) return <NoCompanyState />;
+  if (!canAccessCompanyPage(profile?.role ?? "", "/dashboard/warehouse")) {
+    redirect(defaultDashboardPath(profile?.role ?? ""));
+  }
 
   const [matsResult, txResult, thresholdsResult] = await Promise.all([
     // select("*") — survives not-yet-applied schema migrations

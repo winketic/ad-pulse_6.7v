@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { createInviteAndSendEmail } from "@/lib/supabase/inviteHelper";
+import { findAuthUserByEmail } from "@/lib/supabase/inviteHelper";
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -108,7 +109,8 @@ export async function saveAvatarUrl(avatarUrl: string) {
   const supabase = createClient(cookieStore);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Не авторизован");
-  await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
+  const { error } = await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
+  if (error) throw new Error(error.message);
   revalidatePath("/dashboard/settings");
 }
 
@@ -117,7 +119,8 @@ export async function saveBannerColor(bannerColor: string) {
   const supabase = createClient(cookieStore);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Не авторизован");
-  await supabase.from("profiles").update({ banner_color: bannerColor }).eq("id", user.id);
+  const { error } = await supabase.from("profiles").update({ banner_color: bannerColor }).eq("id", user.id);
+  if (error) throw new Error(error.message);
   revalidatePath("/dashboard/settings");
 }
 
@@ -165,17 +168,22 @@ export async function listCompanyUsers(): Promise<UserRow[]> {
 
     if (profilesError) {
       console.error("[listCompanyUsers] profiles error:", profilesError.message);
-      return [];
+      throw profilesError;
     }
     if (!profiles?.length) return [];
 
     // Fetch emails from auth.users via service role admin API
-    let emailMap = new Map<string, string>();
-    try {
-      const { data: authUsers } = await service.auth.admin.listUsers({ perPage: 1000 });
-      emailMap = new Map((authUsers?.users ?? []).map((u) => [u.id, u.email ?? ""]));
-    } catch (e) {
-      console.error("[listCompanyUsers] auth.admin.listUsers error:", e);
+    const emailMap = new Map<string, string>();
+    for (let page = 1; ; page += 1) {
+      const { data: authUsers, error } = await service.auth.admin.listUsers({ page, perPage: 1000 });
+      if (error) throw error;
+      const users = authUsers.users ?? [];
+      for (const authUser of users) {
+        if (profiles.some((profile) => profile.id === authUser.id)) {
+          emailMap.set(authUser.id, authUser.email ?? "");
+        }
+      }
+      if (users.length < 1000) break;
     }
 
     return profiles.map((p) => ({
@@ -189,13 +197,14 @@ export async function listCompanyUsers(): Promise<UserRow[]> {
     }));
   } catch (e) {
     console.error("[listCompanyUsers] unexpected error:", e);
-    return [];
+    throw new Error("Не удалось загрузить список пользователей. Попробуйте обновить страницу.");
   }
 }
 
 export async function updateUserRole(userId: string, role: string) {
   const { companyId, role: myRole, userId: myId } = await getAdminContext();
   if (myRole !== "admin") throw new Error("Только администратор может менять роли");
+  if (!["admin", "manager", "warehouse", "workshop"].includes(role)) throw new Error("Неизвестная роль");
   if (userId === myId) throw new Error("Нельзя изменить собственную роль");
 
   const service = createServiceClient();
@@ -212,7 +221,8 @@ export async function updateUserRole(userId: string, role: string) {
   const { error } = await service
     .from("profiles")
     .update({ role })
-    .eq("id", userId);
+    .eq("id", userId)
+    .eq("company_id", companyId);
 
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/settings");
@@ -259,9 +269,24 @@ export async function inviteUserByEmail(
   try {
     const { companyId, role: myRole } = await getAdminContext();
     if (myRole !== "admin") return { error: "Только администратор может добавлять пользователей" };
+    if (!["admin", "manager", "warehouse", "workshop"].includes(role)) return { error: "Неизвестная роль" };
 
     const service = createServiceClient();
     const cleanEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || cleanEmail.length > 254) return { error: "Укажите корректный email" };
+
+    const existingUser = await findAuthUserByEmail(service, cleanEmail);
+    if (existingUser) {
+      const { data: existingProfile, error } = await service
+        .from("profiles")
+        .select("company_id")
+        .eq("id", existingUser.id)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (existingProfile?.company_id) {
+        return { error: existingProfile.company_id === companyId ? "Пользователь уже состоит в вашей компании" : "Пользователь уже состоит в другой компании" };
+      }
+    }
 
     // Приглашение шлём через Resend, а НЕ через встроенную почту Supabase:
     // встроенная доставляет только участникам проекта Supabase и режется
@@ -270,19 +295,8 @@ export async function inviteUserByEmail(
     const { userId, emailSent } = await createInviteAndSendEmail(cleanEmail);
 
     // Guard: don't steal from another company
-    const { data: existingProfile } = await service
-      .from("profiles")
-      .select("company_id")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (existingProfile?.company_id && existingProfile.company_id !== companyId) {
-      return { error: "Пользователь уже состоит в другой компании" };
-    }
-
-    const { error: profileError } = await service.from("profiles").upsert(
+    const { error: profileError } = await service.from("profiles").insert(
       { id: userId, company_id: companyId, role, full_name: cleanEmail },
-      { onConflict: "id" }
     );
 
     if (profileError) return { error: profileError.message };

@@ -16,6 +16,12 @@ import {
   deleteTransaction,
   type TxType,
 } from "@/app/(dashboard)/dashboard/transactions/actions";
+import {
+  buildTxInput,
+  type Counterparty,
+  type Material,
+  type FormState,
+} from "@/components/transactions/buildTxInput";
 import { formatQuantity } from "@/lib/utils/format";
 import { isNetworkError, savePending, clearPending } from "@/lib/hooks/useOfflineRetry";
 import { useToast } from "@/components/ui/Toast";
@@ -25,77 +31,6 @@ import { Modal, ModalBody, ModalFooter } from "@/components/ui/Modal";
 type PendingTx = { form: FormState; type: "regular" | "production" };
 
 const TX_PENDING_KEY = "tx_form";
-
-// Builds the final payload for createTransaction from raw form state.
-// Applies the kg→m conversion when the material has kg_per_meter set:
-// the user typed kilograms, we store meters and keep the entered kg in
-// the note for traceability. Single source of truth — used by both the
-// submit path and the offline-retry path.
-function buildTxInput(
-  form: FormState,
-  materials: Material[],
-  counterparties: Counterparty[] = []
-): {
-  type: TxType;
-  material_id: string;
-  quantity: number;
-  note: string | null;
-  counterparty: string | null;
-  transaction_date: string;
-  unit_price: number | null;
-  load_index: string | null;
-  counterparty_id: string | null;
-} {
-  const noteBase =
-    form.type === "defect"
-      ? form.defect_reason.trim() +
-        (form.note.trim() ? `\n\n${form.note.trim()}` : "")
-      : form.note.trim() || null;
-
-  const mat = materials.find((m) => m.id === form.material_id);
-  const kgPerMeter =
-    mat?.kg_per_meter != null && mat.kg_per_meter > 0 ? mat.kg_per_meter : null;
-
-  const rawQty = parseFloat(form.quantity);
-  const quantity = kgPerMeter
-    ? Math.round((rawQty / kgPerMeter) * 10000) / 10000
-    : rawQty;
-  const kgNote = kgPerMeter ? `(введено: ${rawQty} кг)` : null;
-  const note = kgNote ? (noteBase ? `${noteBase}\n${kgNote}` : kgNote) : noteBase;
-
-  // Цена относится к единице хранения (для «Арматуры» — за метр). Только для
-  // прихода/расхода; для остальных типов поле скрыто и остаётся пустым → null.
-  const priceRaw = parseFloat(form.unit_price);
-  const unit_price =
-    (form.type === "income" || form.type === "expense") &&
-    Number.isFinite(priceRaw) &&
-    priceRaw > 0
-      ? Math.round(priceRaw * 100) / 100
-      : null;
-
-  // Контрагент: когда выбран из справочника — пишем и id, и его имя в текстовую
-  // колонку counterparty. Текст нужен, чтобы прежние отчёты (они группируют по
-  // тексту) продолжали работать, и чтобы запись осталась читаемой, даже если
-  // контрагента потом удалят из справочника.
-  const cp = counterparties.find((c) => c.id === form.counterparty_id);
-  const counterpartyText = cp ? cp.name : form.counterparty.trim() || null;
-
-  // Индекс нагрузки — только на отгрузке. Это же требует CHECK в миграции 042.
-  const load_index =
-    form.type === "expense" && form.load_index.trim() ? form.load_index.trim() : null;
-
-  return {
-    type: form.type as TxType,
-    material_id: form.material_id,
-    quantity,
-    note,
-    counterparty: counterpartyText,
-    transaction_date: form.date,
-    unit_price,
-    load_index,
-    counterparty_id: cp ? cp.id : null,
-  };
-}
 
 async function retryTx(
   payload: PendingTx,
@@ -139,12 +74,9 @@ export type Transaction = {
   deleted_by_name?: string | null;
 };
 
-// Справочник контрагентов (миграция 042). Пустой массив = миграция ещё не
-// применена → форма откатывается на свободный текстовый ввод.
-export type Counterparty = {
-  id: string;
-  name: string;
-};
+// Counterparty / Material / FormState live in ./buildTxInput (pure module,
+// unit-tested); re-exported here so existing importers keep working.
+export type { Counterparty, Material };
 
 // Строка прайса: цена = контрагент × базовая марка × индекс нагрузки
 // (миграции 042 + 045). load_index — text, как в схеме.
@@ -153,31 +85,6 @@ export type PriceRow = {
   counterparty_id: string;
   load_index: string;
   price: number;
-};
-
-export type Material = {
-  id: string;
-  name: string;
-  unit: string;
-  norm_concrete?: number | null;
-  norm_rebar?: number | null;
-  rebar_material_name?: string | null;
-  // kg→m conversion: when set, the user enters kg in the form and the
-  // transaction is stored in meters (quantity = kg / kg_per_meter)
-  kg_per_meter?: number | null;
-};
-
-type FormState = {
-  type: string; // TxType at runtime
-  material_id: string;
-  quantity: string;
-  defect_reason: string;
-  note: string;
-  counterparty: string; // свободный текст — фоллбэк, пока справочник пуст
-  counterparty_id: string; // выбор из справочника; "" = не выбран
-  load_index: string; // индекс нагрузки отгрузки ("8"/"20"/"27"/"37"); "" = без индекса
-  date: string;
-  unit_price: string; // цена за ед. (тг), строка ввода; "" = не указана
 };
 
 // ─── Config ───────────────────────────────────────────────
@@ -339,6 +246,7 @@ function AddTransactionForm({
   balances,
   counterparties,
   priceList,
+  role,
   onSubmit,
   onCancel,
   isPending,
@@ -348,13 +256,14 @@ function AddTransactionForm({
   balances: Record<string, number>;
   counterparties: Counterparty[];
   priceList: PriceRow[];
+  role: string;
   onSubmit: (form: FormState) => void;
   onCancel: () => void;
   isPending: boolean;
   error: string;
 }) {
   const [form, setForm] = useState<FormState>({
-    type: "income",
+    type: role === "workshop" ? "expense" : "income",
     material_id: materials[0]?.id ?? "",
     quantity: "",
     defect_reason: "",
@@ -378,7 +287,10 @@ function AddTransactionForm({
         HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
       >
     ) => {
-      setForm((p) => ({ ...p, [k]: e.target.value }));
+      setForm((p) => k === "material_id"
+        ? { ...p, material_id: e.target.value, load_index: "" }
+        : { ...p, [k]: e.target.value });
+      if (k === "material_id") setPriceTouched(false);
       if (k === "unit_price") setPriceTouched(true);
       if (k === "quantity") {
         const val = Number(e.target.value);
@@ -608,7 +520,9 @@ function AddTransactionForm({
             Тип <span className="text-red-500">*</span>
           </label>
           <select value={form.type} onChange={set("type")} className={inputCls}>
-            {TX_TYPES.map((k) => (
+            {TX_TYPES.filter((k) =>
+              role === "workshop" ? k === "expense" : role === "warehouse" ? k !== "production" : true,
+            ).map((k) => (
               <option key={k} value={k}>
                 {TYPE_CONFIG[k].label}
               </option>
@@ -1053,6 +967,7 @@ export default function TransactionsClient({
   totalCount,
   initialMaterialId,
   isAdmin = false,
+  role = "warehouse",
   counterparties = [],
   priceList = [],
 }: {
@@ -1065,6 +980,7 @@ export default function TransactionsClient({
   totalCount?: number;
   initialMaterialId?: string;
   isAdmin?: boolean;
+  role?: string;
   // Пустые по умолчанию: до применения миграций 042/045 справочников нет,
   // форма в этом случае работает как раньше
   counterparties?: Counterparty[];
@@ -1574,6 +1490,7 @@ export default function TransactionsClient({
             balances={balancesByMaterial}
             counterparties={counterparties}
             priceList={priceList}
+            role={role}
             onSubmit={handleAdd}
             onCancel={closeModal}
             isPending={isPending}

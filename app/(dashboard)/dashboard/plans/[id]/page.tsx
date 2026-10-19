@@ -8,6 +8,8 @@ import { getLastChange } from "@/lib/audit/getLastChange";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 import type { PlanStatus } from "../actions";
+import { canAccessCompanyPage, canManagePlans, canViewPlan, defaultDashboardPath } from "@/lib/auth/role-permissions";
+import { redirect } from "next/navigation";
 
 export default async function PlanDetailPage({
   params,
@@ -24,7 +26,7 @@ export default async function PlanDetailPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("company_id")
+    .select("company_id, role")
     .eq("id", user.id)
     .single();
 
@@ -35,6 +37,9 @@ export default async function PlanDetailPage({
         Компания не найдена. Обратитесь к администратору.
       </div>
     );
+  }
+  if (!canAccessCompanyPage(profile?.role ?? "", "/dashboard/plans")) {
+    redirect(defaultDashboardPath(profile?.role ?? ""));
   }
 
   // Batch 1: plan header + plan_materials with embedded materials join (parallel)
@@ -57,6 +62,7 @@ export default async function PlanDetailPage({
 
   if (planResult.error || !planResult.data) notFound();
   const plan = planResult.data;
+  if (!canViewPlan(profile?.role ?? "", user.id, plan.assigned_to)) notFound();
   const assignee = plan.profiles as unknown as { full_name: string } | null;
 
   const lastChange = await getLastChange("production_plans", plan.id);
@@ -120,5 +126,5 @@ export default async function PlanDetailPage({
     materials: rows,
   };
 
-  return <PlanDetailClient plan={detail} lastChange={lastChange} />;
+  return <PlanDetailClient plan={detail} lastChange={lastChange} canManage={canManagePlans(profile?.role ?? "")} />;
 }

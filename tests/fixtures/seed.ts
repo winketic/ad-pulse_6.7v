@@ -5,6 +5,8 @@ import {
   getServiceClient,
   assertTestCompany,
   E2E_COMPANY_NAME,
+  E2E_OTHER_COMPANY_ID,
+  E2E_OTHER_COMPANY_NAME,
 } from "./guards";
 
 // ─── Meta (written to tests/.auth/e2e-meta.json, gitignored) ─────────────
@@ -22,7 +24,13 @@ export type E2EMeta = {
     lintel: string; // Перемычка 2ПБ-13 (шт, с нормами)
   };
   counterparties: Record<CounterpartyKey, string>; // key → counterparties.id
+  // "Foreign" tenant for isolation tests — nobody logs in as it; tests only
+  // smuggle its ids into E2E_TEST's own server actions and expect a refusal.
+  other: { companyId: string; material: string; counterparty: string };
 };
+
+export const E2E_OTHER_MATERIAL_NAME = "Перемычка 2ПБ-13";
+export const E2E_OTHER_COUNTERPARTY_NAME = "E2E Чужой контрагент";
 
 // ─── Fixed identities for the test tenant ────────────────────────────────
 const DOMAIN = "e2e.adpulse.local";
@@ -227,7 +235,10 @@ export async function ensureE2E(): Promise<E2EMeta> {
   // 3b) Counterparty directory (pricing rows are synced by ensurePricing below)
   const counterparties = await ensureCounterparties(sb, companyId);
 
-  const meta: E2EMeta = { companyId, users, materials, counterparties };
+  // 3c) Foreign tenant E2E_OTHER (fixed id) with one product + one counterparty
+  const other = await ensureOtherTenant(sb, companyId);
+
+  const meta: E2EMeta = { companyId, users, materials, counterparties, other };
   await ensurePricing(meta);
 
   // 4) Plans (2 active) — created once, referencing the lintel product.
@@ -237,8 +248,8 @@ export async function ensureE2E(): Promise<E2EMeta> {
     .eq("company_id", companyId);
   if ((planCount ?? 0) === 0) {
     const plans = [
-      { name: "План E2E — Партия 2ПБ-13", planned: 500, start: isoDay(-5), end: isoDay(20) },
-      { name: "План E2E — Срочный заказ", planned: 200, start: isoDay(-2), end: isoDay(5) },
+      { name: "План E2E — Партия 2ПБ-13", planned: 500, start: isoDay(-5), end: isoDay(20), assigned_to: users.workshop.id },
+      { name: "План E2E — Срочный заказ", planned: 200, start: isoDay(-2), end: isoDay(5), assigned_to: users.manager.id },
     ];
     for (const p of plans) {
       const { data: plan, error } = await sb
@@ -251,6 +262,7 @@ export async function ensureE2E(): Promise<E2EMeta> {
           end_date: p.end,
           status: "active",
           created_by: users.admin.id,
+          assigned_to: p.assigned_to,
         })
         .select("id")
         .single();
@@ -262,6 +274,13 @@ export async function ensureE2E(): Promise<E2EMeta> {
       });
     }
   }
+
+  // Keep known test assignments deterministic when the tenant already had
+  // plans from an earlier seed run.
+  await sb.from("production_plans").update({ assigned_to: users.workshop.id })
+    .eq("company_id", companyId).eq("name", "План E2E — Партия 2ПБ-13");
+  await sb.from("production_plans").update({ assigned_to: users.manager.id })
+    .eq("company_id", companyId).eq("name", "План E2E — Срочный заказ");
 
   writeMeta(meta);
   return meta;
@@ -328,6 +347,78 @@ async function ensureCounterparties(
   if (delErr) throw new Error(`prune counterparties: ${delErr.message}`);
 
   return resolved;
+}
+
+/**
+ * Ensure the E2E_OTHER tenant exists under its pinned id, with one product and
+ * one counterparty. Refuses to adopt a company that merely shares the id or the
+ * name — either mismatch means something unexpected owns it, so we stop rather
+ * than write. Guard-checked against the exact allow-listed id.
+ */
+async function ensureOtherTenant(
+  sb: SupabaseClient,
+  e2eCompanyId: string,
+): Promise<E2EMeta["other"]> {
+  assertTestCompany(E2E_OTHER_COMPANY_ID, e2eCompanyId);
+
+  const { data: byId, error: idErr } = await sb
+    .from("companies")
+    .select("id, name")
+    .eq("id", E2E_OTHER_COMPANY_ID)
+    .maybeSingle();
+  if (idErr) throw new Error(`lookup E2E_OTHER: ${idErr.message}`);
+  if (byId && byId.name !== E2E_OTHER_COMPANY_NAME) {
+    throw new Error(`[GUARD] company ${E2E_OTHER_COMPANY_ID} exists as «${byId.name}», not E2E_OTHER`);
+  }
+  if (!byId) {
+    const { data: byName } = await sb
+      .from("companies")
+      .select("id")
+      .eq("name", E2E_OTHER_COMPANY_NAME)
+      .maybeSingle();
+    if (byName) {
+      throw new Error(`[GUARD] E2E_OTHER exists under a different id (${byName.id})`);
+    }
+    const { error } = await sb
+      .from("companies")
+      .insert({ id: E2E_OTHER_COMPANY_ID, name: E2E_OTHER_COMPANY_NAME });
+    if (error) throw new Error(`create E2E_OTHER: ${error.message}`);
+  }
+
+  const lintelDef = MATERIAL_DEFS.find((d) => d.key === "lintel");
+  const { data: foundMat } = await sb
+    .from("materials")
+    .select("id")
+    .eq("company_id", E2E_OTHER_COMPANY_ID)
+    .eq("name", E2E_OTHER_MATERIAL_NAME)
+    .maybeSingle();
+  let material = foundMat?.id as string | undefined;
+  if (!material) {
+    const { data, error } = await sb
+      .from("materials")
+      .insert({
+        company_id: E2E_OTHER_COMPANY_ID,
+        name: E2E_OTHER_MATERIAL_NAME,
+        unit: "шт",
+        ...(lintelDef?.extra ?? {}),
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(`create E2E_OTHER material: ${error.message}`);
+    material = data.id as string;
+  }
+
+  const { data: cp, error: cpErr } = await sb
+    .from("counterparties")
+    .upsert(
+      { company_id: E2E_OTHER_COMPANY_ID, name: E2E_OTHER_COUNTERPARTY_NAME },
+      { onConflict: "company_id,name" },
+    )
+    .select("id")
+    .single();
+  if (cpErr) throw new Error(`upsert E2E_OTHER counterparty: ${cpErr.message}`);
+
+  return { companyId: E2E_OTHER_COMPANY_ID, material, counterparty: cp.id as string };
 }
 
 /**

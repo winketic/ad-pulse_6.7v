@@ -3,8 +3,9 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendEmail } from "@/lib/email";
 import { sendTelegramMessage } from "@/lib/telegram/send";
+import { PLATFORM_OWNER_EMAIL } from "@/lib/auth/platform-owner";
+import { escapeHtml } from "@/lib/utils/escapeHtml";
 
-const ADMIN_EMAIL = "altai.dx@gmail.com";
 
 export async function submitRegistration(data: {
   company_name: string;
@@ -12,15 +13,24 @@ export async function submitRegistration(data: {
   email: string;
   phone: string;
 }) {
+  const companyName = typeof data?.company_name === "string" ? data.company_name.trim() : "";
+  const contactName = typeof data?.contact_name === "string" ? data.contact_name.trim() : "";
+  const email = typeof data?.email === "string" ? data.email.trim().toLowerCase() : "";
+  const phone = typeof data?.phone === "string" ? data.phone.trim() : "";
+  if (!companyName || companyName.length > 160) throw new Error("Укажите название компании (до 160 символов)");
+  if (!contactName || contactName.length > 120) throw new Error("Укажите имя контактного лица (до 120 символов)");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new Error("Укажите корректный email");
+  if (phone.length > 40) throw new Error("Телефон слишком длинный");
+
   const service = createServiceClient();
 
   const { data: reg, error } = await service
     .from("registrations")
     .insert({
-      company_name: data.company_name.trim(),
-      contact_name: data.contact_name.trim(),
-      email: data.email.trim().toLowerCase(),
-      phone: data.phone.trim() || null,
+      company_name: companyName,
+      contact_name: contactName,
+      email,
+      phone: phone || null,
     })
     .select("id")
     .single();
@@ -32,16 +42,16 @@ export async function submitRegistration(data: {
   await sendTelegramMessage(
     "1700146125",
     `🆕 Новая заявка!\n\n` +
-      `🏢 ${data.company_name}\n` +
-      `👤 ${data.contact_name}\n` +
-      `📧 ${data.email}\n` +
-      `📱 ${data.phone || "—"}\n\n` +
+      `🏢 ${escapeHtml(companyName)}\n` +
+      `👤 ${escapeHtml(contactName)}\n` +
+      `📧 ${escapeHtml(email)}\n` +
+      `📱 ${escapeHtml(phone || "—")}\n\n` +
       `<a href="${appUrl}/admin/registrations">👉 Открыть заявки</a>`
-  );
+  ).catch((e) => console.error("[submitRegistration] Telegram alert failed:", e));
 
   // Заявка уже сохранена и Telegram-алерт ушёл: сбой письма админу не должен
   // показывать клиенту ошибку — иначе он отправит заявку повторно.
-  await sendAdminEmail(data, appUrl, reg.id).catch((e) =>
+  await sendAdminEmail({ company_name: companyName, contact_name: contactName, email, phone }, appUrl, reg.id).catch((e) =>
     console.error("[submitRegistration] admin email failed:", e)
   );
 }
@@ -51,9 +61,13 @@ function sendAdminEmail(
   appUrl: string,
   registrationId: string,
 ): Promise<void> {
+  const company = escapeHtml(data.company_name);
+  const contact = escapeHtml(data.contact_name);
+  const email = escapeHtml(data.email);
+  const phone = escapeHtml(data.phone || "—");
   return sendEmail({
-    to: ADMIN_EMAIL,
-    subject: `Новая заявка — ${data.company_name}`,
+    to: PLATFORM_OWNER_EMAIL,
+    subject: `Новая заявка — ${data.company_name.replace(/[\r\n]/g, " ").slice(0, 120)}`,
     html: `<!DOCTYPE html>
 <html lang="ru">
 <head><meta charset="UTF-8"></head>
@@ -71,19 +85,19 @@ function sendAdminEmail(
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
         <span style="font-size:13px;color:#9ca3af;">Компания</span><br>
-        <span style="font-size:15px;font-weight:600;color:#111827;">${data.company_name}</span>
+        <span style="font-size:15px;font-weight:600;color:#111827;">${company}</span>
       </td></tr>
       <tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
         <span style="font-size:13px;color:#9ca3af;">Контактное лицо</span><br>
-        <span style="font-size:15px;color:#111827;">${data.contact_name}</span>
+        <span style="font-size:15px;color:#111827;">${contact}</span>
       </td></tr>
       <tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
         <span style="font-size:13px;color:#9ca3af;">Email</span><br>
-        <span style="font-size:15px;color:#111827;">${data.email}</span>
+        <span style="font-size:15px;color:#111827;">${email}</span>
       </td></tr>
       <tr><td style="padding:10px 0;">
         <span style="font-size:13px;color:#9ca3af;">Телефон</span><br>
-        <span style="font-size:15px;color:#111827;">${data.phone || "—"}</span>
+        <span style="font-size:15px;color:#111827;">${phone}</span>
       </td></tr>
     </table>
     <div style="margin-top:32px;text-align:center;">

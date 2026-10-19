@@ -15,10 +15,12 @@ import {
   MessageCircle,
   MoreVertical,
   Factory,
+  Building2,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Logo } from "@/components/Logo";
 import OnboardingTour from "@/components/OnboardingTour";
+import { canAccessCompanyPage } from "@/lib/auth/role-permissions";
 
 const NAV_ITEMS = [
   { href: "/dashboard",              label: "Обзор",      Icon: LayoutDashboard, tourId: "tour-nav-overview"     },
@@ -107,6 +109,8 @@ interface DashboardShellProps {
   userName: string;
   whatsappBadge?: number;
   avatarUrl?: string | null;
+  role?: string;
+  isPlatformOwner?: boolean;
 }
 
 export default function DashboardShell({
@@ -114,6 +118,8 @@ export default function DashboardShell({
   userName,
   whatsappBadge = 0,
   avatarUrl,
+  role = "warehouse",
+  isPlatformOwner = false,
 }: DashboardShellProps) {
   const pathname = usePathname();
   const router   = useRouter();
@@ -157,6 +163,18 @@ export default function DashboardShell({
     href === "/dashboard" ? pathname === href : pathname.startsWith(href);
 
   const initials = userName.charAt(0).toUpperCase();
+  const isCompanyAdmin = role === "admin" || role === "manager";
+  const desktopTabs = DESKTOP_TABS.filter((item) =>
+    item.href !== "/dashboard" && !canAccessCompanyPage(role, item.href)
+      ? false
+      : item.href !== "/dashboard" || isCompanyAdmin,
+  );
+  const userMenuItems = USER_MENU_ITEMS.filter((item) => canAccessCompanyPage(role, item.href));
+  const mobileLeft = isCompanyAdmin ? MOBILE_NAV_LEFT : [role === "warehouse" ? NAV_ITEMS[2] : NAV_ITEMS[4]];
+  const mobileRight = isCompanyAdmin ? MOBILE_NAV_RIGHT : [NAV_ITEMS[3]];
+  const moreItems = MORE_ITEMS.filter((item) => canAccessCompanyPage(role, item.href));
+  const primaryHref = isCompanyAdmin ? FAB_HREF : "/dashboard/transactions";
+  const PrimaryIcon = isCompanyAdmin ? Factory : ArrowLeftRight;
 
   return (
     <div className="flex flex-col h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
@@ -173,7 +191,7 @@ export default function DashboardShell({
 
         {/* Tabs — full-height with bottom indicator */}
         <nav className="flex items-stretch h-full">
-          {DESKTOP_TABS.map((item) => {
+          {desktopTabs.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
@@ -205,15 +223,15 @@ export default function DashboardShell({
 
         {/* Primary action */}
         <Link
-          href="/dashboard/produce"
+          href={primaryHref}
           prefetch
           className="flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-sm font-semibold transition-colors duration-150 mr-3"
           style={{ background: "var(--accent)", color: "var(--accent-text)" }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--accent-hover)"; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--accent)"; }}
         >
-          <Factory size={15} strokeWidth={2.2} />
-          Выпуск
+          <PrimaryIcon size={15} strokeWidth={2.2} />
+          {isCompanyAdmin ? "Выпуск" : "Движение"}
         </Link>
 
         {/* User menu */}
@@ -253,7 +271,7 @@ export default function DashboardShell({
               }}
               role="menu"
             >
-              {USER_MENU_ITEMS.map((item) => {
+              {userMenuItems.map((item) => {
                 const badge = item.href === "/dashboard/whatsapp" && whatsappBadge > 0 ? whatsappBadge : 0;
                 return (
                   <Link
@@ -276,6 +294,11 @@ export default function DashboardShell({
                   </Link>
                 );
               })}
+              {isPlatformOwner && (
+                <Link href="/admin/platform" role="menuitem" className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-[var(--text)] hover:bg-[var(--bg3)]">
+                  <Building2 size={16} className="text-[var(--accent)]" />Платформа
+                </Link>
+              )}
               <div className="my-1.5" style={{ borderTop: "1px solid var(--border)" }} />
               <button
                 onClick={handleLogout}
@@ -350,7 +373,7 @@ export default function DashboardShell({
 
               {/* Links */}
               <nav className="px-4 pb-5 pt-2 space-y-1">
-                {MORE_ITEMS.map(({ href, label, Icon }) => {
+                {moreItems.map(({ href, label, Icon }) => {
                   const active = isActive(href);
                   return (
                     <Link
@@ -371,6 +394,11 @@ export default function DashboardShell({
                     </Link>
                   );
                 })}
+                {isPlatformOwner && (
+                  <Link href="/admin/platform" className="flex items-center gap-3.5 rounded-xl px-3 py-3 text-sm font-medium text-[var(--text)]">
+                    <Building2 size={20} className="text-[var(--accent)]" />Платформа
+                  </Link>
+                )}
               </nav>
             </div>
           </>
@@ -404,16 +432,16 @@ export default function DashboardShell({
         }}
       >
         <div className="flex items-stretch min-h-[72px] px-1">
-          {MOBILE_NAV_LEFT.map((item) => (
+          {mobileLeft.map((item) => (
             <NavTab key={item.href} item={item} active={isActive(item.href)} />
           ))}
 
           {/* Center FAB — primary action: production entry */}
           <div className="flex-1 relative flex justify-center">
             <Link
-              href={FAB_HREF}
+              href={primaryHref}
               prefetch
-              aria-label="Записать выпуск"
+              aria-label={isCompanyAdmin ? "Записать выпуск" : "Открыть движение"}
               className="absolute -top-5 w-16 h-16 rounded-full flex items-center justify-center tap-scale"
               style={{
                 background: "var(--accent)",
@@ -424,20 +452,20 @@ export default function DashboardShell({
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              <Factory className="w-7 h-7" strokeWidth={2.2} />
+              <PrimaryIcon className="w-7 h-7" strokeWidth={2.2} />
             </Link>
             <span
               className="self-end pb-2 text-[11px] leading-none"
               style={{
-                color: isActive(FAB_HREF) ? "var(--accent)" : "var(--muted)",
-                fontWeight: isActive(FAB_HREF) ? 700 : 500,
+                color: isActive(primaryHref) ? "var(--accent)" : "var(--muted)",
+                fontWeight: isActive(primaryHref) ? 700 : 500,
               }}
             >
-              Выпуск
+              {isCompanyAdmin ? "Выпуск" : "Движение"}
             </span>
           </div>
 
-          {MOBILE_NAV_RIGHT.map((item) => (
+          {mobileRight.map((item) => (
             <NavTab key={item.href} item={item} active={isActive(item.href)} />
           ))}
         </div>

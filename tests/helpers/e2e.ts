@@ -79,6 +79,23 @@ export async function txCount(type?: string): Promise<number> {
   return count ?? 0;
 }
 
+/**
+ * All transactions (deleted included) of an arbitrary test tenant — used to
+ * prove nothing leaked into E2E_OTHER. Read-only; guard still pins the id to
+ * a known test company.
+ */
+export async function txCountForCompany(companyId: string): Promise<number> {
+  const m = meta();
+  assertTestCompany(companyId, m.companyId);
+  const sb = getServiceClient();
+  const { count, error } = await sb
+    .from("material_transactions")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", companyId);
+  if (error) throw new Error(`txCountForCompany: ${error.message}`);
+  return count ?? 0;
+}
+
 // ─── Движение modal UI helpers ───────────────────────────────────────────
 
 /**
