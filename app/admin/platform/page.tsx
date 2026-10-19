@@ -1,27 +1,16 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { Building2, CalendarClock, ChevronRight, CircleCheck, Clock3, Users } from "lucide-react";
+import { ArrowLeft, Building2, CalendarClock, ChevronRight, CircleCheck } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isPlatformOwnerEmail } from "@/lib/auth/platform-owner";
+import PlatformCompaniesClient from "./PlatformCompaniesClient";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type CompanyRow = { id: string; name: string; created_at: string };
-
-function formatLastSeen(value: string | null) {
-  if (!value) return "Пока не входили";
-  return new Date(value).toLocaleString("ru-RU", {
-    timeZone: "Europe/Moscow",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export default async function PlatformOverviewPage() {
   const cookieStore = await cookies();
@@ -71,18 +60,26 @@ export default async function PlatformOverviewPage() {
   const pendingCount = (registrationsResult.data ?? []).filter((registration) => registration.status === "pending").length;
 
   return (
-    <div className="min-h-full px-4 py-6 sm:px-6 lg:px-8" style={{ background: "var(--bg)" }}>
+    <div className="min-h-full px-4 py-6 sm:px-6 sm:py-8 lg:px-8" style={{ background: "var(--bg)" }}>
       <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">AD Pulse · платформа</p>
-            <h1 className="text-2xl font-bold text-[var(--text)] sm:text-3xl">Обзор компаний</h1>
-            <p className="mt-1 text-sm text-[var(--muted)]">Сводка активности за последние 7 дней. Данные учёта компаний здесь не отображаются.</p>
+        <div className="mb-6 border-b border-[var(--border)] pb-5">
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <Link href="/dashboard" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-sm font-medium text-[var(--muted)] transition-colors hover:border-[var(--accent)]/40 hover:text-[var(--text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]">
+              <ArrowLeft size={16} /> В приложение
+            </Link>
+            <span className="rounded-full border border-[var(--accent)]/20 bg-[var(--accent-15)] px-3 py-1.5 text-xs font-semibold text-[var(--accent)]">Панель владельца</span>
           </div>
-          <Link href="/admin/registrations" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-text)] hover:opacity-90">
-            Заявки {pendingCount > 0 && <span className="rounded-full bg-black/10 px-2 py-0.5">{pendingCount}</span>}
-            <ChevronRight size={16} />
-          </Link>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">AD Pulse · платформа</p>
+              <h1 className="text-2xl font-bold tracking-tight text-[var(--text)] sm:text-3xl">Обзор компаний</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">Смотрите, какие компании пользуются платформой. Данные об их материалах, операциях и производстве здесь не показываются.</p>
+            </div>
+            <Link href="/admin/registrations" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-text)] shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">
+              Заявки {pendingCount > 0 && <span className="rounded-full bg-black/10 px-2 py-0.5 tabular-nums">{pendingCount}</span>}
+              <ChevronRight size={16} />
+            </Link>
+          </div>
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -92,28 +89,13 @@ export default async function PlatformOverviewPage() {
         </div>
 
         {companies.length === 0 ? (
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] px-6 py-16 text-center text-sm text-[var(--muted)]">Компаний пока нет</div>
-        ) : (
-          <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)]">
-            <div className="hidden grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto] gap-4 border-b border-[var(--border)] px-5 py-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)] md:grid">
-              <span>Компания</span><span>Последний вход</span><span>Команда</span><span>Статус</span>
-            </div>
-            <ul className="divide-y divide-[var(--border)]">
-              {companies.map((company) => (
-                <li key={company.id} className="grid gap-3 px-4 py-4 sm:px-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-center md:gap-4">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-15)] text-[var(--accent)]"><Building2 size={18} /></span>
-                    <div className="min-w-0"><p className="truncate text-sm font-semibold text-[var(--text)]">{company.name}</p><p className="text-xs text-[var(--muted)]">Подключена {formatLastSeen(company.created_at).split(",")[0]}</p></div>
-                  </div>
-                  <p className="flex items-center gap-2 text-sm text-[var(--muted)]"><Clock3 size={15} className="shrink-0" />{formatLastSeen(company.lastSeen)}</p>
-                  <p className="flex items-center gap-2 text-sm text-[var(--muted)]"><Users size={15} className="shrink-0" />{company.users} сотрудников</p>
-                  <span className={`inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-xs font-medium ${company.activeThisWeek ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" : "border-amber-500/20 bg-amber-500/10 text-amber-300"}`}>
-                    {company.activeThisWeek ? "Активна за 7 дней" : "Не заходили 7 дней"}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--card)] px-6 py-16 text-center">
+            <Building2 size={26} className="mx-auto mb-3 text-[var(--muted)]" />
+            <p className="font-medium text-[var(--text)]">Компаний пока нет</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">После одобрения первой заявки компания появится здесь.</p>
           </div>
+        ) : (
+          <PlatformCompaniesClient companies={companies} />
         )}
       </div>
     </div>
@@ -121,9 +103,9 @@ export default async function PlatformOverviewPage() {
 }
 
 function SummaryCard({ icon, label, value, href }: { icon: React.ReactNode; label: string; value: number; href?: string }) {
-  const content = <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 sm:p-5">
+  const content = <div className="h-full rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 transition-colors sm:p-5">
     <div className="mb-3 flex items-center gap-2 text-[var(--muted)]"><span className="text-[var(--accent)]">{icon}</span><span className="text-sm">{label}</span></div>
     <p className="text-3xl font-bold tabular-nums text-[var(--text)]">{value}</p>
   </div>;
-  return href ? <Link href={href} className="rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]">{content}</Link> : content;
+  return href ? <Link href={href} className="rounded-2xl hover:[&>div]:border-[var(--accent)]/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)]">{content}</Link> : content;
 }
