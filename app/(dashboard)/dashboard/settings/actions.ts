@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { createInviteAndSendEmail } from "@/lib/supabase/inviteHelper";
+import { findAuthUserByEmail } from "@/lib/supabase/inviteHelper";
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -107,7 +109,8 @@ export async function saveAvatarUrl(avatarUrl: string) {
   const supabase = createClient(cookieStore);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Не авторизован");
-  await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
+  const { error } = await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
+  if (error) throw new Error(error.message);
   revalidatePath("/dashboard/settings");
 }
 
@@ -116,7 +119,8 @@ export async function saveBannerColor(bannerColor: string) {
   const supabase = createClient(cookieStore);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Не авторизован");
-  await supabase.from("profiles").update({ banner_color: bannerColor }).eq("id", user.id);
+  const { error } = await supabase.from("profiles").update({ banner_color: bannerColor }).eq("id", user.id);
+  if (error) throw new Error(error.message);
   revalidatePath("/dashboard/settings");
 }
 
@@ -164,17 +168,22 @@ export async function listCompanyUsers(): Promise<UserRow[]> {
 
     if (profilesError) {
       console.error("[listCompanyUsers] profiles error:", profilesError.message);
-      return [];
+      throw profilesError;
     }
     if (!profiles?.length) return [];
 
     // Fetch emails from auth.users via service role admin API
-    let emailMap = new Map<string, string>();
-    try {
-      const { data: authUsers } = await service.auth.admin.listUsers({ perPage: 1000 });
-      emailMap = new Map((authUsers?.users ?? []).map((u) => [u.id, u.email ?? ""]));
-    } catch (e) {
-      console.error("[listCompanyUsers] auth.admin.listUsers error:", e);
+    const emailMap = new Map<string, string>();
+    for (let page = 1; ; page += 1) {
+      const { data: authUsers, error } = await service.auth.admin.listUsers({ page, perPage: 1000 });
+      if (error) throw error;
+      const users = authUsers.users ?? [];
+      for (const authUser of users) {
+        if (profiles.some((profile) => profile.id === authUser.id)) {
+          emailMap.set(authUser.id, authUser.email ?? "");
+        }
+      }
+      if (users.length < 1000) break;
     }
 
     return profiles.map((p) => ({
@@ -188,13 +197,14 @@ export async function listCompanyUsers(): Promise<UserRow[]> {
     }));
   } catch (e) {
     console.error("[listCompanyUsers] unexpected error:", e);
-    return [];
+    throw new Error("Не удалось загрузить список пользователей. Попробуйте обновить страницу.");
   }
 }
 
 export async function updateUserRole(userId: string, role: string) {
   const { companyId, role: myRole, userId: myId } = await getAdminContext();
   if (myRole !== "admin") throw new Error("Только администратор может менять роли");
+  if (!["admin", "manager", "warehouse", "workshop"].includes(role)) throw new Error("Неизвестная роль");
   if (userId === myId) throw new Error("Нельзя изменить собственную роль");
 
   const service = createServiceClient();
@@ -211,7 +221,8 @@ export async function updateUserRole(userId: string, role: string) {
   const { error } = await service
     .from("profiles")
     .update({ role })
-    .eq("id", userId);
+    .eq("id", userId)
+    .eq("company_id", companyId);
 
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/settings");
@@ -258,58 +269,42 @@ export async function inviteUserByEmail(
   try {
     const { companyId, role: myRole } = await getAdminContext();
     if (myRole !== "admin") return { error: "Только администратор может добавлять пользователей" };
+    if (!["admin", "manager", "warehouse", "workshop"].includes(role)) return { error: "Неизвестная роль" };
 
     const service = createServiceClient();
     const cleanEmail = email.trim().toLowerCase();
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://ad-pulse-eight.vercel.app").replace(/\/$/, "");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || cleanEmail.length > 254) return { error: "Укажите корректный email" };
 
-    // Invite user via Supabase mailer
-    const { data: inviteData, error: inviteError } = await service.auth.admin.inviteUserByEmail(
-      cleanEmail,
-      { redirectTo: `${appUrl}/auth/confirm?next=/invite` }
-    );
-
-    let userId: string;
-
-    if (inviteError) {
-      const alreadyExists =
-        inviteError.message.toLowerCase().includes("already registered") ||
-        inviteError.message.toLowerCase().includes("already in use") ||
-        inviteError.message.toLowerCase().includes("already exists") ||
-        inviteError.status === 422;
-
-      if (!alreadyExists) {
-        return { error: `Ошибка приглашения: ${inviteError.message}` };
+    const existingUser = await findAuthUserByEmail(service, cleanEmail);
+    if (existingUser) {
+      const { data: existingProfile, error } = await service
+        .from("profiles")
+        .select("company_id")
+        .eq("id", existingUser.id)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (existingProfile?.company_id) {
+        return { error: existingProfile.company_id === companyId ? "Пользователь уже состоит в вашей компании" : "Пользователь уже состоит в другой компании" };
       }
-
-      const { data: authList } = await service.auth.admin.listUsers({ perPage: 1000 });
-      const found = (authList?.users ?? []).find((u) => u.email?.toLowerCase() === cleanEmail);
-      if (!found) return { error: "Пользователь не найден. Попробуйте ещё раз." };
-      userId = found.id;
-    } else {
-      if (!inviteData?.user) return { error: "Ошибка создания пользователя" };
-      userId = inviteData.user.id;
     }
+
+    // Приглашение шлём через Resend, а НЕ через встроенную почту Supabase:
+    // встроенная доставляет только участникам проекта Supabase и режется
+    // лимитом в пару писем в час, поэтому приглашения обычным людям просто
+    // исчезали — без письма и без ошибки в логах.
+    const { userId, emailSent } = await createInviteAndSendEmail(cleanEmail);
 
     // Guard: don't steal from another company
-    const { data: existingProfile } = await service
-      .from("profiles")
-      .select("company_id")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (existingProfile?.company_id && existingProfile.company_id !== companyId) {
-      return { error: "Пользователь уже состоит в другой компании" };
-    }
-
-    const { error: profileError } = await service.from("profiles").upsert(
+    const { error: profileError } = await service.from("profiles").insert(
       { id: userId, company_id: companyId, role, full_name: cleanEmail },
-      { onConflict: "id" }
     );
 
     if (profileError) return { error: profileError.message };
     revalidatePath("/dashboard/settings");
-    return { ok: true, emailSent: true };
+    // Отдаём ФАКТ отправки, а не константу: интерфейс умеет показать
+    // «письмо не отправлено — отправьте ссылку вручную», и эта ветка
+    // до сих пор была мёртвой.
+    return { ok: true, emailSent };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Неизвестная ошибка" };
   }

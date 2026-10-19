@@ -361,7 +361,7 @@ export default function ProfileCard({
 
         {/* Banner color swatches — hidden when gradient banner is active */}
         {!displayBanner.includes("gradient") && (
-          <div className="flex items-center gap-1.5 pb-1">
+          <div className="flex flex-wrap items-center gap-1.5 pb-1">
             {BANNER_COLORS.map((color) => (
               <button
                 key={color}

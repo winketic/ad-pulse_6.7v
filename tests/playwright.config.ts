@@ -61,6 +61,11 @@ export default defineConfig({
     {
       name: "e2e",
       testMatch: E2E_MATCH,
+      // Every e2e file writes the same E2E_TEST tenant and resets it in
+      // beforeEach — two files in parallel would wipe each other's rows
+      // mid-test. One worker = files run one after another. Device projects
+      // keep the global worker pool.
+      workers: 1,
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1440, height: 900 },

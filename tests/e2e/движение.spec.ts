@@ -8,7 +8,12 @@ import {
   txForm,
   roleState,
 } from "../helpers/e2e";
-import { resetTransactions, type E2EMeta } from "../fixtures/seed";
+import {
+  resetTransactions,
+  LINTEL_NORM_CONCRETE,
+  E2E_COUNTERPARTIES,
+  type E2EMeta,
+} from "../fixtures/seed";
 
 // Writes into E2E_TEST only — serialize so tests never race each other's
 // balances, and reset to the known baseline before each one.
@@ -34,7 +39,7 @@ async function addRegular(
     materialId: string;
     qty: number | string;
     price?: number;
-    counterparty?: string;
+    counterpartyId?: string; // E2E_TEST has a counterparty directory → <select>
     defectReason?: string;
     note?: string;
   },
@@ -46,7 +51,7 @@ async function addRegular(
   await f.quantity.fill(String(o.qty));
   if (o.defectReason) await f.defectReason.fill(o.defectReason);
   if (o.note) await f.note.fill(o.note);
-  if (o.counterparty) await f.counterparty.fill(o.counterparty);
+  if (o.counterpartyId) await f.counterpartyRef.selectOption(o.counterpartyId);
   if (o.price != null) await f.price.fill(String(o.price));
   await f.submit.click();
 }
@@ -161,28 +166,75 @@ test("валидация: количество выше максимума по�
   await expect(f.submit).toBeDisabled();
 });
 
-// Bug #1 guard (migration 039): производство сверх остатка сырья не должно
-// уводить остаток в минус. Клиент заранее предупреждает (мягко), сервер —
-// авторитетно отклоняет с понятным текстом и НИЧЕГО не пишет.
-test("производство сверх остатка блокируется, минус не проходит", async ({ page }) => {
+// Контракт мягкого гарда (миграция 041, заменила отброшенную 039):
+//   · сырья > 0  → выпуск ЗАПИСЫВАЕТСЯ, даже если остаток уходит в минус;
+//   · сырья ≤ 0  → выпуск отклоняется, списывать нечего.
+//
+// Жёсткий блок 039 был отброшен осознанно: на заводе бетон льют днём, а приход
+// вносят вечером, и жёсткий блок мешал бы записать реальный выпуск. Прежняя
+// версия этого теста проверяла именно 039 — поведение, от которого отказались.
+test("производство в минус записывается: сырья ещё есть (мягкий гард)", async ({ page }) => {
   await gotoTx(page);
   const concreteBefore = await balanceOf(M.materials.concrete); // 94 из baseline
+  expect(concreteBefore, "baseline: бетона должно быть > 0").toBeGreaterThan(0);
+
+  // Столько, чтобы гарантированно уйти в минус по бетону.
+  const qty = Math.ceil((concreteBefore / LINTEL_NORM_CONCRETE) * 2);
+
   await openTxModal(page);
   const f = txForm(page);
   await f.type.selectOption("production");
   await f.material.selectOption(M.materials.lintel);
-  await f.quantity.fill("100000"); // нужно 1300 бетона, есть 94
+  await f.quantity.fill(String(qty));
 
-  // Мягкое клиентское предупреждение в превью (сохранить всё равно можно)
+  // Клиент предупреждает, но сохранить разрешает — в этом и смысл «мягко».
   await expect(page.getByText(/Не хватит бетона/)).toBeVisible();
+  await expect(f.submit).toBeEnabled();
 
-  // Сервер отклоняет с понятной ошибкой (не техно-крэш)
   await f.submit.click();
-  await expect(page.getByText(/Недостаточно бетона: нужно .* есть/)).toBeVisible();
 
-  // Остаток не ушёл в минус — записей не создано
-  await expect.poll(() => balanceOf(M.materials.concrete)).toBe(concreteBefore);
-  expect(await balanceOf(M.materials.concrete)).toBeGreaterThanOrEqual(0);
+  // Выпуск записан, бетон ушёл в минус ровно по нормам.
+  const expected = concreteBefore - qty * LINTEL_NORM_CONCRETE;
+  await expect.poll(() => balanceOf(M.materials.concrete)).toBeCloseTo(expected, 3);
+  expect(await balanceOf(M.materials.concrete)).toBeLessThan(0);
+});
+
+// Вторая половина контракта 041: когда сырья уже ≤ 0, выпуск не проходит.
+//
+// На практике до серверного отказа интерфейс не доходит: форма сама гасит
+// кнопку и пишет «Нет остатка сырья». Проверяем именно это — то, что увидит
+// мастер. Серверный гард (041, применён 06.10.2026) остаётся вторым рубежом
+// на случай прямого вызова экшена в обход формы, и из UI недостижим.
+test("производство при нулевом сырье не отправляется", async ({ page }) => {
+  await gotoTx(page);
+  const concreteBefore = await balanceOf(M.materials.concrete);
+
+  // Шаг 1: уводим бетон в минус — это разрешено (мягкий гард).
+  const drain = Math.ceil((concreteBefore / LINTEL_NORM_CONCRETE) * 2);
+  await openTxModal(page);
+  const f1 = txForm(page);
+  await f1.type.selectOption("production");
+  await f1.material.selectOption(M.materials.lintel);
+  await f1.quantity.fill(String(drain));
+  await f1.submit.click();
+  await expect
+    .poll(() => balanceOf(M.materials.concrete), { timeout: 20_000 })
+    .toBeLessThan(0);
+
+  // Шаг 2: сырья ≤ 0 — форма обязана остановить на входе.
+  const afterDrain = await balanceOf(M.materials.concrete);
+  await gotoTx(page);
+  await openTxModal(page);
+  const f2 = txForm(page);
+  await f2.type.selectOption("production");
+  await f2.material.selectOption(M.materials.lintel);
+  await f2.quantity.fill("1");
+
+  await expect(page.getByText(/Нет остатка сырья/)).toBeVisible();
+  await expect(f2.submit).toBeDisabled();
+
+  // И ничего не записано: остаток не сдвинулся.
+  expect(await balanceOf(M.materials.concrete)).toBe(afterDrain);
 });
 
 // ─── kg → m conversion ───────────────────────────────────────────────────
@@ -235,17 +287,22 @@ test("цена: живой итог, подсказка последней це�
 
 // ─── Counterparty ────────────────────────────────────────────────────────
 
-test("контрагент сохраняется и виден в списке", async ({ page }) => {
+// The seed fills E2E_TEST's directory, so the form offers a <select> instead of
+// free text. The text fallback (empty directory) is no longer e2e-covered — by
+// decision; a buildTxInput unit test replaces it in task 2.
+test("контрагент из справочника сохраняется и виден в списке", async ({ page }) => {
   await gotoTx(page);
   await addRegular(page, {
     type: "income",
     materialId: M.materials.concrete,
     qty: 6,
-    counterparty: "ООО Ромашка",
+    counterpartyId: M.counterparties.a,
   });
   await expect.poll(async () => (await latestTx(M.materials.concrete, "income"))?.counterparty)
-    .toBe("ООО Ромашка");
-  await expect(page.getByRole("cell", { name: "ООО Ромашка" })).toBeVisible();
+    .toBe(E2E_COUNTERPARTIES.a);
+  const tx = await latestTx(M.materials.concrete, "income");
+  expect(tx?.counterparty_id).toBe(M.counterparties.a);
+  await expect(page.getByRole("cell", { name: E2E_COUNTERPARTIES.a })).toBeVisible();
 });
 
 // ─── Delete + roles ──────────────────────────────────────────────────────
@@ -344,14 +401,16 @@ test.describe("мобильный разворот строки", () => {
       type: "income",
       materialId: M.materials.concrete,
       qty: 8,
-      counterparty: "ООО Тест-Разворот",
+      counterpartyId: M.counterparties.b,
     });
     // Mobile compact list: tap the specific +8 row to expand
     await page.getByRole("button").filter({ hasText: "+8" }).first().click();
     // The counterparty label + value live together in the mobile detail <p>;
     // the (display:none) desktop table also holds the bare value, so match the
     // combined "Контрагент: …" text to stay unambiguous.
-    await expect(page.getByText(/Контрагент:\s*ООО Тест-Разворот/)).toBeVisible();
+    await expect(
+      page.getByText(new RegExp(`Контрагент:\\s*${E2E_COUNTERPARTIES.b}`)),
+    ).toBeVisible();
   });
 });
 

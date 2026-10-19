@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { sendTelegramAlert } from "@/lib/telegram/send";
+import { canCreateTransaction, canManagePlans } from "@/lib/auth/role-permissions";
 
 export type TxType = "income" | "expense" | "return" | "defect";
 
@@ -15,6 +16,10 @@ export type TransactionInput = {
   transaction_date: string;
   counterparty?: string | null;
   unit_price?: number | null;
+  // Фаза 6: индекс нагрузки — атрибут ОТГРУЗКИ (только type='expense'),
+  // и ссылка на справочник контрагентов. Обе колонки появляются в миграции 042.
+  load_index?: string | null;
+  counterparty_id?: string | null;
 };
 
 async function getSupabaseAndUser() {
@@ -79,10 +84,13 @@ export type ProductionTransactionInput = {
 // product + expense of concrete/rebar by its norms. See migration
 // 023_create_production_transaction.sql.
 export async function createProductionTransaction(input: ProductionTransactionInput) {
-  const { supabase } = await getSupabaseAndUser();
+  const { supabase, company_id, role } = await getSupabaseAndUser();
 
-  if (input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
+  if (!canManagePlans(role)) throw new Error("Нет прав для записи выпуска");
+
+  if (!Number.isFinite(input.quantity) || input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
   if (input.quantity > 999999999) throw new Error("Количество превышает максимально допустимое значение");
+  await assertWholeUnitQuantity(supabase, company_id, input.material_id, input.quantity);
 
   const { error } = await supabase.rpc("create_production_transaction", {
     p_product_material_id: input.material_id,
@@ -96,11 +104,72 @@ export async function createProductionTransaction(input: ProductionTransactionIn
   revalidatePath("/dashboard");
 }
 
-export async function createTransaction(input: TransactionInput) {
-  const { supabase, user, company_id } = await getSupabaseAndUser();
+/**
+ * Штучные позиции не бывают дробными. Клиент это уже проверяет, но форма —
+ * не граница доверия: та же RPC и те же экшены доступны напрямую. У СаттиГрупп
+ * дробь уже просочилась — остаток 11.5 шт по 1ПБ10-1.
+ *
+ * Для материалов с kg_per_meter (Арматура) проверки нет: там вводят килограммы,
+ * а хранят метры, и дробное значение штатно.
+ */
+type ServerSupabase = Awaited<ReturnType<typeof import("@/utils/supabase/server").createClient>>;
 
-  if (input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
+async function assertWholeUnitQuantity(
+  supabase: ServerSupabase,
+  companyId: string,
+  materialId: string,
+  quantity: number,
+) {
+  // company_id в фильтре явно: RLS — второй уровень защиты, не единственный.
+  // Чужой или несуществующий материал отклоняем, а не пропускаем молча.
+  const { data: material, error } = await supabase
+    .from("materials")
+    .select("*")
+    .eq("id", materialId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (error) throw new Error(`DB error: ${error.message}`);
+  if (!material) throw new Error("Материал не найден");
+  const raw = material as Record<string, unknown>;
+  const kgPerMeter = raw.kg_per_meter != null ? Number(raw.kg_per_meter) : null;
+  const unit = String(raw.unit ?? "").toLowerCase();
+  if (unit === "шт" && !(kgPerMeter && kgPerMeter > 0) && !Number.isInteger(quantity)) {
+    throw new Error(
+      `Количество в штуках должно быть целым: получено ${quantity} для «${String(raw.name ?? "")}»`,
+    );
+  }
+}
+
+// FK counterparty_id не проверяет принадлежность компании, а экшен вызывается
+// с произвольным телом — проверяем, что контрагент свой.
+async function assertOwnCounterparty(
+  supabase: ServerSupabase,
+  companyId: string,
+  counterpartyId: string,
+) {
+  const { data, error } = await supabase
+    .from("counterparties")
+    .select("id")
+    .eq("id", counterpartyId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (error) throw new Error(`DB error: ${error.message}`);
+  if (!data) throw new Error("Контрагент не найден");
+}
+
+export async function createTransaction(input: TransactionInput) {
+  const { supabase, user, company_id, role } = await getSupabaseAndUser();
+
+  const validTypes: TxType[] = ["income", "expense", "return", "defect"];
+  if (!validTypes.includes(input.type)) throw new Error("Неизвестный тип операции");
+  if (!canCreateTransaction(role, input.type)) throw new Error("Нет прав для этого типа операции");
+
+  if (!Number.isFinite(input.quantity) || input.quantity <= 0) throw new Error("Количество должно быть больше нуля");
   if (input.quantity > 999999999) throw new Error("Количество превышает максимально допустимое значение");
+  await assertWholeUnitQuantity(supabase, company_id, input.material_id, input.quantity);
+  if (input.counterparty_id != null) {
+    await assertOwnCounterparty(supabase, company_id, input.counterparty_id);
+  }
 
   // unit_price only included when provided, so inserts still work in the
   // window before migration 038 is applied (an unknown column would error).
@@ -115,6 +184,13 @@ export async function createTransaction(input: TransactionInput) {
     created_by: user.id,
   };
   if (input.unit_price != null) insertRow.unit_price = input.unit_price;
+  // Так же условно, чтобы INSERT работал в окне до применения миграции 042:
+  // неизвестная колонка уронила бы весь запрос. Индекс нагрузки допустим
+  // только на расходе — это же требует CHECK-констрейнт в 042.
+  if (input.load_index != null && input.type === "expense") {
+    insertRow.load_index = input.load_index;
+  }
+  if (input.counterparty_id != null) insertRow.counterparty_id = input.counterparty_id;
 
   const { error } = await supabase.from("material_transactions").insert(insertRow);
 
@@ -144,6 +220,7 @@ async function fireAlerts({
     .from("materials")
     .select("name, unit")
     .eq("id", input.material_id)
+    .eq("company_id", company_id)
     .single();
 
   if (materialError) throw new Error(`DB error: ${materialError.message}`);

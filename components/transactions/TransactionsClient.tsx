@@ -16,6 +16,12 @@ import {
   deleteTransaction,
   type TxType,
 } from "@/app/(dashboard)/dashboard/transactions/actions";
+import {
+  buildTxInput,
+  type Counterparty,
+  type Material,
+  type FormState,
+} from "@/components/transactions/buildTxInput";
 import { formatQuantity } from "@/lib/utils/format";
 import { isNetworkError, savePending, clearPending } from "@/lib/hooks/useOfflineRetry";
 import { useToast } from "@/components/ui/Toast";
@@ -26,54 +32,11 @@ type PendingTx = { form: FormState; type: "regular" | "production" };
 
 const TX_PENDING_KEY = "tx_form";
 
-// Builds the final payload for createTransaction from raw form state.
-// Applies the kg→m conversion when the material has kg_per_meter set:
-// the user typed kilograms, we store meters and keep the entered kg in
-// the note for traceability. Single source of truth — used by both the
-// submit path and the offline-retry path.
-function buildTxInput(
-  form: FormState,
-  materials: Material[]
-): { type: TxType; material_id: string; quantity: number; note: string | null; counterparty: string | null; transaction_date: string; unit_price: number | null } {
-  const noteBase =
-    form.type === "defect"
-      ? form.defect_reason.trim() +
-        (form.note.trim() ? `\n\n${form.note.trim()}` : "")
-      : form.note.trim() || null;
-
-  const mat = materials.find((m) => m.id === form.material_id);
-  const kgPerMeter =
-    mat?.kg_per_meter != null && mat.kg_per_meter > 0 ? mat.kg_per_meter : null;
-
-  const rawQty = parseFloat(form.quantity);
-  const quantity = kgPerMeter
-    ? Math.round((rawQty / kgPerMeter) * 10000) / 10000
-    : rawQty;
-  const kgNote = kgPerMeter ? `(введено: ${rawQty} кг)` : null;
-  const note = kgNote ? (noteBase ? `${noteBase}\n${kgNote}` : kgNote) : noteBase;
-
-  // Цена относится к единице хранения (для «Арматуры» — за метр). Только для
-  // прихода/расхода; для остальных типов поле скрыто и остаётся пустым → null.
-  const priceRaw = parseFloat(form.unit_price);
-  const unit_price =
-    (form.type === "income" || form.type === "expense") &&
-    Number.isFinite(priceRaw) &&
-    priceRaw > 0
-      ? Math.round(priceRaw * 100) / 100
-      : null;
-
-  return {
-    type: form.type as TxType,
-    material_id: form.material_id,
-    quantity,
-    note,
-    counterparty: form.counterparty.trim() || null,
-    transaction_date: form.date,
-    unit_price,
-  };
-}
-
-async function retryTx(payload: PendingTx, materials: Material[]) {
+async function retryTx(
+  payload: PendingTx,
+  materials: Material[],
+  counterparties: Counterparty[] = []
+) {
   if (payload.type === "production") {
     await createProductionTransaction({
       material_id: payload.form.material_id,
@@ -81,7 +44,7 @@ async function retryTx(payload: PendingTx, materials: Material[]) {
       transaction_date: payload.form.date,
     });
   } else {
-    await createTransaction(buildTxInput(payload.form, materials));
+    await createTransaction(buildTxInput(payload.form, materials, counterparties));
   }
 }
 
@@ -106,31 +69,22 @@ export type Transaction = {
   creator_name: string;
   source: string;
   unit_price?: number | null;
+  load_index?: string | null;
   deleted_at?: string | null;
   deleted_by_name?: string | null;
 };
 
-export type Material = {
-  id: string;
-  name: string;
-  unit: string;
-  norm_concrete?: number | null;
-  norm_rebar?: number | null;
-  rebar_material_name?: string | null;
-  // kg→m conversion: when set, the user enters kg in the form and the
-  // transaction is stored in meters (quantity = kg / kg_per_meter)
-  kg_per_meter?: number | null;
-};
+// Counterparty / Material / FormState live in ./buildTxInput (pure module,
+// unit-tested); re-exported here so existing importers keep working.
+export type { Counterparty, Material };
 
-type FormState = {
-  type: string; // TxType at runtime
+// Строка прайса: цена = контрагент × базовая марка × индекс нагрузки
+// (миграции 042 + 045). load_index — text, как в схеме.
+export type PriceRow = {
   material_id: string;
-  quantity: string;
-  defect_reason: string;
-  note: string;
-  counterparty: string;
-  date: string;
-  unit_price: string; // цена за ед. (тг), строка ввода; "" = не указана
+  counterparty_id: string;
+  load_index: string;
+  price: number;
 };
 
 // ─── Config ───────────────────────────────────────────────
@@ -290,6 +244,9 @@ function TypeBadge({ type }: { type: TxType }) {
 function AddTransactionForm({
   materials,
   balances,
+  counterparties,
+  priceList,
+  role,
   onSubmit,
   onCancel,
   isPending,
@@ -297,24 +254,31 @@ function AddTransactionForm({
 }: {
   materials: Material[];
   balances: Record<string, number>;
+  counterparties: Counterparty[];
+  priceList: PriceRow[];
+  role: string;
   onSubmit: (form: FormState) => void;
   onCancel: () => void;
   isPending: boolean;
   error: string;
 }) {
   const [form, setForm] = useState<FormState>({
-    type: "income",
+    type: role === "workshop" ? "expense" : "income",
     material_id: materials[0]?.id ?? "",
     quantity: "",
     defect_reason: "",
     note: "",
     counterparty: "",
+    counterparty_id: "",
+    load_index: "",
     date: todayStr(),
     unit_price: "",
   });
   const [quantityError, setQuantityError] = useState("");
   // Last price used for this material+type (suggestion chip). null = none/loading.
   const [lastPrice, setLastPrice] = useState<number | null>(null);
+  // Пользователь правил цену руками → автоподстановка больше не вмешивается.
+  const [priceTouched, setPriceTouched] = useState(false);
 
   const set =
     (k: keyof FormState) =>
@@ -323,11 +287,24 @@ function AddTransactionForm({
         HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
       >
     ) => {
-      setForm((p) => ({ ...p, [k]: e.target.value }));
+      setForm((p) => k === "material_id"
+        ? { ...p, material_id: e.target.value, load_index: "" }
+        : { ...p, [k]: e.target.value });
+      if (k === "material_id") setPriceTouched(false);
+      if (k === "unit_price") setPriceTouched(true);
       if (k === "quantity") {
         const val = Number(e.target.value);
-        setQuantityError(val > 999999999 ? "Максимальное количество: 999 999 999" : "");
+        setQuantityError(quantityProblem(val));
       }
+    };
+
+  // Смена контрагента или индекса — это НОВАЯ связка, значит и новая цена:
+  // сбрасываем "тронуто руками", чтобы автоподстановка сработала снова.
+  const setRef =
+    (k: "counterparty_id" | "load_index") =>
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      setForm((p) => ({ ...p, [k]: e.target.value }));
+      setPriceTouched(false);
     };
 
   const isDefect = form.type === "defect";
@@ -364,6 +341,21 @@ function AddTransactionForm({
       ? selectedMaterial.kg_per_meter
       : null;
 
+  // Штучные позиции не бывают дробными: половины перемычки не существует.
+  // У СаттиГрупп так уже появился остаток 11.5 шт по 1ПБ10-1 — опечатка,
+  // которую форма пропустила. Для «Арматуры» ввод в кг остаётся дробным:
+  // туда уходит конвертация кг→м, и единица хранения там метры, не штуки.
+  const wholeUnitOnly =
+    !kgPerMeter && (selectedMaterial?.unit ?? "").toLowerCase() === "шт";
+
+  const quantityProblem = (val: number): string => {
+    if (val > 999999999) return "Максимальное количество: 999 999 999";
+    if (wholeUnitOnly && Number.isFinite(val) && !Number.isInteger(val)) {
+      return "Количество в штуках должно быть целым";
+    }
+    return "";
+  };
+
   const qtyNum = Number(form.quantity) || 0;
   const concreteAmount =
     isProduction && selectedMaterial?.norm_concrete != null
@@ -387,6 +379,82 @@ function AddTransactionForm({
   const rawDepleted =
     isProduction &&
     (!concreteMaterial || !rebarMaterial || concreteHave <= 0 || rebarHave <= 0);
+
+  // ── Фаза 6: отгрузка = базовая марка + индекс нагрузки + контрагент ──────
+  // Индекс нагрузки — атрибут ОТГРУЗКИ, а не марки: завод льёт базовую марку,
+  // индекс появляется только при продаже. Поэтому блок показываем лишь на
+  // расходе готовой продукции (у сырья норм нет).
+  const hasRefs = counterparties.length > 0;
+  const hasPriceList = priceList.length > 0;
+  const isProductExpense =
+    form.type === "expense" && selectedMaterial?.norm_concrete != null;
+  const showLoadIndex = isProductExpense && hasPriceList;
+
+  // Индексы, под которые у этой марки вообще есть цены. Если под марку цен нет
+  // (её ещё не продавали) — даём весь набор индексов из прайса, чтобы отгрузку
+  // всё равно можно было записать корректно.
+  const loadIndexOptions = useMemo(() => {
+    if (!hasPriceList) return [] as string[];
+    const forMaterial = new Set(
+      priceList.filter((r) => r.material_id === form.material_id).map((r) => r.load_index)
+    );
+    const pool = forMaterial.size > 0
+      ? forMaterial
+      : new Set(priceList.map((r) => r.load_index));
+    return Array.from(pool).sort((a, b) => Number(a) - Number(b));
+  }, [priceList, form.material_id, hasPriceList]);
+
+  // Смена марки (или уход с расхода продукции) — индекс от прежней марки к
+  // новой не относится: сбрасываем его, иначе в отгрузку уйдёт чужой индекс,
+  // которого даже нет в списке.
+  useEffect(() => {
+    if (!form.load_index) return;
+    if (showLoadIndex && loadIndexOptions.includes(form.load_index)) return;
+    setForm((p) => ({ ...p, load_index: "" }));
+    setPriceTouched(false);
+  }, [showLoadIndex, loadIndexOptions, form.load_index]);
+
+  // Цена из прайса по связке марка + индекс + контрагент.
+  const pricedRow = useMemo(() => {
+    if (!isProductExpense || !form.counterparty_id || !form.load_index) return null;
+    return (
+      priceList.find(
+        (r) =>
+          r.material_id === form.material_id &&
+          r.counterparty_id === form.counterparty_id &&
+          r.load_index === form.load_index
+      ) ?? null
+    );
+  }, [priceList, isProductExpense, form.material_id, form.counterparty_id, form.load_index]);
+
+  // Автоподстановка: прайс — источник истины, но руками введённое не трогаем.
+  useEffect(() => {
+    if (pricedRow && !priceTouched) {
+      setForm((p) =>
+        p.unit_price === String(pricedRow.price)
+          ? p
+          : { ...p, unit_price: String(pricedRow.price) }
+      );
+    }
+  }, [pricedRow, priceTouched]);
+
+  // Связка выбрана целиком, но цены под неё в прайсе нет — честно говорим,
+  // а не делаем вид, что цена ноль. Это ровно те 15 связок, которых не хватает.
+  const priceMissingInList =
+    isProductExpense &&
+    hasPriceList &&
+    !!form.counterparty_id &&
+    !!form.load_index &&
+    !pricedRow;
+
+  // Связки нет в прайсе, а в поле осталась автоподставленная цена ПРЕЖНЕЙ
+  // связки — убираем её, иначе рядом с «введи вручную» стоит валидная на вид
+  // цифра и при сохранении уходит чужая цена. Введённое руками не трогаем.
+  useEffect(() => {
+    if (priceMissingInList && !priceTouched) {
+      setForm((p) => (p.unit_price === "" ? p : { ...p, unit_price: "" }));
+    }
+  }, [priceMissingInList, priceTouched]);
 
   // ── Price (задача: цена за ед. только для прихода/расхода) ──────────
   const showPrice = form.type === "income" || form.type === "expense";
@@ -426,7 +494,7 @@ function AddTransactionForm({
     !!form.material_id &&
     !!form.quantity &&
     Number(form.quantity) > 0 &&
-    Number(form.quantity) <= 999999999 &&
+    !quantityProblem(Number(form.quantity)) &&
     !!form.date &&
     (!isDefect || !!form.defect_reason.trim()) &&
     (!isProduction ||
@@ -452,7 +520,9 @@ function AddTransactionForm({
             Тип <span className="text-red-500">*</span>
           </label>
           <select value={form.type} onChange={set("type")} className={inputCls}>
-            {TX_TYPES.map((k) => (
+            {TX_TYPES.filter((k) =>
+              role === "workshop" ? k === "expense" : role === "warehouse" ? k !== "production" : true,
+            ).map((k) => (
               <option key={k} value={k}>
                 {TYPE_CONFIG[k].label}
               </option>
@@ -622,23 +692,64 @@ function AddTransactionForm({
         />
       </div>
 
-      {/* Counterparty */}
+      {/* Counterparty — справочник, если он заполнен (миграция 042/045);
+          иначе прежний свободный текст, чтобы форма работала и до миграции */}
       {!isProduction && (
         <div>
           <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
             Контрагент
             <span className="ml-1.5 text-xs font-normal text-[var(--muted)]">
-              (необязательно)
+              {isProductExpense && hasPriceList ? "(нужен для цены)" : "(необязательно)"}
             </span>
           </label>
-          <input
-            type="text"
-            value={form.counterparty}
-            onChange={set("counterparty")}
-            placeholder="Название компании"
-            maxLength={200}
+          {hasRefs ? (
+            <select
+              value={form.counterparty_id}
+              onChange={setRef("counterparty_id")}
+              className="field-input"
+            >
+              <option value="">— не указан —</option>
+              {counterparties.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={form.counterparty}
+              onChange={set("counterparty")}
+              placeholder="Название компании"
+              maxLength={200}
+              className="field-input"
+            />
+          )}
+        </div>
+      )}
+
+      {/* Индекс нагрузки — только отгрузка готовой продукции.
+          Завод льёт базовую марку, индекс появляется при продаже. */}
+      {showLoadIndex && (
+        <div>
+          <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
+            Индекс нагрузки
+            <span className="ml-1.5 text-xs font-normal text-[var(--muted)]">
+              (нужен для цены)
+            </span>
+          </label>
+          <select
+            value={form.load_index}
+            onChange={setRef("load_index")}
             className="field-input"
-          />
+          >
+            <option value="">— без индекса —</option>
+            {loadIndexOptions.map((idx) => (
+              <option key={idx} value={idx}>
+                {selectedMaterial?.name}-{idx}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
@@ -652,12 +763,28 @@ function AddTransactionForm({
           {kgPerMeter && (
             <p className="mb-1.5 text-xs text-[var(--muted)]">Цена за метр (не за кг)</p>
           )}
-          {lastPrice != null && (
+          {/* Цена подставлена из прайса — главный сценарий Фазы 6 */}
+          {pricedRow && !priceTouched && (
+            <p className="mb-1.5 text-xs text-[var(--success)]">
+              По прайсу: {formatMoney(pricedRow.price)} тг
+            </p>
+          )}
+          {/* Связка выбрана, но цены под неё нет — не молчим и не ставим ноль */}
+          {priceMissingInList && (
+            <p className="mb-1.5 text-xs text-[var(--warning)]">
+              Цены на эту связку нет в прайсе — введи вручную
+            </p>
+          )}
+          {/* Фоллбэк: последняя использованная цена по этому материалу */}
+          {lastPrice != null && !pricedRow && (
             <div className="mb-1.5 flex flex-wrap items-center gap-2 text-xs">
               <span className="text-[var(--muted)]">Ранее: {formatMoney(lastPrice)} тг</span>
               <button
                 type="button"
-                onClick={() => setForm((p) => ({ ...p, unit_price: String(lastPrice) }))}
+                onClick={() => {
+                  setPriceTouched(true);
+                  setForm((p) => ({ ...p, unit_price: String(lastPrice) }));
+                }}
                 className="px-2 py-0.5 rounded-full border border-[var(--accent)]/40 text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors font-medium tap-scale"
               >
                 поставить {formatMoney(lastPrice)}
@@ -840,6 +967,9 @@ export default function TransactionsClient({
   totalCount,
   initialMaterialId,
   isAdmin = false,
+  role = "warehouse",
+  counterparties = [],
+  priceList = [],
 }: {
   transactions: Transaction[];
   materials: Material[];
@@ -850,6 +980,11 @@ export default function TransactionsClient({
   totalCount?: number;
   initialMaterialId?: string;
   isAdmin?: boolean;
+  role?: string;
+  // Пустые по умолчанию: до применения миграций 042/045 справочников нет,
+  // форма в этом случае работает как раньше
+  counterparties?: Counterparty[];
+  priceList?: PriceRow[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -978,7 +1113,7 @@ export default function TransactionsClient({
       // buildTxInput applies the kg→m conversion when the material has
       // kg_per_meter, so both the optimistic row and the server payload
       // carry the converted (meters) quantity.
-      const input = buildTxInput(form, materials);
+      const input = buildTxInput(form, materials, counterparties);
       const mat = materials.find((m) => m.id === form.material_id);
       const hasConversion = mat?.kg_per_meter != null && mat.kg_per_meter > 0;
       const temp: Transaction = {
@@ -996,6 +1131,7 @@ export default function TransactionsClient({
         creator_name: "Вы",
         source: "manual",
         unit_price: input.unit_price,
+        load_index: input.load_index,
       };
       setOptimistic((prev) => [temp, ...prev]);
       closeModal();
@@ -1024,14 +1160,14 @@ export default function TransactionsClient({
         }
       });
     },
-    [router, closeModal, toast, materials]
+    [router, closeModal, toast, materials, counterparties]
   );
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <OfflineRetryBanner<PendingTx>
         pendingKey={TX_PENDING_KEY}
-        onRetry={(payload) => retryTx(payload, materials)}
+        onRetry={(payload) => retryTx(payload, materials, counterparties)}
       />
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -1352,6 +1488,9 @@ export default function TransactionsClient({
           <AddTransactionForm
             materials={materials}
             balances={balancesByMaterial}
+            counterparties={counterparties}
+            priceList={priceList}
+            role={role}
             onSubmit={handleAdd}
             onCancel={closeModal}
             isPending={isPending}

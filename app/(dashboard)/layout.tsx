@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import DashboardShell from "@/components/layout/DashboardShell";
+import { isPlatformOwnerEmail } from "@/lib/auth/platform-owner";
 
 export default async function DashboardLayout({
   children,
@@ -18,6 +19,7 @@ export default async function DashboardLayout({
   if (!user) {
     redirect("/login");
   }
+  const isPlatformOwner = isPlatformOwnerEmail(user.email);
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -27,12 +29,12 @@ export default async function DashboardLayout({
 
   // Redirect invited users who haven't completed onboarding yet
   // (their full_name defaults to their email address)
-  if (profile && (!profile.full_name || profile.full_name === user.email)) {
+  if (!isPlatformOwner && profile && (!profile.full_name || profile.full_name === user.email)) {
     redirect("/onboarding");
   }
 
   // Redirect admins who haven't completed company setup
-  if (profile?.role === "admin" && profile?.company_id) {
+  if (!isPlatformOwner && profile?.role === "admin" && profile?.company_id) {
     const { data: company } = await supabase
       .from("companies")
       .select("setup_completed")
@@ -66,6 +68,8 @@ export default async function DashboardLayout({
       userName={displayName}
       whatsappBadge={whatsappBadge}
       avatarUrl={profile?.avatar_url ?? null}
+      role={profile?.role ?? "warehouse"}
+      isPlatformOwner={isPlatformOwner}
     >
       {children}
     </DashboardShell>

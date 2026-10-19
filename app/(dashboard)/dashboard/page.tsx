@@ -4,6 +4,8 @@ import Link from "next/link";
 import NoCompanyState from "@/components/ui/NoCompanyState";
 import { formatCompact, formatQuantity } from "@/lib/utils/format";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
+import { redirect } from "next/navigation";
+import { defaultDashboardPath } from "@/lib/auth/role-permissions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -87,12 +89,15 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("company_id, full_name")
+    .select("company_id, full_name, role")
     .eq("id", user.id)
     .single();
 
   const company_id = profile?.company_id as string | undefined;
   if (!company_id) return <NoCompanyState />;
+  if (profile?.role === "warehouse" || profile?.role === "workshop") {
+    redirect(defaultDashboardPath(profile.role));
+  }
 
   const today = new Date().toISOString().split("T")[0];
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)

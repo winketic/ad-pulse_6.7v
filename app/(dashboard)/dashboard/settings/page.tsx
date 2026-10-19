@@ -79,7 +79,7 @@ export default async function SettingsPage({
 
     // Users list
     company_id && isAdmin
-      ? listCompanyUsers().catch(() => [])
+      ? listCompanyUsers()
       : Promise.resolve([]),
 
     // Materials (for threshold settings)

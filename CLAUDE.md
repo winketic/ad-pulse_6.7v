@@ -69,10 +69,11 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 SUPABASE_SERVICE_ROLE_KEY
 NEXT_PUBLIC_APP_URL=https://pulse.altaidynamics.kz
-TELEGRAM_BOT_TOKEN=REDACTED_TELEGRAM_BOT_TOKEN
+TELEGRAM_BOT_TOKEN
 ADMIN_TELEGRAM_CHAT_ID=1700146125
 RESEND_API_KEY
 EMAIL_FROM=onboarding@resend.dev
+SUPABASE_ACCESS_TOKEN — только в окружении shell (для Supabase MCP в .mcp.json), не коммитить
 
 ## Текущий статус разработки
 
@@ -93,7 +94,7 @@ EMAIL_FROM=onboarding@resend.dev
 - Пагинация транзакций
 
 #### Интеграции
-- Telegram бот @adpulse_alerts_bot (токен в TELEGRAM_BOT_TOKEN)
+- Telegram бот @adpulse_alerts_bot (токен в TELEGRAM_BOT_TOKEN, только в env)
   - Подключение по 8-символьному коду компании
   - Алерты: брак, критический остаток, перерасход
   - Уведомления администратору о новых заявках

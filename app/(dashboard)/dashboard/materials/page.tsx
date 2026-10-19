@@ -3,6 +3,8 @@ import { createClient } from "@/utils/supabase/server";
 import MaterialsClient from "@/components/materials/MaterialsClient";
 import type { Material } from "@/components/materials/MaterialsClient";
 import NoCompanyState from "@/components/ui/NoCompanyState";
+import { redirect } from "next/navigation";
+import { canAccessCompanyPage, defaultDashboardPath } from "@/lib/auth/role-permissions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -24,6 +26,9 @@ export default async function MaterialsPage() {
 
   const company_id = profile?.company_id as string | undefined;
   if (!company_id) return <NoCompanyState />;
+  if (!canAccessCompanyPage(profile?.role ?? "", "/dashboard/materials")) {
+    redirect(defaultDashboardPath(profile?.role ?? ""));
+  }
 
   const { data } = await supabase
     .from("materials")

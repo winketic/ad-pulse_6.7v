@@ -380,9 +380,11 @@ function StatusChangePanel({ plan }: { plan: PlanDetail }) {
 export default function PlanDetailClient({
   plan,
   lastChange,
+  canManage = true,
 }: {
   plan: PlanDetail;
   lastChange: LastChange | null;
+  canManage?: boolean;
 }) {
   // Summary totals
   const totalPlanned = plan.materials.reduce(
@@ -480,7 +482,7 @@ export default function PlanDetailClient({
       {/* ── Status change ───────────────────────────────── */}
       {plan.status === "active" && (
         <div className="mb-6">
-          <StatusChangePanel plan={plan} />
+          {canManage && <StatusChangePanel plan={plan} />}
         </div>
       )}
 

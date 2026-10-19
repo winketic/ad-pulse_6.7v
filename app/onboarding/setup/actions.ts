@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { createInviteAndSendEmail, findAuthUserByEmail } from "@/lib/supabase/inviteHelper";
 import { revalidatePath } from "next/cache";
 
 async function getAdminSession() {
@@ -18,6 +19,7 @@ async function getAdminSession() {
     .single();
 
   if (!profile?.company_id) throw new Error("Компания не найдена");
+  if (profile.role !== "admin") throw new Error("Только администратор может завершать настройку компании");
   return { userId: user.id, companyId: profile.company_id as string, role: profile.role as string };
 }
 
@@ -29,6 +31,7 @@ export async function addSetupMaterial(
     const { companyId, userId } = await getAdminSession();
     const trimName = name.trim();
     if (!trimName) return { error: "Название обязательно" };
+    if (trimName.length > 160) return { error: "Название слишком длинное" };
     if (!unit) return { error: "Единица измерения обязательна" };
 
     const service = createServiceClient();
@@ -53,41 +56,36 @@ export async function inviteSetupMember(
   try {
     const { companyId, role: myRole } = await getAdminSession();
     if (myRole !== "admin") return { error: "Только администратор может приглашать" };
+    if (!["manager", "warehouse", "workshop"].includes(role)) return { error: "Некорректная роль" };
 
     const service = createServiceClient();
     const cleanEmail = email.trim().toLowerCase();
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://ad-pulse-eight.vercel.app").replace(/\/$/, "");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || cleanEmail.length > 254) return { error: "Укажите корректный email" };
 
-    const { data: inviteData, error: inviteError } = await service.auth.admin.inviteUserByEmail(
-      cleanEmail,
-      { redirectTo: `${appUrl}/auth/confirm?next=/invite` }
-    );
-
-    let userId: string;
-    if (inviteError) {
-      const alreadyExists =
-        inviteError.message.toLowerCase().includes("already registered") ||
-        inviteError.message.toLowerCase().includes("already in use") ||
-        inviteError.status === 422;
-      if (!alreadyExists) return { error: inviteError.message };
-
-      const { data: authList } = await service.auth.admin.listUsers({ perPage: 1000 });
-      const found = (authList?.users ?? []).find((u) => u.email?.toLowerCase() === cleanEmail);
-      if (!found) return { error: "Пользователь не найден" };
-      userId = found.id;
-    } else {
-      if (!inviteData?.user) return { error: "Ошибка создания пользователя" };
-      userId = inviteData.user.id;
+    const existingUser = await findAuthUserByEmail(service, cleanEmail);
+    if (existingUser) {
+      const { data: existingProfile, error } = await service
+        .from("profiles")
+        .select("company_id")
+        .eq("id", existingUser.id)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (existingProfile?.company_id) {
+        return { error: existingProfile.company_id === companyId ? "Пользователь уже состоит в вашей компании" : "Пользователь уже состоит в другой компании" };
+      }
     }
 
-    const { error: profileError } = await service.from("profiles").upsert(
+    // См. комментарий в settings/actions.ts: встроенная почта Supabase
+    // не доставляет приглашения людям вне проекта, поэтому идём через Resend.
+    const { userId, emailSent } = await createInviteAndSendEmail(cleanEmail);
+
+    const { error: profileError } = await service.from("profiles").insert(
       { id: userId, company_id: companyId, role, full_name: cleanEmail },
-      { onConflict: "id" }
     );
     if (profileError) return { error: profileError.message };
 
     revalidatePath("/dashboard/settings");
-    return { ok: true, emailSent: true };
+    return { ok: true, emailSent };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Ошибка" };
   }
@@ -96,9 +94,10 @@ export async function inviteSetupMember(
 export async function markSetupCompleted(): Promise<void> {
   const { companyId } = await getAdminSession();
   const service = createServiceClient();
-  await service
+  const { error } = await service
     .from("companies")
     .update({ setup_completed: true })
     .eq("id", companyId);
+  if (error) throw new Error(error.message);
   revalidatePath("/dashboard");
 }

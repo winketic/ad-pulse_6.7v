@@ -1,7 +1,12 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import TransactionsClient from "@/components/transactions/TransactionsClient";
-import type { Transaction, Material } from "@/components/transactions/TransactionsClient";
+import type {
+  Transaction,
+  Material,
+  Counterparty,
+  PriceRow,
+} from "@/components/transactions/TransactionsClient";
 import type { BalanceData } from "@/components/BalanceCard";
 import type { TxType } from "./actions";
 import NoCompanyState from "@/components/ui/NoCompanyState";
@@ -33,31 +38,35 @@ export default async function TransactionsPage({
   const company_id = profile?.company_id as string | undefined;
   if (!company_id) return <NoCompanyState />;
   const isAdmin = profile?.role === "admin";
+  const isWorkshop = profile?.role === "workshop";
 
   const page = Math.max(1, parseInt(searchParams.page ?? "1", 10));
   const rangeFrom = (page - 1) * PAGE_SIZE;
   const rangeTo = rangeFrom + PAGE_SIZE - 1;
 
+  let txQuery = supabase
+    .from("material_transactions")
+    .select("*")
+    .eq("company_id", company_id);
+  let countQuery = supabase.from("material_transactions").select("id", { count: "exact", head: true }).eq("company_id", company_id).is("deleted_at", null);
+  let balanceQuery = supabase.from("material_transactions").select("material_id, type, quantity").eq("company_id", company_id).is("deleted_at", null);
+  if (isWorkshop) {
+    txQuery = txQuery.eq("created_by", user.id).eq("type", "expense");
+    countQuery = countQuery.eq("created_by", user.id).eq("type", "expense");
+    balanceQuery = balanceQuery.eq("created_by", user.id).eq("type", "expense");
+  }
+
   const [txResult, countResult, matResult, profilesResult, balanceTxResult] =
     await Promise.all([
       // Paginated list — includes deleted rows so an admin can toggle
       // "показать удалённые"; the client hides them by default.
-      supabase
-        .from("material_transactions")
-        .select(
-          "id, type, quantity, note, counterparty, transaction_date, created_at, material_id, created_by, source, wazzup_message_id, deleted_at, deleted_by"
-        )
-        .eq("company_id", company_id)
+      txQuery
         .order("transaction_date", { ascending: false })
         .order("created_at", { ascending: false })
         .range(rangeFrom, rangeTo),
 
       // Total count — active (non-deleted) rows only for the headline
-      supabase
-        .from("material_transactions")
-        .select("id", { count: "exact", head: true })
-        .eq("company_id", company_id)
-        .is("deleted_at", null),
+      countQuery,
 
       // Materials lookup — select("*") so not-yet-migrated columns
       // (kg_per_meter) don't fail the whole query before migration 033
@@ -70,18 +79,34 @@ export default async function TransactionsPage({
       // Profiles lookup — select("*") so the not-yet-migrated phone column
       // (migration 019) can't fail the whole query and blank out all
       // creator names; phone is only needed for WhatsApp sender matching
-      supabase
-        .from("profiles")
-        .select("*")
-        .eq("company_id", company_id),
+      isWorkshop
+        ? supabase.from("profiles").select("*").eq("company_id", company_id).eq("id", user.id)
+        : supabase.from("profiles").select("*").eq("company_id", company_id),
 
       // Lightweight all-tx for balance cards (3 fields only) — active only
-      supabase
-        .from("material_transactions")
-        .select("material_id, type, quantity")
-        .eq("company_id", company_id)
-        .is("deleted_at", null),
+      balanceQuery,
     ]);
+
+  // ── Фаза 6: справочник контрагентов и прайс ──────────────────────────
+  // Fail-open: таблицы появляются только в миграции 042/045. Пока их нет,
+  // запрос вернёт error — отдаём пустые массивы, и форма отгрузки тихо
+  // откатывается на прежнее поведение (свободный текст + подсказка цены).
+  const [cpResult, priceResult] = await Promise.all([
+    supabase.from("counterparties").select("*").eq("company_id", company_id).order("name"),
+    supabase.from("price_list").select("*").eq("company_id", company_id),
+  ]);
+
+  const counterparties: Counterparty[] = (cpResult.data ?? []).map((c) => ({
+    id: c.id as string,
+    name: c.name as string,
+  }));
+
+  const priceList: PriceRow[] = (priceResult.data ?? []).map((r) => ({
+    material_id: r.material_id as string,
+    counterparty_id: r.counterparty_id as string,
+    load_index: String(r.load_index),
+    price: Number(r.price),
+  }));
 
   const totalCount = countResult.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -137,6 +162,10 @@ export default async function TransactionsPage({
       material_unit: matMap.get(tx.material_id)?.unit ?? "",
       creator_name: creatorName,
       source: tx.source ?? "manual",
+      // Новые колонки читаем через rawTx: до применения миграций их нет,
+      // обращение к tx.* напрямую не прошло бы типизацию
+      unit_price: rawTx.unit_price != null ? Number(rawTx.unit_price) : null,
+      load_index: (rawTx.load_index as string | null) ?? null,
       deleted_at: deletedAt,
       deleted_by_name: deletedBy ? profileMap.get(deletedBy)?.full_name ?? "—" : null,
     };
@@ -195,6 +224,9 @@ export default async function TransactionsPage({
       totalCount={totalCount}
       initialMaterialId={searchParams.material_id}
       isAdmin={isAdmin}
+      role={profile?.role ?? "warehouse"}
+      counterparties={counterparties}
+      priceList={priceList}
     />
   );
 }

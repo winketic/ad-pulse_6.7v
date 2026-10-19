@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/middleware";
-
-const ADMIN_EMAIL = "altai.dx@gmail.com";
+import { isPlatformOwnerEmail } from "@/lib/auth/platform-owner";
+import { canAccessCompanyPage, defaultDashboardPath } from "@/lib/auth/role-permissions";
 
 const PUBLIC_PATHS = [
   "/login",
@@ -43,8 +43,19 @@ export async function middleware(request: NextRequest) {
   if (user) {
     // Admin-only routes
     if (pathname.startsWith("/admin")) {
-      if (user.email !== ADMIN_EMAIL) {
+      if (!isPlatformOwnerEmail(user.email)) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
+
+    if (pathname.startsWith("/dashboard/") && !pathname.startsWith("/dashboard/settings")) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profile?.role && !canAccessCompanyPage(profile.role, pathname)) {
+        return NextResponse.redirect(new URL(defaultDashboardPath(profile.role), request.url));
       }
     }
 

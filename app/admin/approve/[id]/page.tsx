@@ -5,17 +5,17 @@ import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { Logo } from "@/components/Logo";
 import { ApproveButton } from "@/components/ApproveButton";
+import { isPlatformOwnerEmail } from "@/lib/auth/platform-owner";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_EMAIL = "altai.dx@gmail.com";
 
 export default async function AdminApprovePage({ params }: { params: { id: string } }) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user || user.email !== ADMIN_EMAIL) notFound();
+  if (!user || !isPlatformOwnerEmail(user.email)) notFound();
 
   const service = createServiceClient();
   const { data: reg, error } = await service

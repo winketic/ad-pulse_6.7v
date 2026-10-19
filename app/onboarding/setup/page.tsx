@@ -67,6 +67,10 @@ export default function SetupPage() {
     if ("error" in res) { setInvError(res.error); return; }
     setInvitedMembers((prev) => [...prev, { email: invEmail.trim(), role: invRole }]);
     setInvEmail("");
+    // Участник уже создан, но письмо могло не уйти — не выдаём это за успех.
+    if (!res.emailSent) {
+      setInvError("Участник добавлен, но письмо-приглашение не отправлено. Сообщите ему о доступе вручную.");
+    }
   }
 
   async function handleFinish() {

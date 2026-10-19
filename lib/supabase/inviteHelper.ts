@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendEmail } from "@/lib/email";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const APP_URL = (
   process.env.NEXT_PUBLIC_APP_URL ?? "https://ad-pulse-eight.vercel.app"
@@ -40,10 +41,7 @@ export async function createInviteAndSendEmail(
     }
 
     // User exists — find them, no new invite link
-    const { data: authList } = await svc.auth.admin.listUsers({ perPage: 1000 });
-    const found = (authList?.users ?? []).find(
-      (u) => u.email?.toLowerCase() === email.toLowerCase()
-    );
+    const found = await findAuthUserByEmail(svc, email);
     if (!found) throw new Error("Пользователь не найден в системе");
     userId = found.id;
     hashedToken = undefined;
@@ -71,6 +69,16 @@ export async function createInviteAndSendEmail(
   }
 
   return { userId, emailSent };
+}
+
+export async function findAuthUserByEmail(svc: SupabaseClient, email: string) {
+  for (let page = 1; ; page += 1) {
+    const { data, error } = await svc.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw new Error(`Не удалось проверить аккаунт пользователя: ${error.message}`);
+    const found = (data.users ?? []).find((user) => user.email?.toLowerCase() === email.toLowerCase());
+    if (found) return found;
+    if ((data.users ?? []).length < 1000) return null;
+  }
 }
 
 function buildInviteHtml(link: string): string {

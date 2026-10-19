@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
+import { canManageMaterials } from "@/lib/auth/role-permissions";
 
 export type MaterialInput = {
   name: string;
@@ -22,18 +23,21 @@ async function getSupabaseAndCompany() {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("company_id")
+    .select("company_id, role")
     .eq("id", user.id)
     .single();
 
   if (profileError) throw new Error(`DB error: ${profileError.message}`);
   if (!profile?.company_id) throw new Error("Компания не найдена");
+  if (!canManageMaterials(profile.role)) throw new Error("Нет прав для управления материалами");
 
   return { supabase, company_id: profile.company_id as string };
 }
 
 export async function createMaterial(input: MaterialInput) {
   const { supabase, company_id } = await getSupabaseAndCompany();
+
+  if (!input.name?.trim() || !input.unit?.trim()) throw new Error("Название и единица измерения обязательны");
 
   const { error } = await supabase.from("materials").insert({
     company_id,
@@ -48,6 +52,8 @@ export async function createMaterial(input: MaterialInput) {
 
 export async function updateMaterial(id: string, input: MaterialInput) {
   const { supabase, company_id } = await getSupabaseAndCompany();
+
+  if (!id || !input.name?.trim() || !input.unit?.trim()) throw new Error("Название и единица измерения обязательны");
 
   const { error } = await supabase
     .from("materials")
