@@ -101,6 +101,31 @@ export default async function TransactionsPage({
       fetchAllPages((from, to) => balanceQuery.range(from, to)),
     ]);
 
+  // ── Ошибки чтения: сбой не должен выглядеть как пустой журнал ─────────
+  // Логируем с контекстом (детали в UI не выводим) и передаём флаги в
+  // клиент: журнал и справочник материалов показывают видимую ошибку,
+  // счётчик и профили деградируют мягко («—» вместо выдуманных нулей/имён).
+  if (txResult.error)
+    console.error(
+      "[transactions] не удалось загрузить журнал транзакций:",
+      txResult.error.message
+    );
+  if (countResult.error)
+    console.error(
+      "[transactions] не удалось получить количество записей:",
+      countResult.error.message
+    );
+  if (matResult.error)
+    console.error(
+      "[transactions] не удалось загрузить справочник материалов:",
+      matResult.error.message
+    );
+  if (profilesResult.error)
+    console.error(
+      "[transactions] не удалось загрузить профили сотрудников:",
+      profilesResult.error.message
+    );
+
   // ── Фаза 6: справочник контрагентов и прайс ──────────────────────────
   // Fail-open: таблицы появляются только в миграции 042/045. Пока их нет,
   // запрос вернёт error — отдаём пустые массивы, и форма отгрузки тихо
@@ -122,10 +147,19 @@ export default async function TransactionsPage({
     price: Number(r.price),
   }));
 
-  const totalCount = countResult.count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  // Сбой счётчика не должен превращаться в «Записей нет» и прятать
+  // пагинацию: при ошибке отдаём null, а число страниц строим по строкам.
+  const countFailed = Boolean(countResult.error);
+  const countedTotal = countResult.count ?? 0;
+  const totalCount = countFailed ? null : countedTotal;
+  const totalPages = countFailed
+    ? null
+    : Math.max(1, Math.ceil(countedTotal / PAGE_SIZE));
 
   const matMap = new Map((matResult.data ?? []).map((m) => [m.id, m]));
+  // Сбой справочника: matMap пуст, и подставлять «Неизвестный материал» с
+  // пустой единицей нельзя — это выглядит как поломка данных. Нейтральное «—».
+  const materialsFailed = Boolean(matResult.error);
   const profileMap = new Map((profilesResult.data ?? []).map((p) => [p.id, p]));
   // phone → full_name for WhatsApp sender lookup
   const phoneMap = new Map(
@@ -172,8 +206,8 @@ export default async function TransactionsPage({
       created_at: tx.created_at,
       material_id: tx.material_id,
       created_by: tx.created_by ?? null,
-      material_name: matMap.get(tx.material_id)?.name ?? "Неизвестный материал",
-      material_unit: matMap.get(tx.material_id)?.unit ?? "",
+      material_name: matMap.get(tx.material_id)?.name ?? (materialsFailed ? "—" : "Неизвестный материал"),
+      material_unit: matMap.get(tx.material_id)?.unit ?? (materialsFailed ? "—" : ""),
       creator_name: creatorName,
       source: tx.source ?? "manual",
       // Новые колонки читаем через rawTx: до применения миграций их нет,
@@ -184,6 +218,12 @@ export default async function TransactionsPage({
       deleted_by_name: deletedBy ? profileMap.get(deletedBy)?.full_name ?? "—" : null,
     };
   });
+
+  // Точное число страниц при сбое счётчика неизвестно: «Следующая» активна,
+  // только если текущая страница заполнена целиком (значит, могут быть ещё).
+  const hasNextPage = countFailed
+    ? transactions.length >= PAGE_SIZE
+    : page < (totalPages ?? 1);
 
   const materials: Material[] = (matResult.data ?? []).map((m) => {
     const raw = m as Record<string, unknown>;
@@ -234,8 +274,12 @@ export default async function TransactionsPage({
       initialBalances={initialBalances}
       balancesByMaterial={balancesByMaterial}
       page={page}
-      totalPages={totalPages}
-      totalCount={totalCount}
+      totalPages={totalPages ?? undefined}
+      totalCount={totalCount ?? undefined}
+      countUnknown={countFailed}
+      hasNextPage={hasNextPage}
+      loadError={Boolean(txResult.error)}
+      materialsError={Boolean(matResult.error)}
       initialMaterialId={searchParams.material_id}
       isAdmin={isAdmin}
       role={profile?.role ?? "warehouse"}

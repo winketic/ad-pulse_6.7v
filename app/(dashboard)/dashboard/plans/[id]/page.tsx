@@ -54,7 +54,13 @@ export default async function PlanDetailPage({
       .eq("company_id", company_id)
       .single(),
 
-    // Single query: plan_materials joined with materials — no separate lookup needed
+    // Single query: plan_materials joined with materials — no separate lookup needed.
+    // У plan_materials нет company_id, поэтому фильтра по компании в этом запросе
+    // быть не может. Арендатор ограничен двумя уровнями: (1) гейт по родительскому
+    // плану — production_plans читается с .eq("company_id", company_id), и при
+    // отсутствии строки (PGRST116) выполнение уходит в notFound() ДО того, как
+    // состав плана попадёт в UI; (2) RLS на plan_materials. Не убирайте гейт по
+    // родительскому плану при рефакторинге — это не «лишний» фильтр.
     supabase
       .from("plan_materials")
       .select("id, material_id, planned_quantity, materials(name, unit)")
