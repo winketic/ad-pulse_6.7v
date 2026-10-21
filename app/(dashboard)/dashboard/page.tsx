@@ -6,6 +6,7 @@ import { formatCompact, formatQuantity } from "@/lib/utils/format";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import { redirect } from "next/navigation";
 import { defaultDashboardPath } from "@/lib/auth/role-permissions";
+import { fetchAllPages } from "@/lib/supabase/fetchAllPages";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -48,9 +49,16 @@ function computeTrend(today: number, yesterday: number): Trend | null {
   return { pct, dir: pct > 0 ? "up" : "down", good: pct > 0 };
 }
 
-type StockLevel = "normal" | "low" | "critical";
+// "unknown" — пороги не загрузились: уровень запаса неизвестен,
+// поэтому «норма» не выводится (иначе дефицит выглядит как благополучие).
+type StockLevel = "normal" | "low" | "critical" | "unknown";
 
-function stockLevel(balance: number, threshold: number | undefined): StockLevel {
+function stockLevel(
+  balance: number,
+  threshold: number | undefined,
+  thresholdsKnown = true
+): StockLevel {
+  if (!thresholdsKnown) return "unknown";
   if (threshold != null && threshold > 0) {
     if (balance <= threshold) return "critical";
     if (balance <= threshold * 2) return "low";
@@ -63,17 +71,57 @@ const LEVEL_DOT: Record<StockLevel, string> = {
   normal: "bg-[var(--success)]",
   low: "bg-[var(--warning)]",
   critical: "bg-[var(--danger)]",
+  unknown: "bg-[var(--muted-2)]",
 };
 
 const LEVEL_NUM: Record<StockLevel, string> = {
   normal: "text-[var(--text)]",
   low: "text-[var(--warning)]",
   critical: "text-[var(--danger)]",
+  unknown: "text-[var(--muted)]",
 };
 
 function fmtDate(s: string) {
   const [y, m, d] = s.split("-");
   return `${d}.${m}.${y}`;
+}
+
+// Inline read-error strip: показывает, что данных нет из-за ошибки чтения,
+// а не потому что операций не было. Retry — обычная перезагрузка страницы.
+function ReadErrorStrip({
+  message,
+  className = "",
+}: {
+  message: string;
+  className?: string;
+}) {
+  return (
+    <div
+      role="alert"
+      className={`flex items-center gap-2 rounded-lg border border-[var(--danger)]/40 bg-[var(--danger-bg)] px-3.5 py-2.5 text-xs text-[var(--danger)] ${className}`}
+    >
+      <svg
+        className="w-4 h-4 shrink-0"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+        />
+      </svg>
+      <span className="flex-1 min-w-0">{message}</span>
+      <Link
+        href="/dashboard"
+        className="shrink-0 font-semibold underline underline-offset-2"
+      >
+        Обновить
+      </Link>
+    </div>
+  );
 }
 
 // ─── Page ─────────────────────────────────────────────────
@@ -134,11 +182,18 @@ export default async function DashboardPage() {
       .eq("company_id", company_id)
       .is("deleted_at", null)
       .eq("transaction_date", yesterday),
-    supabase
-      .from("material_transactions")
-      .select("material_id, type, quantity, transaction_date")
-      .eq("company_id", company_id)
-      .is("deleted_at", null),
+    fetchAllPages((from, to) =>
+      supabase
+        .from("material_transactions")
+        .select("material_id, type, quantity, transaction_date")
+        .eq("company_id", company_id)
+        .is("deleted_at", null)
+        // Полный порядок: created_at + уникальный id, иначе страницы
+        // range() могут пересекаться и терять строки.
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to)
+    ),
     supabase
       .from("material_transactions")
       .select("id, type, quantity, transaction_date, created_at, material_id, created_by")
@@ -162,6 +217,32 @@ export default async function DashboardPage() {
       .select("material_id, min_quantity")
       .eq("company_id", company_id),
   ]);
+
+  // ── Ошибки чтения нельзя показывать как «0» или «пусто» ──
+  const matsFailed = Boolean(matsResult.error);
+  const thresholdsFailed = Boolean(thresholdsResult.error);
+  const todayFailed = Boolean(todayTxResult.error);
+  const yesterdayFailed = Boolean(yesterdayTxResult.error);
+  if (matsResult.error)
+    console.error(
+      "[dashboard] не удалось загрузить справочник материалов:",
+      matsResult.error.message
+    );
+  if (thresholdsResult.error)
+    console.error(
+      "[dashboard] не удалось загрузить пороги остатков:",
+      thresholdsResult.error.message
+    );
+  if (todayTxResult.error)
+    console.error(
+      "[dashboard] не удалось загрузить движение за сегодня:",
+      todayTxResult.error.message
+    );
+  if (yesterdayTxResult.error)
+    console.error(
+      "[dashboard] не удалось загрузить движение за вчера:",
+      yesterdayTxResult.error.message
+    );
 
   const materials = matsResult.data ?? [];
   const matById = new Map(materials.map((m) => [m.id, m]));
@@ -189,7 +270,11 @@ export default async function DashboardPage() {
 
   const todayProdTotal = prodTotal(todayTxs);
   const yesterdayProdTotal = prodTotal(yesterdayTxs);
-  const prodTrend = computeTrend(todayProdTotal, yesterdayProdTotal);
+  // Тренд не считаем, если хотя бы один из дней не прочитан.
+  const prodTrend =
+    todayFailed || yesterdayFailed
+      ? null
+      : computeTrend(todayProdTotal, yesterdayProdTotal);
 
   // Fallback hero for companies without production norms
   const todayInQty = todayTxs
@@ -216,7 +301,7 @@ export default async function DashboardPage() {
   // ── Balances (full history) + 7-day-active ticker ───────
   const balMap = new Map<string, number>();
   for (const m of materials) balMap.set(m.id, 0);
-  for (const tx of allTxResult.data ?? []) {
+  for (const tx of allTxResult) {
     const qty = Number(tx.quantity);
     const delta = tx.type === "income" || tx.type === "return" ? qty : -qty;
     balMap.set(tx.material_id, (balMap.get(tx.material_id) ?? 0) + delta);
@@ -226,7 +311,7 @@ export default async function DashboardPage() {
     .toISOString()
     .split("T")[0];
   const lastActivity = new Map<string, string>();
-  for (const tx of allTxResult.data ?? []) {
+  for (const tx of allTxResult) {
     const d = tx.transaction_date as string | null;
     if (!d || d < sevenDaysAgo) continue;
     const prev = lastActivity.get(tx.material_id);
@@ -239,7 +324,15 @@ export default async function DashboardPage() {
       const m = matById.get(id);
       if (!m) return [];
       const balance = balMap.get(id) ?? 0;
-      return [{ id, name: m.name, unit: m.unit, balance, level: stockLevel(balance, thresholds[id]) }];
+      return [
+        {
+          id,
+          name: m.name,
+          unit: m.unit,
+          balance,
+          level: stockLevel(balance, thresholds[id], !thresholdsFailed),
+        },
+      ];
     });
 
   // ── Timeline ─────────────────────────────────────────────
@@ -284,7 +377,7 @@ export default async function DashboardPage() {
   const companyName = companyResult.data?.name ?? "";
 
   // Desktop stock list — critical first (mobile ticker is recency-first)
-  const levelOrder: Record<StockLevel, number> = { critical: 0, low: 1, normal: 2 };
+  const levelOrder: Record<StockLevel, number> = { critical: 0, low: 1, unknown: 2, normal: 3 };
   const desktopStocks = [...ticker].sort((a, b) => levelOrder[a.level] - levelOrder[b.level]);
 
   // ─────────────────────────────────────────────────────────
@@ -304,9 +397,11 @@ export default async function DashboardPage() {
           <p className="text-sm text-[var(--muted)]">Выпуск сегодня</p>
           <div className="flex items-baseline gap-2.5 mt-2">
             <span className="num text-3xl font-semibold text-[var(--text)]">
-              {hasProduction ? formatCompact(todayProdTotal) : "—"}
+              {hasProduction && !todayFailed ? formatCompact(todayProdTotal) : "—"}
             </span>
-            {hasProduction && <span className="text-sm text-[var(--muted)]">шт</span>}
+            {hasProduction && !todayFailed && (
+              <span className="text-sm text-[var(--muted)]">шт</span>
+            )}
             {prodTrend && prodTrend.dir !== "flat" && (
               <span className={`num text-xs font-semibold ${prodTrend.good ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
                 {prodTrend.dir === "up" ? "↑" : "↓"}
@@ -318,12 +413,16 @@ export default async function DashboardPage() {
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-5">
           <p className="text-sm text-[var(--muted)]">Движений сегодня</p>
           <div className="flex items-baseline gap-2.5 mt-2">
-            <span className="num text-3xl font-semibold text-[var(--text)]">{todayTxs.length}</span>
-            <span className="num text-xs text-[var(--muted)]">
-              <span className="text-[var(--success)]">+{formatCompact(todayInQty)}</span>
-              {" / "}
-              <span className="text-[var(--danger)]">−{formatCompact(todayOutQty)}</span>
+            <span className="num text-3xl font-semibold text-[var(--text)]">
+              {todayFailed ? "—" : todayTxs.length}
             </span>
+            {!todayFailed && (
+              <span className="num text-xs text-[var(--muted)]">
+                <span className="text-[var(--success)]">+{formatCompact(todayInQty)}</span>
+                {" / "}
+                <span className="text-[var(--danger)]">−{formatCompact(todayOutQty)}</span>
+              </span>
+            )}
           </div>
         </div>
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-5">
@@ -338,6 +437,33 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {todayFailed && (
+        <ReadErrorStrip
+          className="mt-4"
+          message="Не удалось загрузить движение за сегодня — цифры за день недоступны"
+        />
+      )}
+      {!todayFailed && yesterdayFailed && (
+        <ReadErrorStrip
+          className="mt-4"
+          message="Не удалось загрузить движение за вчера — тренд не рассчитан"
+        />
+      )}
+      {matsFailed && (
+        <ReadErrorStrip
+          className="mt-4"
+          message="Не удалось загрузить справочник материалов — остатки могут отображаться не полностью"
+        />
+      )}
+      {!matsFailed && thresholdsFailed && (
+        <div
+          role="status"
+          className="mt-4 rounded-lg border border-[var(--warning)]/40 bg-[var(--warning-bg)] px-3.5 py-2.5 text-xs text-[var(--warning)]"
+        >
+          Пороги остатков не загружены — уровень запаса не определяется
+        </div>
+      )}
 
       {/* Two-column: activity feed | stocks + plans */}
       <div className="grid grid-cols-[1fr_360px] gap-6 mt-6 items-start">
@@ -381,7 +507,22 @@ export default async function DashboardPage() {
                 Весь склад →
               </Link>
             </div>
-            {desktopStocks.length === 0 ? (
+            {matsFailed ? (
+              <div className="px-5 py-8 text-center">
+                <p className="text-sm font-medium text-[var(--danger)]">
+                  Не удалось загрузить остатки
+                </p>
+                <p className="text-xs text-[var(--muted)] mt-1">
+                  Справочник материалов не получен — это не значит, что склад пуст.
+                </p>
+                <Link
+                  href="/dashboard"
+                  className="mt-3 inline-flex items-center rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors"
+                >
+                  Обновить
+                </Link>
+              </div>
+            ) : desktopStocks.length === 0 ? (
               <p className="text-sm text-[var(--muted)] text-center py-8">Нет движения за 7 дней</p>
             ) : (
               <div className="divide-y divide-[var(--border)]">
@@ -465,9 +606,9 @@ export default async function DashboardPage() {
               <p className="text-label mb-1.5">Выпуск сегодня</p>
               <div className="flex items-baseline gap-3 flex-wrap">
                 <span className="num font-bold text-[var(--text)] leading-none text-[56px] tracking-tighter">
-                  <AnimatedNumber value={todayProdTotal} />
+                  {todayFailed ? "—" : <AnimatedNumber value={todayProdTotal} />}
                 </span>
-                <span className="text-lg text-[var(--muted)]">шт</span>
+                {!todayFailed && <span className="text-lg text-[var(--muted)]">шт</span>}
                 {prodTrend && prodTrend.dir !== "flat" && (
                   <span
                     className={`num text-sm font-bold ${
@@ -480,7 +621,7 @@ export default async function DashboardPage() {
                   </span>
                 )}
               </div>
-              {topDeductions.length > 0 && (
+              {!todayFailed && topDeductions.length > 0 && (
                 <p className="num text-xs text-[var(--muted)] mt-2">
                   ▸ {topDeductions.join(" · ")}
                 </p>
@@ -489,21 +630,49 @@ export default async function DashboardPage() {
           ) : (
             <>
               <p className="text-label mb-1.5">Движение сегодня</p>
-              <div className="flex items-baseline gap-4">
-                <span className="num font-bold leading-none text-[44px] tracking-tighter text-[var(--success)]">
-                  +<AnimatedNumber value={todayInQty} />
+              {todayFailed ? (
+                <span className="num font-bold leading-none text-[44px] tracking-tighter text-[var(--muted)]">
+                  —
                 </span>
-                <span className="num font-bold leading-none text-[44px] tracking-tighter text-[var(--danger)]">
-                  −<AnimatedNumber value={todayOutQty} />
-                </span>
-              </div>
+              ) : (
+                <div className="flex items-baseline gap-4">
+                  <span className="num font-bold leading-none text-[44px] tracking-tighter text-[var(--success)]">
+                    +<AnimatedNumber value={todayInQty} />
+                  </span>
+                  <span className="num font-bold leading-none text-[44px] tracking-tighter text-[var(--danger)]">
+                    −<AnimatedNumber value={todayOutQty} />
+                  </span>
+                </div>
+              )}
             </>
+          )}
+          {todayFailed && (
+            <ReadErrorStrip
+              className="mt-3"
+              message="Не удалось загрузить движение за сегодня"
+            />
+          )}
+          {!todayFailed && yesterdayFailed && (
+            <ReadErrorStrip
+              className="mt-3"
+              message="Не удалось загрузить движение за вчера — тренд не рассчитан"
+            />
           )}
         </div>
       </div>
 
       {/* ── TICKER: 7-day-active stock, horizontal ──────── */}
-      {ticker.length > 0 && (
+      {matsFailed && (
+        <div className="px-4 sm:px-6 mb-5">
+          <ReadErrorStrip message="Не удалось загрузить остатки — склад не показан" />
+        </div>
+      )}
+      {!matsFailed && thresholdsFailed && (
+        <div className="px-4 sm:px-6 mb-3 text-xs text-[var(--warning)]">
+          Пороги остатков не загружены — уровень запаса не определяется
+        </div>
+      )}
+      {!matsFailed && ticker.length > 0 && (
         <div
           className="flex overflow-x-auto border-y border-[var(--border)] bg-[var(--surface-1)]/60 mb-5 snap-x fade-in-up"
           style={{ animationDelay: "80ms" }}

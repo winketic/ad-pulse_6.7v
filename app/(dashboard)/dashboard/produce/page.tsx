@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import ProduceClient, { type ProduceMaterial } from "@/components/produce/ProduceClient";
 import NoCompanyState from "@/components/ui/NoCompanyState";
 import Link from "next/link";
+import { fetchAllPages } from "@/lib/supabase/fetchAllPages";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -78,35 +79,49 @@ export default async function ProducePage() {
   const rawList = (allMats ?? []).filter((m) => rawNames.has(m.name));
   const rawIds = rawList.map((m) => m.id);
 
-  const [{ data: freqRows }, { data: rawTx }] = await Promise.all([
-    supabase
-      .from("material_transactions")
-      .select("material_id, quantity")
-      .eq("company_id", company_id)
-      .is("deleted_at", null)
-      .eq("type", "income")
-      .in("material_id", matIds)
-      .gte("transaction_date", sinceStr),
+  const [freqRows, rawTx] = await Promise.all([
+    fetchAllPages((from, to) =>
+      supabase
+        .from("material_transactions")
+        .select("material_id, quantity")
+        .eq("company_id", company_id)
+        .is("deleted_at", null)
+        .eq("type", "income")
+        .in("material_id", matIds)
+        .gte("transaction_date", sinceStr)
+        // Полный порядок: created_at + уникальный id, иначе страницы
+        // range() могут пересекаться и терять строки.
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to)
+    ),
     // Raw stock balances (concrete + each rebar target) for the cart's soft check
     rawIds.length > 0
-      ? supabase
-          .from("material_transactions")
-          .select("material_id, type, quantity")
-          .eq("company_id", company_id)
-          .is("deleted_at", null)
-          .in("material_id", rawIds)
-      : Promise.resolve({ data: [] as { material_id: string; type: string; quantity: number }[] }),
+      ? fetchAllPages((from, to) =>
+          supabase
+            .from("material_transactions")
+            .select("material_id, type, quantity")
+            .eq("company_id", company_id)
+            .is("deleted_at", null)
+            .in("material_id", rawIds)
+            // Полный порядок: created_at + уникальный id, иначе страницы
+            // range() могут пересекаться и терять строки.
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to)
+        )
+      : Promise.resolve([] as { material_id: string; type: string; quantity: number }[]),
   ]);
 
   // Aggregate frequency counts
   const freqMap = new Map<string, number>();
-  for (const row of freqRows ?? []) {
+  for (const row of freqRows) {
     freqMap.set(row.material_id, (freqMap.get(row.material_id) ?? 0) + Number(row.quantity));
   }
 
   // Raw balances by material id → then by name
   const balById = new Map<string, number>();
-  for (const t of rawTx ?? []) {
+  for (const t of rawTx) {
     const q = Number(t.quantity);
     const delta = t.type === "income" || t.type === "return" ? q : -q;
     balById.set(t.material_id, (balById.get(t.material_id) ?? 0) + delta);

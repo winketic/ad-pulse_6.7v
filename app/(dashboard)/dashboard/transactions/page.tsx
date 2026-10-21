@@ -10,6 +10,7 @@ import type {
 import type { BalanceData } from "@/components/BalanceCard";
 import type { TxType } from "./actions";
 import NoCompanyState from "@/components/ui/NoCompanyState";
+import { fetchAllPages } from "@/lib/supabase/fetchAllPages";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -56,7 +57,14 @@ export default async function TransactionsPage({
     balanceQuery = balanceQuery.eq("created_by", user.id).eq("type", "expense");
   }
 
-  const [txResult, countResult, matResult, profilesResult, balanceTxResult] =
+  // Полный порядок для постраничной загрузки (balanceQuery переиспользуется
+  // между страницами, поэтому сортировка задаётся один раз): created_at +
+  // уникальный id, иначе range() может дублировать и терять строки.
+  balanceQuery = balanceQuery
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  const [txResult, countResult, matResult, profilesResult, balanceTxRows] =
     await Promise.all([
       // Paginated list — includes deleted rows so an admin can toggle
       // "показать удалённые"; the client hides them by default.
@@ -83,8 +91,10 @@ export default async function TransactionsPage({
         ? supabase.from("profiles").select("*").eq("company_id", company_id).eq("id", user.id)
         : supabase.from("profiles").select("*").eq("company_id", company_id),
 
-      // Lightweight all-tx for balance cards (3 fields only) — active only
-      balanceQuery,
+      // Paginate the full active history so balances do not silently truncate
+      // at PostgREST's default row limit. balanceQuery carries the full
+      // (created_at, id) order set above, so pages never overlap.
+      fetchAllPages((from, to) => balanceQuery.range(from, to)),
     ]);
 
   // ── Фаза 6: справочник контрагентов и прайс ──────────────────────────
@@ -192,7 +202,7 @@ export default async function TransactionsPage({
   for (const m of matResult.data ?? []) {
     balMap.set(m.id, { material_id: m.id, name: m.name, unit: m.unit, balance: 0, totalIn: 0, totalOut: 0 });
   }
-  for (const tx of balanceTxResult.data ?? []) {
+  for (const tx of balanceTxRows) {
     const b = balMap.get(tx.material_id);
     if (!b) continue;
     const qty = Number(tx.quantity);

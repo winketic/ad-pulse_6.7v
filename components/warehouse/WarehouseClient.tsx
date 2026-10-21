@@ -12,12 +12,20 @@ import { useToast } from "@/components/ui/Toast";
 // ─── Stock level ──────────────────────────────────────────
 // critical ≤ min threshold, low ≤ 2×min, else normal.
 // No threshold → critical only at ≤0.
-type StockLevel = "normal" | "low" | "critical";
+// "unknown" — пороги остатков не загрузились: уровень не определяем,
+// иначе дефицит выглядит как «норма» (зелёный).
+type StockLevel = "normal" | "low" | "critical" | "unknown";
 
 // Level warnings apply only to raw materials (сырьё). Finished products
 // (перемычки) live at 0 most of the time — that's normal, not critical.
-function stockLevel(m: { balance: number; threshold: number | null; isProduct: boolean }): StockLevel {
+function stockLevel(m: {
+  balance: number;
+  threshold: number | null;
+  isProduct: boolean;
+  thresholdKnown?: boolean;
+}): StockLevel {
   if (m.isProduct) return "normal";
+  if (m.thresholdKnown === false) return "unknown";
   if (m.threshold != null && m.threshold > 0) {
     if (m.balance <= m.threshold) return "critical";
     if (m.balance <= m.threshold * 2) return "low";
@@ -26,7 +34,7 @@ function stockLevel(m: { balance: number; threshold: number | null; isProduct: b
   return m.balance <= 0 ? "critical" : "normal";
 }
 
-const LEVEL_ORDER: Record<StockLevel, number> = { critical: 0, low: 1, normal: 2 };
+const LEVEL_ORDER: Record<StockLevel, number> = { critical: 0, low: 1, unknown: 2, normal: 3 };
 
 const TILE_STYLE: Record<StockLevel, { tile: string; num: string; label: string | null; labelCls: string }> = {
   critical: {
@@ -44,6 +52,12 @@ const TILE_STYLE: Record<StockLevel, { tile: string; num: string; label: string 
   normal: {
     tile: "bg-[var(--surface-1)] border-[var(--border)]",
     num: "text-[var(--text)]",
+    label: null,
+    labelCls: "",
+  },
+  unknown: {
+    tile: "bg-[var(--surface-1)] border-[var(--border)]",
+    num: "text-[var(--muted)]",
     label: null,
     labelCls: "",
   },
@@ -381,9 +395,16 @@ type SortKey = "status" | "name" | "balance";
 
 export default function WarehouseClient({
   materials,
+  loadError = false,
+  thresholdsError = false,
 }: {
   materials: WarehouseMaterial[];
+  // Справочник не прочитан — показываем ошибку, а не «справочник пуст».
+  loadError?: boolean;
+  // Пороги не прочитаны — уровень запаса неизвестен (не «норма»).
+  thresholdsError?: boolean;
 }) {
+  const router = useRouter();
   const [sheetMaterial, setSheetMaterial] = useState<WarehouseMaterial | null>(null);
   const [stockMaterial, setStockMaterial] = useState<WarehouseMaterial | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("status");
@@ -454,7 +475,39 @@ export default function WarehouseClient({
         </div>
       </div>
 
-      {materials.length === 0 ? (
+      {thresholdsError && !loadError && (
+        <div
+          role="status"
+          className="mb-4 rounded-lg border border-[var(--warning)]/40 bg-[var(--warning-bg)] px-3.5 py-2.5 text-xs text-[var(--warning)]"
+        >
+          Пороги остатков не загружены — уровень запаса не определён (не «норма»)
+        </div>
+      )}
+
+      {loadError ? (
+        <div
+          role="alert"
+          className="flex flex-col items-center justify-center py-20 text-center"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-[var(--danger-bg)] flex items-center justify-center mb-4">
+            <svg className="w-7 h-7 text-[var(--danger)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-[var(--text)]">Не удалось загрузить склад</p>
+          <p className="text-xs text-[var(--muted)] mt-1 max-w-xs">
+            Справочник материалов не получен — это не значит, что склад пуст.
+            Повторите попытку.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            className="mt-4 px-4 py-2 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            Обновить
+          </button>
+        </div>
+      ) : materials.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-14 h-14 rounded-2xl bg-[var(--surface-2)] flex items-center justify-center mb-4">
             <svg className="w-7 h-7 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -550,10 +603,22 @@ export default function WarehouseClient({
                       <span className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${
-                            level === "critical" ? "bg-[var(--danger)]" : level === "low" ? "bg-[var(--warning)]" : "bg-[var(--success)]"
+                            level === "critical"
+                              ? "bg-[var(--danger)]"
+                              : level === "low"
+                              ? "bg-[var(--warning)]"
+                              : level === "unknown"
+                              ? "bg-[var(--muted-2)]"
+                              : "bg-[var(--success)]"
                           }`}
                         />
-                        {level === "critical" ? "Критично" : level === "low" ? "Мало" : "Норма"}
+                        {level === "critical"
+                          ? "Критично"
+                          : level === "low"
+                          ? "Мало"
+                          : level === "unknown"
+                          ? "Нет порога"
+                          : "Норма"}
                       </span>
                     </td>
                     <td className="px-4">

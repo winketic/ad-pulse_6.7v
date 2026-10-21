@@ -10,6 +10,7 @@ export const revalidate = 0;
 import type { PlanStatus } from "../actions";
 import { canAccessCompanyPage, canManagePlans, canViewPlan, defaultDashboardPath } from "@/lib/auth/role-permissions";
 import { redirect } from "next/navigation";
+import { fetchAllPages } from "@/lib/supabase/fetchAllPages";
 
 export default async function PlanDetailPage({
   params,
@@ -68,18 +69,25 @@ export default async function PlanDetailPage({
   const lastChange = await getLastChange("production_plans", plan.id);
 
   // Batch 2: transactions in plan period (needs plan dates from batch 1)
-  const { data: txData } = await supabase
-    .from("material_transactions")
-    .select("material_id, type, quantity")
-    .eq("company_id", company_id)
-    .is("deleted_at", null)
-    .in("type", ["expense", "defect"])
-    .gte("transaction_date", plan.start_date)
-    .lte("transaction_date", plan.end_date);
+  const txData = await fetchAllPages((from, to) =>
+    supabase
+      .from("material_transactions")
+      .select("material_id, type, quantity")
+      .eq("company_id", company_id)
+      .is("deleted_at", null)
+      .in("type", ["expense", "defect"])
+      .gte("transaction_date", plan.start_date)
+      .lte("transaction_date", plan.end_date)
+      // Полный порядок: created_at + уникальный id, иначе страницы
+      // range() могут пересекаться и терять строки.
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 
   // Actual consumption per material
   const actualMap = new Map<string, number>();
-  for (const tx of txData ?? []) {
+  for (const tx of txData) {
     actualMap.set(
       tx.material_id,
       (actualMap.get(tx.material_id) ?? 0) + Number(tx.quantity)
