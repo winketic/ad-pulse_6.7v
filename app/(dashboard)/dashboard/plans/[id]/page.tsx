@@ -61,9 +61,25 @@ export default async function PlanDetailPage({
       .eq("plan_id", params.id),
   ]);
 
-  if (planResult.error || !planResult.data) notFound();
+  // PGRST116 — строк с таким id/company_id нет: это действительно «не найден».
+  // Любая другая ошибка чтения — сбой, а не отсутствие плана: пробрасываем её,
+  // чтобы страницу перехватил app/(dashboard)/error.tsx.
+  if (planResult.error) {
+    if (planResult.error.code === "PGRST116") notFound();
+    throw new Error(
+      `Не удалось загрузить план: ${planResult.error.message}`
+    );
+  }
+  if (!planResult.data) notFound();
   const plan = planResult.data;
   if (!canViewPlan(profile?.role ?? "", user.id, plan.assigned_to)) notFound();
+
+  // Ошибка чтения plan_materials не должна выглядеть как «материалы не добавлены».
+  if (pmResult.error) {
+    throw new Error(
+      `Не удалось загрузить материалы плана: ${pmResult.error.message}`
+    );
+  }
   const assignee = plan.profiles as unknown as { full_name: string } | null;
 
   const lastChange = await getLastChange("production_plans", plan.id);

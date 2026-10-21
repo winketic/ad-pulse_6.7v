@@ -71,6 +71,10 @@ export default async function TransactionsPage({
       txQuery
         .order("transaction_date", { ascending: false })
         .order("created_at", { ascending: false })
+        // id уникален — третий ключ делает порядок полным: при пакетной
+        // вставке строк с одинаковым created_at страницы range() иначе
+        // могут дублировать или терять записи.
+        .order("id", { ascending: false })
         .range(rangeFrom, rangeTo),
 
       // Total count — active (non-deleted) rows only for the headline

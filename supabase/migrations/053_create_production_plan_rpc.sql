@@ -15,7 +15,9 @@
 --
 -- Семантика и проверки не ослаблены, а перенесены на границу данных:
 --   * p_company_id обязан принадлежать auth.uid() (profiles);
---   * p_created_by и p_assigned_to должны быть профилями этой компании;
+--   * p_created_by обязан совпадать с auth.uid() (авторство нельзя подменить)
+--     и быть профилем этой компании;
+--   * p_assigned_to должен быть профилем этой компании;
 --   * p_status — одно из значений enum public.plan_status;
 --   * p_materials — непустой JSON-массив объектов
 --     {material_id: uuid, planned_quantity: number > 0} без дублей;
@@ -87,7 +89,18 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
-  IF p_created_by IS NULL OR NOT EXISTS (
+  -- ── 2.1. Автор — только сам вызывающий пользователь ──────────────────
+  -- p_created_by приходит от клиента, а функция выдана роли authenticated,
+  -- поэтому её можно вызвать напрямую через PostgREST в обход actions.ts.
+  -- Проверки «профиль существует в этой компании» недостаточно: с ней
+  -- пользователь мог бы записать автором коллегу из той же компании и
+  -- подменить авторство. Автор всегда равен auth.uid().
+  IF p_created_by IS NULL OR p_created_by IS DISTINCT FROM auth.uid() THEN
+    RAISE EXCEPTION 'Автором плана может быть только текущий пользователь'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT EXISTS (
     SELECT 1
       FROM public.profiles AS author
      WHERE author.id = p_created_by

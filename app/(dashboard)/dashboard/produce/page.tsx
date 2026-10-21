@@ -30,11 +30,48 @@ export default async function ProducePage() {
   // Raw = "Бетон" + whatever is referenced as a rebar target (Арматура/Проволока).
   // Products include category-Б перемычки that have NO norms yet — they can still
   // be produced (штука only, no auto-deduction).
-  const { data: allMats } = await supabase
+  const { data: allMats, error: matsError } = await supabase
     .from("materials")
     .select("id, name, unit, norm_concrete, norm_rebar, rebar_material_name")
     .eq("company_id", company_id)
     .order("name");
+
+  // ── Ошибка чтения ≠ пустой справочник ─────────────────────
+  // Иначе сбой запроса выдаёт себя за «материалов нет» и предлагает
+  // заполнить нормы, хотя материалы существуют.
+  if (matsError) {
+    console.error(
+      "[produce] не удалось загрузить справочник материалов:",
+      matsError.message
+    );
+    return (
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-[var(--text)]">Быстрый выпуск</h1>
+        </div>
+        <div
+          role="alert"
+          className="flex flex-col items-center justify-center py-20 text-center bg-[var(--card)] rounded-xl border border-[var(--border)]"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-[var(--danger-bg)] flex items-center justify-center mb-4">
+            <svg className="w-7 h-7 text-[var(--danger)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-[var(--text)] mb-1">
+            Не удалось загрузить справочник материалов
+          </p>
+          <p className="text-xs text-[var(--muted)] mb-4 max-w-sm">
+            Материалы не получены — это не значит, что их нет. Нормы расхода
+            заполнять не нужно, повторите попытку.
+          </p>
+          <Link href="/dashboard/produce" className="dp-btn-primary rounded-xl">
+            Обновить
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const rawNames = new Set<string>(["Бетон"]);
   for (const m of allMats ?? []) {
