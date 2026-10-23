@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import {
+  MAX_SHEET_ROWS,
+  parseMaterialRows,
+  type MaterialRow,
+} from "@/lib/materials/parseImport";
 import * as XLSX from "xlsx";
 
 // Ограничители разбора пользовательского файла: в установленной версии xlsx
@@ -15,21 +20,6 @@ import * as XLSX from "xlsx";
 // числа строк её не ловят. Полноценное решение — заменить библиотеку парсинга
 // (потоковый/ограниченный по памяти парсер), это вне рамок текущей правки.
 const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2 МБ
-const MAX_SHEET_ROWS = 5000; // строк в листе, включая строку заголовка
-const MAX_DATA_ROWS = MAX_SHEET_ROWS - 1; // строк данных после sheet_to_json (без заголовка)
-const MAX_COLUMN_NAME_LENGTH = 100;
-const FORBIDDEN_COLUMN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-
-type Row = Record<string, unknown>;
-
-/** Безопасное чтение ячейки: только собственные свойства, без прототипа. */
-function readCell(row: Row, key: string | undefined): string {
-  if (!key || FORBIDDEN_COLUMN_KEYS.has(key)) return "";
-  if (!Object.hasOwn(row, key)) return "";
-  const value = row[key];
-  if (value === undefined || value === null) return "";
-  return String(value).trim();
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -99,51 +89,30 @@ export async function POST(request: NextRequest) {
     const ws = wb.Sheets[wb.SheetNames[0]];
     if (!ws) return NextResponse.json({ error: "Пустой файл" }, { status: 400 });
 
-    const rows = XLSX.utils.sheet_to_json<Row>(ws, { defval: "" });
+    const rows = XLSX.utils.sheet_to_json<MaterialRow>(ws, { defval: "" });
 
-    // Превышение лимита строк — отказ целиком, без частичного импорта.
-    // Работает одинаково для xlsx и CSV.
-    if (rows.length > MAX_DATA_ROWS)
+    if (rows.length === 0) return NextResponse.json({ error: "Нет строк для импорта" }, { status: 400 });
+
+    // Разбор строк вынесен в чистую функцию (lib/materials/parseImport.ts):
+    // определение колонок, VALID_UNITS, trim, отсев пустых и слишком длинных
+    // имён, безопасный доступ к ячейкам. Превышение лимита строк — отказ
+    // целиком, без частичного импорта.
+    const { items, skipped, tooManyRows } = parseMaterialRows(rows);
+
+    if (tooManyRows)
       return NextResponse.json(
         { error: "Файл слишком большой: не более 5000 строк вместе с заголовком" },
         { status: 400 }
       );
 
-    if (rows.length === 0) return NextResponse.json({ error: "Нет строк для импорта" }, { status: 400 });
-
-    // Заголовки из файла не доверенные: отбрасываем опасные ключи и ограничиваем
-    // длину имени колонки, чтобы не отравить прототип через имена.
-    const firstRow = rows[0];
-    const columns = Object.keys(firstRow)
-      .filter((key) => !FORBIDDEN_COLUMN_KEYS.has(key.trim()) && key.trim().length > 0)
-      .map((key) => ({ key, name: key.trim().slice(0, MAX_COLUMN_NAME_LENGTH) }));
-
-    // Detect columns: name/название, unit/единица
-    const nameColumn = columns.find((c) =>
-      /^(name|название|материал|наименование)/i.test(c.name)
-    ) ?? columns[0];
-    const unitColumn = columns.find((c) =>
-      /^(unit|ед|единица|ед\.изм|ед_изм)/i.test(c.name)
-    ) ?? columns[1];
-
-    const VALID_UNITS = new Set(["кг", "тонна", "тн", "шт", "м3", "м2", "литр", "пог.м", "л", "т"]);
-
-    const toInsert: { company_id: string; name: string; unit: string }[] = [];
-    const skipped: string[] = [];
-
-    for (const row of rows) {
-      const name = readCell(row, nameColumn?.key);
-      const rawUnit = readCell(row, unitColumn?.key).toLowerCase();
-      const unit = VALID_UNITS.has(rawUnit) ? rawUnit : rawUnit || "шт";
-
-      if (!name) { skipped.push(`(пустое название)`); continue; }
-      if (name.length > 200) { skipped.push(name.slice(0, 40)); continue; }
-
-      toInsert.push({ company_id: companyId, name, unit });
-    }
-
-    if (toInsert.length === 0)
+    if (items.length === 0)
       return NextResponse.json({ error: "Нет валидных строк", skipped }, { status: 400 });
+
+    const toInsert = items.map((item) => ({
+      company_id: companyId,
+      name: item.name,
+      unit: item.unit,
+    }));
 
     const service = createServiceClient();
     const { error: insertError, count } = await service
