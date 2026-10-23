@@ -4,6 +4,7 @@ import Link from "next/link";
 import NoCompanyState from "@/components/ui/NoCompanyState";
 import { formatCompact, formatQuantity } from "@/lib/utils/format";
 import AnimatedNumber from "@/components/ui/AnimatedNumber";
+import RefreshButton from "@/components/ui/RefreshButton";
 import { redirect } from "next/navigation";
 import { defaultDashboardPath } from "@/lib/auth/role-permissions";
 import { fetchAllPages } from "@/lib/supabase/fetchAllPages";
@@ -114,12 +115,9 @@ function ReadErrorStrip({
         />
       </svg>
       <span className="flex-1 min-w-0">{message}</span>
-      <Link
-        href="/dashboard"
-        className="shrink-0 font-semibold underline underline-offset-2"
-      >
+      <RefreshButton className="shrink-0 font-semibold underline underline-offset-2">
         Обновить
-      </Link>
+      </RefreshButton>
     </div>
   );
 }
@@ -515,12 +513,9 @@ export default async function DashboardPage() {
                 <p className="text-xs text-[var(--muted)] mt-1">
                   Справочник материалов не получен — это не значит, что склад пуст.
                 </p>
-                <Link
-                  href="/dashboard"
-                  className="mt-3 inline-flex items-center rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors"
-                >
+                <RefreshButton className="mt-3 inline-flex items-center rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors">
                   Обновить
-                </Link>
+                </RefreshButton>
               </div>
             ) : desktopStocks.length === 0 ? (
               <p className="text-sm text-[var(--muted)] text-center py-8">Нет движения за 7 дней</p>

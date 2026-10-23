@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import ProduceClient, { type ProduceMaterial } from "@/components/produce/ProduceClient";
 import NoCompanyState from "@/components/ui/NoCompanyState";
 import Link from "next/link";
+import RefreshButton from "@/components/ui/RefreshButton";
 import { fetchAllPages } from "@/lib/supabase/fetchAllPages";
 
 export const dynamic = "force-dynamic";
@@ -65,9 +66,9 @@ export default async function ProducePage() {
             Материалы не получены — это не значит, что их нет. Нормы расхода
             заполнять не нужно, повторите попытку.
           </p>
-          <Link href="/dashboard/produce" className="dp-btn-primary rounded-xl">
+          <RefreshButton className="dp-btn-primary rounded-xl">
             Обновить
-          </Link>
+          </RefreshButton>
         </div>
       </div>
     );
