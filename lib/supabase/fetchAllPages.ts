@@ -16,6 +16,20 @@ export async function fetchAllPages<T>(
 
     const page = data ?? [];
     rows.push(...page);
-    if (page.length < pageSize) return rows;
+    if (page.length < pageSize) {
+      // Короткая страница может быть не концом данных, а признаком того, что
+      // сервер обрезал выдачу (db-max-rows). Проверяем пробным запросом одной
+      // строки со смещением сразу за уже полученными данными.
+      const probeFrom = rows.length;
+      const probe = await fetchPage(probeFrom, probeFrom);
+      if (probe.error) throw new Error(`Не удалось загрузить историю операций: ${probe.error.message}`);
+
+      const probeRows = probe.data ?? [];
+      if (probeRows.length > 0) {
+        throw new Error("Сервер вернул меньше строк, чем запрошено: история обрезана");
+      }
+
+      return rows;
+    }
   }
 }
