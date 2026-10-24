@@ -15,7 +15,7 @@ permissions:
 jobs:
   # Обязательный job: типы, линт и юнит-тесты. Падение любого шага — красный статус.
   quality:
-    name: Quality (types, lint, unit)
+    name: Quality (types, lint, unit, build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -44,9 +44,24 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
-  # НЕ блокирует мерж: известные уязвимости (next, xlsx и транзитивные) ещё не устранены.
-  # continue-on-error снимается после обновления Next.js и замены xlsx;
-  # до тех пор отчёт npm audit остаётся видимым в логах шага (вывод не глушим).
+      # Build is not optional: Next validates route handler and page signatures
+      # only when it builds (.next/types). A sync `params` slipped past tsc on a
+      # clean checkout once already and only surfaced in `next build`.
+      # Dummy env values satisfy @supabase/ssr during prerender; no database is
+      # contacted because every data page is force-dynamic.
+      - name: Build (generates route type validation)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+          NEXT_PUBLIC_APP_URL: https://ci-placeholder.example
+        run: npm run build
+
+  # НЕ блокирует мерж: остаются известные уязвимости, которые не чинятся
+  # без мажорного шага — critical в цепочке @sentry/nextjs и high в postcss,
+  # встроенном в next (лечится только next 16). Отчёт остаётся видимым:
+  # вывод не глушим, поэтому новые уязвимости видны в логах шага.
+  # Флаг снимается, когда эти две записи уйдут.
   audit:
     name: Audit (non-blocking)
     runs-on: ubuntu-latest
