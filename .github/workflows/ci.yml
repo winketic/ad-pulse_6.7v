@@ -59,14 +59,14 @@ jobs:
 
   # НЕ блокирует мерж: остаются известные уязвимости, которые не чинятся
   # без мажорного шага — critical в цепочке @sentry/nextjs и high в postcss,
-  # встроенном в next (лечится только next 16). Отчёт остаётся видимым:
-  # вывод не глушим, поэтому новые уязвимости видны в логах шага.
-  # Флаг снимается, когда эти две записи уйдут.
+  # встроенном в next (лечится только next 16). Шаг намеренно завершается
+  # успехом и оставляет аннотацию: отчёт npm audit печатается целиком выше,
+  # а вечно красная проверка только приучает её игнорировать. Когда обе
+  # записи уйдут — убрать `|| echo ...`, и джоб станет блокирующим.
   audit:
-    name: Audit (non-blocking)
+    name: Audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -79,4 +79,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: npm audit (production dependencies)
-        run: npm audit --omit=dev --audit-level=high
+        run: |
+          npm audit --omit=dev --audit-level=high || \
+            echo "::warning::npm audit нашёл известные уязвимости — см. отчёт шага выше"
+
