@@ -18,8 +18,9 @@ export const revalidate = 0;
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: { from?: string; to?: string };
+  searchParams: Promise<{ from?: string; to?: string }>;
 }) {
+  const sp = await searchParams;
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
@@ -54,8 +55,8 @@ export default async function ReportsPage({
     .toISOString()
     .split("T")[0];
 
-  const from = searchParams.from ?? defaultFrom;
-  const to = searchParams.to ?? defaultTo;
+  const from = sp.from ?? defaultFrom;
+  const to = sp.to ?? defaultTo;
 
   // ── All 3 queries in parallel — no waterfall ─────────────
   const [matsResult, txResult, profilesResult] = await Promise.all([

@@ -28,7 +28,7 @@ export function useToast() {
 }
 
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) {
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     timerRef.current = setTimeout(onRemove, 3000);

@@ -15,8 +15,9 @@ import { fetchAllPages } from "@/lib/supabase/fetchAllPages";
 export default async function PlanDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
@@ -50,7 +51,7 @@ export default async function PlanDetailPage({
       .select(
         "id, name, planned_quantity, actual_quantity, start_date, end_date, status, created_at, assigned_to, profiles!production_plans_assigned_to_fkey(full_name)"
       )
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("company_id", company_id)
       .single(),
 
@@ -64,7 +65,7 @@ export default async function PlanDetailPage({
     supabase
       .from("plan_materials")
       .select("id, material_id, planned_quantity, materials(name, unit)")
-      .eq("plan_id", params.id),
+      .eq("plan_id", id),
   ]);
 
   // PGRST116 — строк с таким id/company_id нет: это действительно «не найден».
