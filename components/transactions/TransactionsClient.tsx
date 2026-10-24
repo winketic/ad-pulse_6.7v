@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   useState,
@@ -862,9 +862,13 @@ function AddTransactionForm({
 function EmptyState({
   isFiltered,
   onAdd,
+  addDisabled = false,
+  addDisabledReason,
 }: {
   isFiltered: boolean;
   onAdd: () => void;
+  addDisabled?: boolean;
+  addDisabledReason?: string;
 }) {
   if (isFiltered) {
     return (
@@ -897,7 +901,9 @@ function EmptyState({
       </p>
       <button
         onClick={onAdd}
-        className="dp-btn-primary rounded-xl"
+        disabled={addDisabled}
+        title={addDisabled ? addDisabledReason : undefined}
+        className="dp-btn-primary rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -914,21 +920,39 @@ function Pagination({
   page,
   totalPages,
   totalCount,
+  hasNext,
 }: {
   page: number;
-  totalPages: number;
-  totalCount: number;
+  totalPages?: number;
+  totalCount?: number;
+  hasNext?: boolean;
 }) {
   const router = useRouter();
-  if (totalPages <= 1) return null;
+  const knownPages = totalPages;
+  const knownCount = totalCount;
+  // Счётчик недоступен — не прячем пагинацию из-за «нуля»: показываем
+  // нейтральное состояние и листаем по фактическому числу строк.
+  if (knownPages != null && knownCount != null) {
+    if (knownPages <= 1) return null;
+  } else if (page <= 1 && !hasNext) {
+    return null;
+  }
 
   const go = (p: number) => router.push(`?page=${p}`);
+  const nextDisabled = knownPages != null ? page >= knownPages : !hasNext;
 
   return (
     <div className="flex items-center justify-between mt-4 px-1">
       <p className="text-sm text-[var(--muted)]">
-        Страница <span className="font-semibold text-gray-800">{page}</span>{" "}
-        из {totalPages} · {totalCount} {pluralRecords(totalCount)} всего
+        Страница <span className="font-semibold text-gray-800">{page}</span>
+        {knownPages != null && knownCount != null ? (
+          <>
+            {" "}из {knownPages} · {knownCount}{" "}
+            {pluralRecords(knownCount)} всего
+          </>
+        ) : (
+          <> · всего: —</>
+        )}
       </p>
       <div className="flex gap-2">
         <button
@@ -943,7 +967,7 @@ function Pagination({
         </button>
         <button
           onClick={() => go(page + 1)}
-          disabled={page >= totalPages}
+          disabled={nextDisabled}
           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[var(--border)] text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           Следующая
@@ -965,6 +989,10 @@ export default function TransactionsClient({
   page,
   totalPages,
   totalCount,
+  countUnknown = false,
+  hasNextPage,
+  loadError = false,
+  materialsError = false,
   initialMaterialId,
   isAdmin = false,
   role = "warehouse",
@@ -978,6 +1006,14 @@ export default function TransactionsClient({
   page?: number;
   totalPages?: number;
   totalCount?: number;
+  // Счётчик записей не получен: в шапке «—», пагинация — по строкам
+  countUnknown?: boolean;
+  // При неизвестном счётчике — есть ли основания листать дальше
+  hasNextPage?: boolean;
+  // Сбой чтения журнала: показываем ошибку, а не EmptyState
+  loadError?: boolean;
+  // Сбой чтения справочника: добавление записей заблокировано
+  materialsError?: boolean;
   initialMaterialId?: string;
   isAdmin?: boolean;
   role?: string;
@@ -1076,6 +1112,14 @@ export default function TransactionsClient({
     setModalOpen(false);
     setFormError("");
   }, []);
+
+  // Без справочника материалов форма бессмысленна: открывать её нельзя,
+  // иначе можно записать операцию без материала. Причину показываем баннером
+  // и в title кнопки.
+  const openAdd = useCallback(() => {
+    if (materialsError) return;
+    setModalOpen(true);
+  }, [materialsError]);
 
   const handleAdd = useCallback(
     (form: FormState) => {
@@ -1176,14 +1220,24 @@ export default function TransactionsClient({
             Движение материалов
           </h1>
           <p className="text-label mt-1.5 lg:hidden">
-            {(totalCount ?? transactions.length) === 0
-              ? "Записей нет"
-              : `${totalCount ?? transactions.length} ${pluralRecords(totalCount ?? transactions.length)}`}
+            {loadError
+              ? "Журнал не загружен"
+              : countUnknown
+                ? "Записей: —"
+                : (totalCount ?? transactions.length) === 0
+                  ? "Записей нет"
+                  : `${totalCount ?? transactions.length} ${pluralRecords(totalCount ?? transactions.length)}`}
           </p>
         </div>
         <button
-          onClick={() => setModalOpen(true)}
-          className="dp-btn-primary rounded-xl self-start sm:self-auto"
+          onClick={openAdd}
+          disabled={materialsError}
+          title={
+            materialsError
+              ? "Справочник материалов не загружен — добавление записей недоступно"
+              : undefined
+          }
+          className="dp-btn-primary rounded-xl self-start sm:self-auto disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -1191,6 +1245,58 @@ export default function TransactionsClient({
           Добавить запись
         </button>
       </div>
+
+      {/* ── Ошибка чтения журнала ───────────────────────── */}
+      {loadError && (
+        <div
+          role="alert"
+          className="mb-5 flex items-start gap-3 rounded-xl border border-[var(--danger)]/40 bg-[var(--danger-bg)] px-4 py-3.5 text-sm text-[var(--danger)]"
+        >
+          <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium">Не удалось загрузить журнал движений</p>
+            <p className="mt-0.5 text-xs opacity-80">
+              Это сбой чтения, а не отсутствие записей. Повторите попытку.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            className="shrink-0 rounded-lg border border-[var(--danger)]/40 px-3 py-1.5 text-xs font-semibold hover:bg-[var(--danger-bg)] transition-colors"
+          >
+            Обновить
+          </button>
+        </div>
+      )}
+
+      {/* ── Ошибка чтения справочника материалов ────────── */}
+      {materialsError && (
+        <div
+          role="alert"
+          className="mb-5 flex items-start gap-3 rounded-xl border border-[var(--warning)]/40 bg-[var(--warning-bg)] px-4 py-3.5 text-sm text-[var(--warning)]"
+        >
+          <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium">
+              Справочник материалов не загружен — добавление записей недоступно
+            </p>
+            <p className="mt-0.5 text-xs opacity-80">
+              Без материалов нельзя указать, по какой позиции движение.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            className="shrink-0 rounded-lg border border-[var(--warning)]/40 px-3 py-1.5 text-xs font-semibold hover:bg-[var(--warning-bg)] transition-colors"
+          >
+            Обновить
+          </button>
+        </div>
+      )}
 
       {/* ── Balance Cards ───────────────────────────────── */}
       {/* ── Period segments ─────────────────────────────── */}
@@ -1270,10 +1376,13 @@ export default function TransactionsClient({
       )}
 
       {/* ── Empty state ─────────────────────────────────── */}
-      {filtered.length === 0 && (
+      {/* При сбое чтения журнала пустоту не показываем — выше висит ошибка */}
+      {!loadError && filtered.length === 0 && (
         <EmptyState
           isFiltered={hasFilters && transactions.length > 0}
-          onAdd={() => setModalOpen(true)}
+          onAdd={openAdd}
+          addDisabled={materialsError}
+          addDisabledReason="Справочник материалов не загружен — добавление записей недоступно"
         />
       )}
 
@@ -1478,8 +1587,18 @@ export default function TransactionsClient({
       )}
 
       {/* ── Pagination ──────────────────────────────────── */}
-      {page != null && totalPages != null && totalCount != null && (
-        <Pagination page={page} totalPages={totalPages} totalCount={totalCount} />
+      {/* Показываем, пока есть куда листать: при неизвестном счётчике
+          totalPages = undefined, и hasNextPage — единственный признак, что
+          дальше есть строки. Со страницы 2+ навигация нужна всегда, даже если
+          журнал не загрузился: баннер ошибки остаётся выше, но вернуться
+          назад пользователь может. */}
+      {page != null && (page > 1 || hasNextPage) && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          hasNext={hasNextPage}
+        />
       )}
 
       {/* ── Modal ───────────────────────────────────────── */}

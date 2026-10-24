@@ -383,7 +383,13 @@ function FilterBar({
 
 // ─── Summary table ────────────────────────────────────────
 
-function SummaryTable({ rows }: { rows: SummaryRow[] }) {
+function SummaryTable({
+  rows,
+  emptyMessage,
+}: {
+  rows: SummaryRow[];
+  emptyMessage?: string;
+}) {
   const totalIncome = rows.reduce((s, r) => s + r.income, 0);
   const totalReturn = rows.reduce((s, r) => s + r.return_qty, 0);
   const totalExpense = rows.reduce((s, r) => s + r.expense, 0);
@@ -393,7 +399,9 @@ function SummaryTable({ rows }: { rows: SummaryRow[] }) {
   if (rows.length === 0) {
     return (
       <div className="py-12 text-center">
-        <p className="text-sm text-[var(--muted)]">Нет данных за выбранный период</p>
+        <p className="text-sm text-[var(--muted)]">
+          {emptyMessage ?? "Нет данных за выбранный период"}
+        </p>
       </div>
     );
   }
@@ -655,6 +663,7 @@ export default function ReportsClient({
   rebarUnit,
   from,
   to,
+  readError = false,
 }: {
   summary: SummaryRow[];
   defects: DefectRow[];
@@ -666,6 +675,9 @@ export default function ReportsClient({
   rebarUnit: string;
   from: string;
   to: string;
+  // Справочник материалов не прочитан: строки/финансы не рассчитаны —
+  // отчёт нельзя выдавать за «нет данных» и нельзя экспортировать как полный.
+  readError?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -717,7 +729,12 @@ export default function ReportsClient({
         </div>
         <button
           onClick={handleExport}
-          disabled={exporting || summary.length === 0}
+          disabled={exporting || readError || summary.length === 0}
+          title={
+            readError
+              ? "Справочник материалов не загружен — экспорт недоступен"
+              : undefined
+          }
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[var(--accent)]/40 text-[var(--accent)] hover:bg-[var(--accent)] hover:text-[var(--accent-text)] text-sm font-semibold transition-colors tap-scale disabled:opacity-40 disabled:cursor-not-allowed self-start sm:self-auto min-h-[48px]"
         >
           {exporting ? (
@@ -734,6 +751,28 @@ export default function ReportsClient({
         </button>
       </div>
 
+      {readError && (
+        <div
+          role="alert"
+          className="mb-5 flex items-center gap-2.5 rounded-xl border border-[var(--danger)]/40 bg-[var(--danger-bg)] px-4 py-3 text-sm text-[var(--danger)]"
+        >
+          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span className="flex-1 min-w-0">
+            Не удалось загрузить справочник материалов — отчёт неполный,
+            итоги и финансы не рассчитаны.
+          </span>
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            className="shrink-0 rounded-lg border border-[var(--danger)]/40 px-3 py-1.5 text-xs font-semibold hover:bg-[var(--danger-bg)] transition-colors"
+          >
+            Обновить
+          </button>
+        </div>
+      )}
+
       {/* ── Filter ─────────────────────────────────────── */}
       <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] px-5 py-4 mb-5">
         <FilterBar from={from} to={to} onApply={handleApply} isPending={isPending} />
@@ -748,7 +787,11 @@ export default function ReportsClient({
           </p>
         </div>
 
-        {!finance.hasAnyPrice ? (
+        {readError ? (
+          <p className="text-sm text-[var(--muted)] text-center py-8 px-5">
+            Финансы не рассчитаны: справочник материалов не загружен.
+          </p>
+        ) : !finance.hasAnyPrice ? (
           <p className="text-sm text-[var(--muted)] text-center py-8 px-5">
             Укажите цены в транзакциях (приход сырья и отгрузка продукции) —
             здесь появятся выручка и маржа.
@@ -895,7 +938,14 @@ export default function ReportsClient({
         <div
           className={isPending ? "opacity-60 pointer-events-none" : ""}
         >
-          <SummaryTable rows={summary} />
+          <SummaryTable
+            rows={summary}
+            emptyMessage={
+              readError
+                ? "Справочник материалов не загружен — данные неполные"
+                : undefined
+            }
+          />
         </div>
       </div>
 

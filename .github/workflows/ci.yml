@@ -1,0 +1,85 @@
+name: CI
+
+# Триггеры: пуши в main/staging и любые pull_request.
+on:
+  push:
+    branches:
+      - main
+      - staging
+  pull_request:
+
+# Минимальные права: CI только читает репозиторий, секреты не нужны.
+permissions:
+  contents: read
+
+jobs:
+  # Обязательный job: типы, линт и юнит-тесты. Падение любого шага — красный статус.
+  quality:
+    name: Quality (types, lint, unit, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # tests/ исключён из tsconfig.json, поэтому tsc проверяет только код приложения.
+      - name: Typecheck (tsc --noEmit)
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      # tests/unit/playwright.unit.config.ts — чистые юнит-тесты:
+      # без браузера, dev-сервера и БД, поэтому `playwright install` не нужен.
+      - name: Unit tests
+        run: npm run test:unit
+
+      # Build is not optional: Next validates route handler and page signatures
+      # only when it builds (.next/types). A sync `params` slipped past tsc on a
+      # clean checkout once already and only surfaced in `next build`.
+      # Dummy env values satisfy @supabase/ssr during prerender; no database is
+      # contacted because every data page is force-dynamic.
+      - name: Build (generates route type validation)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+          NEXT_PUBLIC_APP_URL: https://ci-placeholder.example
+        run: npm run build
+
+  # НЕ блокирует мерж: остаются известные уязвимости, которые не чинятся
+  # без мажорного шага — critical в цепочке @sentry/nextjs и high в postcss,
+  # встроенном в next (лечится только next 16). Шаг намеренно завершается
+  # успехом и оставляет аннотацию: отчёт npm audit печатается целиком выше,
+  # а вечно красная проверка только приучает её игнорировать. Когда обе
+  # записи уйдут — убрать `|| echo ...`, и джоб станет блокирующим.
+  audit:
+    name: Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: npm audit (production dependencies)
+        run: |
+          npm audit --omit=dev --audit-level=high || \
+            echo "::warning::npm audit нашёл известные уязвимости — см. отчёт шага выше"
+

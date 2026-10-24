@@ -10,6 +10,7 @@ import type {
   FinanceData,
 } from "@/components/reports/ReportsClient";
 import NoCompanyState from "@/components/ui/NoCompanyState";
+import { fetchAllPages } from "@/lib/supabase/fetchAllPages";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,8 +18,9 @@ export const revalidate = 0;
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: { from?: string; to?: string };
+  searchParams: Promise<{ from?: string; to?: string }>;
 }) {
+  const sp = await searchParams;
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
@@ -53,8 +55,8 @@ export default async function ReportsPage({
     .toISOString()
     .split("T")[0];
 
-  const from = searchParams.from ?? defaultFrom;
-  const to = searchParams.to ?? defaultTo;
+  const from = sp.from ?? defaultFrom;
+  const to = sp.to ?? defaultTo;
 
   // ── All 3 queries in parallel — no waterfall ─────────────
   const [matsResult, txResult, profilesResult] = await Promise.all([
@@ -66,14 +68,21 @@ export default async function ReportsPage({
     // select("*") so unit_price is read when present but the query still
     // works in the window before migration 038 is applied (missing column
     // would otherwise error). Absent/empty price is treated as 0 below.
-    supabase
-      .from("material_transactions")
-      .select("*")
-      .eq("company_id", company_id)
-      .is("deleted_at", null)
-      .gte("transaction_date", from)
-      .lte("transaction_date", to)
-      .order("transaction_date", { ascending: false }),
+    fetchAllPages((rangeFrom, rangeTo) =>
+        supabase
+          .from("material_transactions")
+          .select("*")
+          .eq("company_id", company_id)
+          .is("deleted_at", null)
+          .gte("transaction_date", from)
+          .lte("transaction_date", to)
+          .order("transaction_date", { ascending: false })
+          // Полный детерминированный порядок: created_at + уникальный id,
+          // иначе страницы range() дублируют/теряют строки.
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(rangeFrom, rangeTo)
+      ),
     // Fetch all company profiles upfront — avoids sequential fetch after defect filter
     supabase
       .from("profiles")
@@ -81,8 +90,16 @@ export default async function ReportsPage({
       .eq("company_id", company_id),
   ]);
 
+  // ── Ошибка чтения справочника: отчёт неполный, не «нет данных» ──
+  const matsFailed = Boolean(matsResult.error);
+  if (matsResult.error)
+    console.error(
+      "[reports] не удалось загрузить справочник материалов:",
+      matsResult.error.message
+    );
+
   const materials = matsResult.data ?? [];
-  const txs = txResult.data ?? [];
+  const txs = txResult;
 
   // ── Build profile map ────────────────────────────────────
   const defectTxs = txs.filter((t) => t.type === "defect");
@@ -375,6 +392,7 @@ export default async function ReportsPage({
       rebarUnit={rebarUnit}
       from={from}
       to={to}
+      readError={matsFailed}
     />
   );
 }

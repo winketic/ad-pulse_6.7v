@@ -10,7 +10,8 @@ import { isPlatformOwnerEmail } from "@/lib/auth/platform-owner";
 export const dynamic = "force-dynamic";
 
 
-export default async function AdminApprovePage({ params }: { params: { id: string } }) {
+export default async function AdminApprovePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const { data: { user } } = await supabase.auth.getUser();
@@ -21,7 +22,7 @@ export default async function AdminApprovePage({ params }: { params: { id: strin
   const { data: reg, error } = await service
     .from("registrations")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (error || !reg) notFound();
@@ -67,7 +68,7 @@ export default async function AdminApprovePage({ params }: { params: { id: strin
             ))}
           </div>
 
-          {isPending && <ApproveButton registrationId={params.id} />}
+          {isPending && <ApproveButton registrationId={id} />}
 
           <div className="mt-5 text-center">
             <Link href="/admin/registrations" className="text-sm text-gray-400 hover:text-[#05050a] transition-colors">

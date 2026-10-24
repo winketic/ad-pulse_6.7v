@@ -51,11 +51,14 @@ function resolveContentType(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   // ── Token verification ─────────────────────────────────
+  // Next 15 passes route params as a promise; awaiting keeps the token check
+  // working instead of comparing against undefined.
+  const { token } = await params;
   const expectedToken = (process.env.WAZZUP_WEBHOOK_TOKEN ?? "").trim();
-  if (!expectedToken || params.token !== expectedToken) {
+  if (!expectedToken || token !== expectedToken) {
     console.warn(`[wazzup/webhook] rejected: invalid token`);
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

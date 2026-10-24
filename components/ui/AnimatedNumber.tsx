@@ -15,7 +15,7 @@ export default function AnimatedNumber({
   duration?: number;
 }) {
   const [display, setDisplay] = useState(0);
-  const raf = useRef<number>();
+  const raf = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (
