@@ -476,7 +476,7 @@ export default async function DashboardPage() {
           {timeline.length === 0 ? (
             <p className="text-sm text-[var(--muted)] text-center py-10">Сегодня пока тихо</p>
           ) : (
-            <div className="divide-y divide-[var(--border)]">
+            <div className="divide-y divide-[var(--border)] stagger">
               {timeline.map((item) => (
                 <div key={item.id} className="flex items-center gap-3 px-5 h-11 hover:bg-[var(--surface-2)] transition-colors duration-150">
                   <span className="num text-xs text-[var(--muted-2)] w-20 shrink-0">{item.timeLabel}</span>

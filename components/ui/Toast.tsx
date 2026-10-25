@@ -61,7 +61,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 rounded-xl border bg-[var(--card)] shadow-2xl min-w-[280px] max-w-[380px] animate-in slide-in-from-bottom-2 duration-200 ${borders[toast.type]}`}
+      className={`flex items-start gap-3 px-4 py-3 rounded-xl border bg-[var(--card)] shadow-2xl min-w-[280px] max-w-[380px] toast-in ${borders[toast.type]}`}
     >
       {icons[toast.type]}
       <p className="text-sm text-[var(--text)] flex-1 leading-snug">{toast.message}</p>

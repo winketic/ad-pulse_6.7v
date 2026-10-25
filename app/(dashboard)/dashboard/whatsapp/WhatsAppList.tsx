@@ -482,7 +482,7 @@ function MessageCard({
     .join(" · ");
 
   return (
-    <div className="rounded-xl overflow-hidden" style={CARD_STYLE}>
+    <div className="rounded-xl overflow-hidden card-lift" style={CARD_STYLE}>
       <button
         type="button"
         onClick={onSelect}

@@ -413,10 +413,11 @@ export default function DashboardShell({
           className="flex-1 overflow-auto overflow-x-hidden lg:pb-0"
           style={{ paddingBottom: "calc(72px + env(safe-area-inset-bottom, 0px))" }}
         >
-          {/* No fill-mode: a completed opacity animation with fill "both"
-              keeps a stacking context alive, trapping every z-indexed
-              overlay inside — bottom sheets would render UNDER the nav bar */}
-          <div key={pathname} style={{ animation: "fadeIn 160ms var(--ease)" }}>
+          {/* .page-enter also runs without fill-mode: a finished opacity
+              animation with fill "both" keeps a stacking context alive,
+              trapping every z-indexed overlay inside — sheets would render
+              UNDER the nav bar */}
+          <div key={pathname} className="page-enter">
             {children}
           </div>
         </main>

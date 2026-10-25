@@ -48,8 +48,6 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <head>
-        <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png" />
-        <link rel="apple-touch-icon" href="/icon-192.png" sizes="192x192" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-x-hidden`}>
         <BrandSplash />

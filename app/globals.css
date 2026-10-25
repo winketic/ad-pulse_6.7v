@@ -111,6 +111,59 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   from { transform: translateY(24px); opacity: 0.4; }
   to   { transform: translateY(0);    opacity: 1; }
 }
+
+/* ── Interaction motion ─────────────────────────────
+   Note: no fill-mode "both" anywhere here. A finished opacity animation that
+   keeps a fill-mode leaves a stacking context behind, and that traps fixed
+   overlays (sheets, drawers) underneath the bottom nav. */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.page-enter {
+  animation: pageEnter 220ms var(--ease) backwards;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+.toast-in {
+  animation: toastIn 240ms var(--ease) backwards;
+}
+
+.card-lift {
+  transition: transform 180ms var(--ease), box-shadow 180ms var(--ease),
+    border-color 180ms var(--ease);
+}
+@media (hover: hover) {
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+  }
+}
+.card-lift:active {
+  transform: translateY(0) scale(0.995);
+}
+
+/* Rows settle in one after another instead of appearing as a block. */
+@keyframes staggerItem {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+.stagger > * {
+  animation: staggerItem 240ms var(--ease) backwards;
+}
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 30ms; }
+.stagger > *:nth-child(3) { animation-delay: 60ms; }
+.stagger > *:nth-child(4) { animation-delay: 90ms; }
+.stagger > *:nth-child(5) { animation-delay: 120ms; }
+.stagger > *:nth-child(6) { animation-delay: 150ms; }
+.stagger > *:nth-child(7) { animation-delay: 180ms; }
+.stagger > *:nth-child(8) { animation-delay: 210ms; }
+.stagger > *:nth-child(n + 9) { animation-delay: 240ms; }
+
 /* ── Launch splash (installed app only) ───────────── */
 .adps-splash {
   position: fixed;
@@ -125,8 +178,27 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   animation: fadeIn 160ms var(--ease) both;
   transition: opacity 240ms var(--ease);
 }
+/* Soft halo behind the mark: reads as the light of a starting engine. */
+.adps-splash::before {
+  content: "";
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 245, 196, 0.18), transparent 62%);
+  animation: splashHalo 1200ms ease-out both;
+}
+@keyframes splashHalo {
+  from { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; }
+  to   { opacity: 0.75; transform: scale(1); }
+}
 .adps-splash--out {
   opacity: 0;
+  transform: scale(0.985);
+}
+
+.adps-splash--out {
   pointer-events: none;
 }
 .adps-splash-mark {
@@ -148,7 +220,11 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   letter-spacing: 0.18em;
   text-transform: uppercase;
   opacity: 0;
-  animation: fadeIn 420ms ease-out 520ms forwards;
+  animation: fadeIn 420ms ease-out 520ms forwards, splashTracking 900ms ease-out 520ms forwards;
+}
+@keyframes splashTracking {
+  from { letter-spacing: 0.42em; }
+  to   { letter-spacing: 0.18em; }
 }
 @keyframes splashDraw {
   to { stroke-dashoffset: 0; }
