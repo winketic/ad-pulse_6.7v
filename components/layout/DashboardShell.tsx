@@ -173,6 +173,22 @@ export default function DashboardShell({
   const mobileLeft = isCompanyAdmin ? MOBILE_NAV_LEFT : [role === "warehouse" ? NAV_ITEMS[2] : NAV_ITEMS[4]];
   const mobileRight = isCompanyAdmin ? MOBILE_NAV_RIGHT : [NAV_ITEMS[3]];
   const moreItems = MORE_ITEMS.filter((item) => canAccessCompanyPage(role, item.href));
+  // Which way the user moved through the sections decides how the page enters.
+  const previousPath = useRef(pathname);
+  const [navDirection, setNavDirection] = useState<"forward" | "back">("forward");
+  useEffect(() => {
+    const order = NAV_ITEMS.map((item) => item.href);
+    const rank = (path: string) => {
+      const exact = order.indexOf(path);
+      if (exact !== -1) return exact;
+      return order.findIndex((href) => href !== "/dashboard" && path.startsWith(href));
+    };
+    const from = rank(previousPath.current);
+    const to = rank(pathname);
+    setNavDirection(from !== -1 && to !== -1 && to < from ? "back" : "forward");
+    previousPath.current = pathname;
+  }, [pathname]);
+
   const primaryHref = isCompanyAdmin ? FAB_HREF : "/dashboard/transactions";
   const PrimaryIcon = isCompanyAdmin ? Factory : ArrowLeftRight;
 
@@ -417,7 +433,7 @@ export default function DashboardShell({
               animation with fill "both" keeps a stacking context alive,
               trapping every z-indexed overlay inside — sheets would render
               UNDER the nav bar */}
-          <div key={pathname} className="page-enter">
+          <div key={pathname} className="page-enter" data-dir={navDirection}>
             {children}
           </div>
         </main>

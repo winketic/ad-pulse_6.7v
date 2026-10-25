@@ -164,6 +164,49 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
 .stagger > *:nth-child(8) { animation-delay: 210ms; }
 .stagger > *:nth-child(n + 9) { animation-delay: 240ms; }
 
+
+/* Direction of travel: forward slides in from the right, back from the left. */
+@keyframes pageEnterForward {
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes pageEnterBack {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+.page-enter[data-dir="forward"] { animation-name: pageEnterForward; }
+.page-enter[data-dir="back"]    { animation-name: pageEnterBack; }
+
+/* Side drawer enters from the edge it lives on. */
+@keyframes drawerIn {
+  from { transform: translateX(100%); }
+  to   { transform: none; }
+}
+.drawer-in { animation: drawerIn 260ms var(--ease) backwards; }
+.backdrop-in { animation: fadeIn 200ms linear backwards; }
+
+/* Empty-state illustrations breathe instead of sitting dead still. */
+@keyframes floatSoft {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+.float-soft { animation: floatSoft 3.2s ease-in-out infinite; }
+
+/* Loading buttons: a light sweep instead of a frozen label. */
+@keyframes btnSheen {
+  from { transform: translateX(-120%); }
+  to   { transform: translateX(120%); }
+}
+.btn-progress { position: relative; overflow: hidden; }
+.btn-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  animation: btnSheen 1.1s linear infinite;
+  pointer-events: none;
+}
+
 /* ── Launch splash (installed app only) ───────────── */
 .adps-splash {
   position: fixed;

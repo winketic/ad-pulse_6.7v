@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useTransition, useCallback, Fragment } from "react";
+import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import { useRouter } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────
@@ -879,21 +880,21 @@ export default function ReportsClient({
               <div className="rounded-lg border border-[var(--border)] bg-[var(--bg3)] px-4 py-3">
                 <p className="text-xs text-[var(--muted)]">Выручка</p>
                 <p className="num text-lg font-bold text-[var(--success)] mt-1 tabular-nums break-words">
-                  {money(finance.revenueTotal)}
+                  <AnimatedNumber value={finance.revenueTotal} format={money} />
                 </p>
                 <p className="text-[11px] text-[var(--muted-2)] mt-0.5">расход / отгрузка продукции</p>
               </div>
               <div className="rounded-lg border border-[var(--border)] bg-[var(--bg3)] px-4 py-3">
                 <p className="text-xs text-[var(--muted)]">Затраты на сырьё</p>
                 <p className="num text-lg font-bold text-[var(--danger)] mt-1 tabular-nums break-words">
-                  {money(finance.rawCostTotal)}
+                  <AnimatedNumber value={finance.rawCostTotal} format={money} />
                 </p>
                 <p className="text-[11px] text-[var(--muted-2)] mt-0.5">приход сырья</p>
               </div>
               <div className="rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 px-4 py-3">
                 <p className="text-xs text-[var(--muted)]">Маржа по материалам</p>
                 <p className={`num text-lg font-bold mt-1 tabular-nums break-words ${finance.materialMargin >= 0 ? "text-[var(--accent)]" : "text-[var(--danger)]"}`}>
-                  {money(finance.materialMargin)}
+                  <AnimatedNumber value={finance.materialMargin} format={money} />
                 </p>
                 <p className="text-[11px] text-[var(--muted-2)] mt-0.5">выручка − списанное сырьё</p>
               </div>

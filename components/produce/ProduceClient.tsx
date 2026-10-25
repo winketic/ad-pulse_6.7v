@@ -486,7 +486,7 @@ export default function ProduceClient({
           type="button"
           onClick={submitAll}
           disabled={cartCount === 0 || isPending}
-          className="dp-btn-primary w-full min-h-[52px] rounded-xl text-base disabled:opacity-40"
+          className={`dp-btn-primary w-full min-h-[52px] rounded-xl text-base disabled:opacity-40${isPending ? " btn-progress" : ""}`}
         >
           {isPending ? "Запись…" : `Записать всё${cartCount > 0 ? ` (${cartCount})` : ""}`}
         </button>

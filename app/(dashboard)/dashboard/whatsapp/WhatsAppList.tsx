@@ -262,7 +262,7 @@ function ConfirmModal({
               style={{ background: "var(--card)", borderColor: "var(--border)" }}
             >
               <button type="button" onClick={onClose} className="dp-btn-secondary flex-1">Отмена</button>
-              <button type="submit" disabled={pending} className="dp-btn-primary flex-1">
+              <button type="submit" disabled={pending} className={`dp-btn-primary flex-1${pending ? " btn-progress" : ""}`}>
                 {pending ? "Сохранение…" : "Сохранить"}
               </button>
             </div>
@@ -299,9 +299,9 @@ function MessageDetailDrawer({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
+      <div className="fixed inset-0 z-40 bg-black/50 backdrop-in" onClick={onClose} />
       <div
-        className="fixed right-0 top-0 h-full w-full sm:w-[420px] max-w-full z-50 flex flex-col"
+        className="fixed right-0 top-0 h-full w-full sm:w-[420px] max-w-full z-50 flex flex-col drawer-in"
         style={{ background: "var(--bg)", borderLeft: "1px solid var(--border)" }}
       >
         {/* Header */}
@@ -590,7 +590,7 @@ function QueueEmptyState({
   return (
     <div className="rounded-xl px-4 py-8 sm:px-8 sm:py-10 text-center" style={CARD_STYLE}>
       <div
-        className="w-12 h-12 rounded-full mx-auto flex items-center justify-center"
+        className="w-12 h-12 rounded-full mx-auto flex items-center justify-center float-soft"
         style={{ background: "var(--bg3)", border: "1px solid var(--border)" }}
       >
         <svg className="w-6 h-6" style={{ color: "var(--accent)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

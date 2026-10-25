@@ -9,10 +9,13 @@ export default function AnimatedNumber({
   value,
   prefix = "",
   duration = 400,
+  format,
 }: {
   value: number;
   prefix?: string;
   duration?: number;
+  /** Optional formatter for the intermediate value, e.g. money(1234.5). */
+  format?: (n: number) => string;
 }) {
   const [display, setDisplay] = useState(0);
   const raf = useRef<number | undefined>(undefined);
@@ -48,7 +51,7 @@ export default function AnimatedNumber({
   return (
     <span className="tabular-nums">
       {prefix}
-      {formatCompact(shown)}
+      {format ? format(shown) : formatCompact(shown)}
     </span>
   );
 }
