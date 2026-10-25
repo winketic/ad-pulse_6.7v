@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
+import BrandSplash from "@/components/BrandSplash";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -47,11 +48,11 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <head>
-        <link rel="icon" href="/logo.svg" type="image/svg+xml" />
         <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png" />
         <link rel="apple-touch-icon" href="/icon-192.png" sizes="192x192" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-x-hidden`}>
+        <BrandSplash />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

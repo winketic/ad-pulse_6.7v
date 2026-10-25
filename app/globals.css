@@ -111,6 +111,53 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   from { transform: translateY(24px); opacity: 0.4; }
   to   { transform: translateY(0);    opacity: 1; }
 }
+/* ── Launch splash (installed app only) ───────────── */
+.adps-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: #05050a;
+  animation: fadeIn 160ms var(--ease) both;
+  transition: opacity 240ms var(--ease);
+}
+.adps-splash--out {
+  opacity: 0;
+  pointer-events: none;
+}
+.adps-splash-mark {
+  animation: splashPop 420ms var(--ease) both;
+}
+.adps-splash-line {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: splashDraw 900ms ease-out 120ms forwards;
+}
+.adps-splash-dot {
+  opacity: 0;
+  animation: fadeIn 320ms ease-out 720ms forwards;
+}
+.adps-splash-title {
+  color: #e8ecf1;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: fadeIn 420ms ease-out 520ms forwards;
+}
+@keyframes splashDraw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes splashPop {
+  from { transform: scale(0.92); opacity: 0.6; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
 @keyframes authGlow {
   0%, 100% { opacity: 0.7; }
   50%      { opacity: 1; }
