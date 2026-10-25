@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   // ── Get company_id ─────────────────────────────────────
   const { data: profile } = await supabase
     .from("profiles")
-    .select("company_id")
+    .select("company_id, role")
     .eq("id", user.id)
     .single();
 
@@ -32,6 +32,12 @@ export async function GET(request: NextRequest) {
     console.error("[wazzup/connect] no company_id for user", user.id);
     settingsUrl.searchParams.set("wazzup", "error");
     settingsUrl.searchParams.set("reason", "no_company");
+    return NextResponse.redirect(settingsUrl);
+  }
+
+  if (profile.role !== "admin") {
+    settingsUrl.searchParams.set("wazzup", "error");
+    settingsUrl.searchParams.set("reason", "forbidden");
     return NextResponse.redirect(settingsUrl);
   }
 
@@ -52,7 +58,6 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   const clientId = wazzupCfg?.client_id?.replace(/\uFEFF/g, "").trim();
-  console.log("[wazzup/connect] company:", profile.company_id, "| wazzupCfg:", JSON.stringify(wazzupCfg), "| clientId:", clientId);
   if (!clientId) {
     console.error("[wazzup/connect] no client_id in wazzup_config for company", profile.company_id);
     settingsUrl.searchParams.set("wazzup", "error");
@@ -81,6 +86,5 @@ export async function GET(request: NextRequest) {
 
   // ── Redirect to Wazzup ─────────────────────────────────
   const authUrl = getAuthUrl(codeChallenge, state, redirectUri, clientId);
-  console.log("[wazzup/connect] redirecting to Wazzup | redirectUri:", redirectUri, "| authUrl:", authUrl);
   return NextResponse.redirect(authUrl);
 }

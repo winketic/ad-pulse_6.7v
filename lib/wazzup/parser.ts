@@ -234,18 +234,17 @@ ${materialsList}${contextBlock}
     });
 
     if (!res.ok) {
-      console.error("[parser] GPT API error:", res.status, await res.text().catch(() => ""));
+      console.error("[parser] GPT API request failed:", res.status);
       return null;
     }
 
     const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
     const raw = data.choices?.[0]?.message?.content?.trim() ?? "";
-    console.log("[parser] GPT raw response:", raw);
 
     const parsed = JSON.parse(raw) as GptParsed;
     return parsed;
-  } catch (e) {
-    console.error("[parser] GPT parse error:", e);
+  } catch {
+    console.error("[parser] GPT parsing failed");
     return null;
   }
 }

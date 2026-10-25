@@ -85,8 +85,8 @@ export async function POST(
   // Return 200 OK immediately so Wazzup doesn't timeout and retry.
   // processWebhook runs in the background within Vercel's maxDuration window.
   if (body) {
-    void processWebhook(body).catch((err) =>
-      console.error("[wazzup/webhook] processing error:", err)
+    void processWebhook(body).catch(() =>
+      console.error("[wazzup/webhook] processing failed")
     );
   }
 
@@ -94,8 +94,6 @@ export async function POST(
 }
 
 async function processWebhook(body: unknown) {
-  // ── FULL RAW BODY ──────────────────────────────────────
-  console.log("[wazzup/webhook] RAW BODY:", JSON.stringify(body));
 
   if (!body || typeof body !== "object") {
     console.log("[wazzup/webhook] SKIP: body is null or not object");
@@ -119,9 +117,9 @@ async function processWebhook(body: unknown) {
   // Parallel processing: total time = slowest item, not sum of all items
   await Promise.all(
     data.map((item) =>
-      processItem(item).catch((err) =>
-        console.error("[wazzup/webhook] ITEM ERROR:", err, "| item:", JSON.stringify(item))
-      )
+      processItem(item).catch(() => {
+        console.error("[wazzup/webhook] item processing failed");
+      })
     )
   );
 }
@@ -156,37 +154,21 @@ async function processItem(item: unknown) {
     const keyOk = key.startsWith("eyJhbGci") && key.length > 100;
     const urlOk = url.startsWith("https://") && url.includes("supabase");
 
-    console.log(
-      "[webhook] supabase admin init check:" +
-      ` url_ok=${urlOk} url=${url.slice(0, 35)}...` +
-      ` key_ok=${keyOk} key_prefix=${key.slice(0, 14)} key_len=${key.length}`
-    );
+    console.log(`[webhook] Supabase configuration valid=${keyOk && urlOk}`);
 
     if (!keyOk) {
-      console.error(
-        "[webhook] WRONG SERVICE ROLE KEY — must start with 'eyJhbGci' and be ~217 chars." +
-        ` Got prefix='${key.slice(0, 20)}' len=${key.length}.` +
-        " Fix: Supabase Dashboard → Settings → API → service_role (secret) → copy to Vercel env."
-      );
+      console.error("[webhook] service role key configuration is invalid");
     }
     if (!urlOk) {
-      console.error(`[webhook] WRONG SUPABASE URL — got '${url.slice(0, 40)}'`);
+      console.error("[webhook] Supabase URL configuration is invalid");
     }
 
     service = createServiceClient();
-  } catch (e) {
-    console.error("[webhook] supabase admin init FAILED:", e);
+  } catch {
+    console.error("[webhook] Supabase admin client initialization failed");
     return;
   }
 
-  // ── RAW FIELD DUMP (for debugging chat_id type issues) ──
-  console.log(
-    "[wazzup/webhook] raw fields:" +
-    ` chat_id=${JSON.stringify(msg.chat_id)} (${typeof msg.chat_id})` +
-    ` channel_id=${JSON.stringify(msg.channel_id)} (${typeof msg.channel_id})` +
-    ` message_id=${JSON.stringify(msg.message_id ?? msg.id)} (${typeof (msg.message_id ?? msg.id)})` +
-    ` sender=${JSON.stringify(msg.sender)}`
-  );
 
   // ── FIELD EXTRACTION ──────────────────────────────
   const dir = typeof msg.direction === "string" ? msg.direction.toLowerCase() : "";
@@ -211,7 +193,6 @@ async function processItem(item: unknown) {
     (typeof msg.chatId  === "string" && msg.chatId.replace(/@.*$/, "")) ||
     "";
 
-  console.log("[wazzup/webhook] insert payload chat_id:", msg.chat_id, "→ extracted:", chatId);
 
   const rawType = typeof msg.type === "string" ? msg.type : "text";
   const text    = typeof msg.text === "string" ? msg.text.trim() : "";
@@ -233,11 +214,6 @@ async function processItem(item: unknown) {
   const mimetype  = typeof attachment?.mimetype === "string" ? attachment.mimetype : null;
   const contentType = resolveContentType(rawType, mimetype);
 
-  console.log(
-    `[wazzup/webhook] item: message_id="${messageId}" channel_id="${channelId}"` +
-    ` chat_id="${chatId}" sender_phone="${senderPhone}"` +
-    ` direction="${dir}" type="${rawType}" text="${text.slice(0, 80)}"`
-  );
   console.log("[wazzup/webhook] step: starting processing");
 
   // ── DIRECTION FILTER ───────────────────────────────
@@ -281,14 +257,13 @@ async function processItem(item: unknown) {
     );
 
     if (idempErr) {
-      console.error("[wazzup/webhook] IDEMPOTENCY ERROR:", idempErr.message, "code:", idempErr.code);
+      console.error("[wazzup/webhook] idempotency lookup failed");
       // продолжаем
     } else if (existing) {
-      console.log("[wazzup/webhook] SKIP: duplicate message_id", messageId);
       return;
     }
-  } catch (e) {
-    console.error("[wazzup/webhook] idempotency timeout/error:", e instanceof Error ? e.message : e);
+  } catch {
+    console.error("[wazzup/webhook] idempotency check failed");
     // продолжаем несмотря на ошибку
   }
   console.log("[wazzup/webhook] step: after idempotency check");
@@ -303,30 +278,23 @@ async function processItem(item: unknown) {
   const { data: token, error: tokenErr } = await supabaseWithTimeout(
     tokenPromise, 5000, "company lookup"
   );
-  console.log(
-    `[wazzup/webhook] step: company result company_id=${token?.company_id ?? "NOT FOUND"} err=${tokenErr?.message ?? "none"}`
-  );
+  if (tokenErr) console.error("[wazzup/webhook] company lookup failed");
 
   if (!token?.company_id) {
-    console.warn(`[wazzup/webhook] SKIP: no company for channel_id="${channelId}"`);
     return;
   }
 
   // ── ALLOWED CHATS FILTER ───────────────────────────
   const allowedChats: string[] = token.allowed_chat_ids ?? [];
-  console.log(`[wazzup/webhook] step: allowed_chat_ids count=${allowedChats.length}`);
   if (allowedChats.length > 0) {
     const incomingId = chatId || senderPhone;
     const isAllowed = !!incomingId && allowedChats.some((a) => a === incomingId);
-    console.log(`[wazzup/webhook] step: allowed check incomingId="${incomingId}" isAllowed=${isAllowed} allowed=${JSON.stringify(allowedChats)}`);
     if (!isAllowed) {
-      console.log(`[wazzup/webhook] SKIP: incomingId="${incomingId}" not in allowed list`);
       return;
     }
   }
 
   // ── INSERT ─────────────────────────────────────────
-  console.log("[webhook] inserting chat_id:", chatId, typeof chatId);
 
   const insertPayload = {
     company_id:   token.company_id,
@@ -341,29 +309,23 @@ async function processItem(item: unknown) {
     parsed:       false,
     needs_review: false,
   };
-  console.log("[wazzup/webhook] step: before insert", JSON.stringify(insertPayload));
 
   const { data: saved, error: insertErr } = await supabaseWithTimeout(
     service.from("wazzup_messages").insert(insertPayload).select("id").single(),
     8000, "INSERT wazzup_messages"
   );
 
-  console.log(`[wazzup/webhook] step: after insert saved_id=${saved?.id ?? "null"} err=${insertErr?.message ?? "none"} code=${insertErr?.code ?? "none"}`);
-
   if (insertErr) {
-    console.error(`[wazzup/webhook] INSERT ERROR: ${insertErr.message} | code=${insertErr.code}`);
+    console.error("[wazzup/webhook] message insert failed");
     return;
   }
 
   const savedId = saved?.id ?? null;
-  console.log(`[wazzup/webhook] SAVED message id=${savedId}`);
 
   // Await parseAndSave — safe now that we return 200 OK before processWebhook runs
-  console.log(`[wazzup/webhook] step: before parseAndSave id=${savedId}`);
   if (savedId) {
-    await parseAndSave(savedId).catch((err) =>
-      console.error(`[wazzup/webhook] parseAndSave error for id=${savedId}:`, err)
-    );
+    await parseAndSave(savedId).catch(() => {
+      console.error("[wazzup/webhook] message parsing failed");
+    });
   }
-  console.log(`[wazzup/webhook] step: parseAndSave complete`);
 }

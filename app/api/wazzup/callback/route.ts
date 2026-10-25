@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       redirectUri
     );
 
-    console.log("[callback] tokens:", JSON.stringify(tokens));
+    // OAuth tokens must never be written to application logs.
     const expiresIn = typeof tokens.expires_in === "number" && isFinite(tokens.expires_in)
       ? tokens.expires_in
       : 3600;
@@ -84,20 +84,24 @@ export async function GET(request: NextRequest) {
     if (upsertErr) throw new Error(upsertErr.message);
 
     // ── Subscribe to webhooks + fetch channel IDs ────────
-    await subscribeToWebhooks(
-      stateRecord.company_id,
-      tokens.access_token
-    ).catch((err) =>
-      console.error("[wazzup/callback] subscribeToWebhooks error:", err)
-    );
+    try {
+      await subscribeToWebhooks(stateRecord.company_id, tokens.access_token);
+    } catch {
+      console.error("[wazzup/callback] webhook subscription failed");
+      await service.from("wazzup_tokens").delete().eq("company_id", stateRecord.company_id);
+      await service.from("oauth_state").delete().eq("state", state);
+      settingsUrl.searchParams.set("wazzup", "error");
+      settingsUrl.searchParams.set("reason", "webhook_subscription");
+      return NextResponse.redirect(settingsUrl);
+    }
 
     // ── Cleanup state record ─────────────────────────────
     await service.from("oauth_state").delete().eq("state", state);
 
     settingsUrl.searchParams.set("wazzup", "connected");
     return NextResponse.redirect(settingsUrl);
-  } catch (err) {
-    console.error("[wazzup/callback] token exchange error:", err);
+  } catch {
+    console.error("[wazzup/callback] token exchange failed");
     // Always cleanup state on failure
     await service.from("oauth_state").delete().eq("state", state);
 

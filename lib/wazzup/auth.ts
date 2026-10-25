@@ -122,12 +122,10 @@ export async function exchangeCodeForTokens(
   });
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "(empty body)");
-    throw new Error(`Wazzup token exchange failed [${res.status}]: ${body}`);
+    throw new Error(`Wazzup token exchange failed [${res.status}]`);
   }
 
   const json = await res.json();
-  console.log("[exchangeCodeForTokens] raw response:", JSON.stringify(json));
   // Wazzup wraps tokens in { data: { access_token, ... }, meta: {...} }
   const tokenData = json?.data ?? json;
   return tokenData as WazzupTokens;

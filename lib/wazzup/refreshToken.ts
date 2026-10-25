@@ -46,8 +46,7 @@ export async function ensureFreshToken(companyId: string): Promise<string> {
   });
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "(empty body)");
-    throw new Error(`Wazzup token refresh failed [${res.status}]: ${body}`);
+    throw new Error(`Wazzup token refresh failed [${res.status}]`);
   }
 
   const json = await res.json();
@@ -68,8 +67,8 @@ export async function ensureFreshToken(companyId: string): Promise<string> {
     .eq("company_id", companyId);
 
   // Re-register webhook after token refresh — Wazzup may expire the old subscription
-  void subscribeToWebhooks(companyId, tokens.access_token).catch((err) =>
-    console.warn("[refreshToken] webhook re-subscribe failed (non-fatal):", err)
+  void subscribeToWebhooks(companyId, tokens.access_token).catch(() =>
+    console.warn("[refreshToken] webhook re-subscribe failed (non-fatal)")
   );
 
   return tokens.access_token;

@@ -72,7 +72,8 @@ export async function saveWazzupConfig(
 }
 
 export async function disconnectWazzup() {
-  const { companyId } = await getAdminContext();
+  const { companyId, role } = await getAdminContext();
+  if (role !== "admin") throw new Error("Только администратор может отключать интеграцию");
   const service = createServiceClient();
 
   const { error } = await service
@@ -158,7 +159,8 @@ export type UserRow = {
 
 export async function listCompanyUsers(): Promise<UserRow[]> {
   try {
-    const { companyId } = await getAdminContext();
+    const { companyId, role } = await getAdminContext();
+    if (role !== "admin") throw new Error("Только администратор может просматривать список пользователей");
     const service = createServiceClient();
 
     const { data: profiles, error: profilesError } = await service
