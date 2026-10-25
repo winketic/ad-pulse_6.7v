@@ -4,6 +4,7 @@ import NoCompanyState from "@/components/ui/NoCompanyState";
 import WarehouseClient from "@/components/warehouse/WarehouseClient";
 import { redirect } from "next/navigation";
 import { canAccessCompanyPage, defaultDashboardPath } from "@/lib/auth/role-permissions";
+import { fetchAllPages } from "@/lib/supabase/fetchAllPages";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -20,6 +21,8 @@ export type WarehouseMaterial = {
   unit: string;
   balance: number;
   threshold: number | null;
+  // false — пороги остатков не загрузились: уровень запаса неизвестен
+  thresholdKnown: boolean;
   // Finished product (перемычка, has both consumption norms) vs raw
   // material (Бетон/Арматура/Проволока…). Stock-level warnings apply
   // only to raw materials — a product at 0 is normal, not critical.
@@ -50,24 +53,43 @@ export default async function WarehousePage() {
     redirect(defaultDashboardPath(profile?.role ?? ""));
   }
 
-  const [matsResult, txResult, thresholdsResult] = await Promise.all([
+  const [matsResult, txRows, thresholdsResult] = await Promise.all([
     // select("*") — survives not-yet-applied schema migrations
     supabase
       .from("materials")
       .select("*")
       .eq("company_id", company_id)
       .order("name"),
-    supabase
-      .from("material_transactions")
-      .select("material_id, type, quantity, transaction_date, created_at")
-      .eq("company_id", company_id)
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false }),
+    fetchAllPages((from, to) =>
+      supabase
+        .from("material_transactions")
+        .select("material_id, type, quantity, transaction_date, created_at")
+        .eq("company_id", company_id)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        // id уникален — делает порядок полным и стабильным между страницами
+        .order("id", { ascending: true })
+        .range(from, to)
+    ),
     supabase
       .from("material_thresholds")
       .select("material_id, min_quantity")
       .eq("company_id", company_id),
   ]);
+
+  // ── Ошибки чтения: пустой справочник ≠ ошибка чтения ─────
+  const matsFailed = Boolean(matsResult.error);
+  const thresholdsFailed = Boolean(thresholdsResult.error);
+  if (matsResult.error)
+    console.error(
+      "[warehouse] не удалось загрузить справочник материалов:",
+      matsResult.error.message
+    );
+  if (thresholdsResult.error)
+    console.error(
+      "[warehouse] не удалось загрузить пороги остатков:",
+      thresholdsResult.error.message
+    );
 
   const thresholdMap = new Map<string, number>();
   for (const t of thresholdsResult.data ?? []) {
@@ -77,7 +99,7 @@ export default async function WarehousePage() {
   const balMap = new Map<string, number>();
   for (const mat of matsResult.data ?? []) balMap.set(mat.id, 0);
 
-  for (const tx of txResult.data ?? []) {
+  for (const tx of txRows) {
     const prev = balMap.get(tx.material_id) ?? 0;
     const qty = Number(tx.quantity);
     const delta =
@@ -87,7 +109,7 @@ export default async function WarehousePage() {
 
   // Last 5 movements per material (txResult is already newest-first)
   const recentMap = new Map<string, WarehouseTx[]>();
-  for (const tx of txResult.data ?? []) {
+  for (const tx of txRows) {
     const list = recentMap.get(tx.material_id) ?? [];
     if (list.length < 5) {
       list.push({
@@ -105,7 +127,7 @@ export default async function WarehousePage() {
   );
   const dayIndex = new Map(weekDays.map((d, i) => [d, i]));
   const weekMap = new Map<string, number[]>();
-  for (const tx of txResult.data ?? []) {
+  for (const tx of txRows) {
     const d = (tx.transaction_date as string) ?? (tx.created_at as string).split("T")[0];
     const idx = dayIndex.get(d);
     if (idx == null) continue;
@@ -123,11 +145,18 @@ export default async function WarehousePage() {
       unit: m.unit,
       balance: balMap.get(m.id) ?? 0,
       threshold: thresholdMap.get(m.id) ?? null,
+      thresholdKnown: !thresholdsFailed,
       isProduct: raw.norm_concrete != null && raw.norm_rebar != null,
       recent: recentMap.get(m.id) ?? [],
       week: weekMap.get(m.id) ?? Array(7).fill(0),
     };
   });
 
-  return <WarehouseClient materials={materials} />;
+  return (
+    <WarehouseClient
+      materials={materials}
+      loadError={matsFailed}
+      thresholdsError={thresholdsFailed}
+    />
+  );
 }

@@ -10,6 +10,7 @@ export const revalidate = 0;
 import type { PlanStatus } from "../actions";
 import { canAccessCompanyPage, canManagePlans, canViewPlan, defaultDashboardPath } from "@/lib/auth/role-permissions";
 import { redirect } from "next/navigation";
+import { fetchAllPages } from "@/lib/supabase/fetchAllPages";
 
 export default async function PlanDetailPage({
   params,
@@ -53,33 +54,62 @@ export default async function PlanDetailPage({
       .eq("company_id", company_id)
       .single(),
 
-    // Single query: plan_materials joined with materials — no separate lookup needed
+    // Single query: plan_materials joined with materials — no separate lookup needed.
+    // У plan_materials нет company_id, поэтому фильтра по компании в этом запросе
+    // быть не может. Арендатор ограничен двумя уровнями: (1) гейт по родительскому
+    // плану — production_plans читается с .eq("company_id", company_id), и при
+    // отсутствии строки (PGRST116) выполнение уходит в notFound() ДО того, как
+    // состав плана попадёт в UI; (2) RLS на plan_materials. Не убирайте гейт по
+    // родительскому плану при рефакторинге — это не «лишний» фильтр.
     supabase
       .from("plan_materials")
       .select("id, material_id, planned_quantity, materials(name, unit)")
       .eq("plan_id", params.id),
   ]);
 
-  if (planResult.error || !planResult.data) notFound();
+  // PGRST116 — строк с таким id/company_id нет: это действительно «не найден».
+  // Любая другая ошибка чтения — сбой, а не отсутствие плана: пробрасываем её,
+  // чтобы страницу перехватил app/(dashboard)/error.tsx.
+  if (planResult.error) {
+    if (planResult.error.code === "PGRST116") notFound();
+    throw new Error(
+      `Не удалось загрузить план: ${planResult.error.message}`
+    );
+  }
+  if (!planResult.data) notFound();
   const plan = planResult.data;
   if (!canViewPlan(profile?.role ?? "", user.id, plan.assigned_to)) notFound();
+
+  // Ошибка чтения plan_materials не должна выглядеть как «материалы не добавлены».
+  if (pmResult.error) {
+    throw new Error(
+      `Не удалось загрузить материалы плана: ${pmResult.error.message}`
+    );
+  }
   const assignee = plan.profiles as unknown as { full_name: string } | null;
 
   const lastChange = await getLastChange("production_plans", plan.id);
 
   // Batch 2: transactions in plan period (needs plan dates from batch 1)
-  const { data: txData } = await supabase
-    .from("material_transactions")
-    .select("material_id, type, quantity")
-    .eq("company_id", company_id)
-    .is("deleted_at", null)
-    .in("type", ["expense", "defect"])
-    .gte("transaction_date", plan.start_date)
-    .lte("transaction_date", plan.end_date);
+  const txData = await fetchAllPages((from, to) =>
+    supabase
+      .from("material_transactions")
+      .select("material_id, type, quantity")
+      .eq("company_id", company_id)
+      .is("deleted_at", null)
+      .in("type", ["expense", "defect"])
+      .gte("transaction_date", plan.start_date)
+      .lte("transaction_date", plan.end_date)
+      // Полный порядок: created_at + уникальный id, иначе страницы
+      // range() могут пересекаться и терять строки.
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to)
+  );
 
   // Actual consumption per material
   const actualMap = new Map<string, number>();
-  for (const tx of txData ?? []) {
+  for (const tx of txData) {
     actualMap.set(
       tx.material_id,
       (actualMap.get(tx.material_id) ?? 0) + Number(tx.quantity)

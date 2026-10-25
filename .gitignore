@@ -55,3 +55,13 @@ build.log
 .vercel
 
 *.tmp.mjs
+
+# local agent/tooling artifacts (not part of the app)
+/.swarm/
+/.claude-flow/
+/agentdb.rvf
+/agentdb.rvf.lock
+/ruvector.db
+
+# playwright run output
+/test-results/

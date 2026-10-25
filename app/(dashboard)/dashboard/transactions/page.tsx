@@ -10,6 +10,7 @@ import type {
 import type { BalanceData } from "@/components/BalanceCard";
 import type { TxType } from "./actions";
 import NoCompanyState from "@/components/ui/NoCompanyState";
+import { fetchAllPages } from "@/lib/supabase/fetchAllPages";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -56,13 +57,24 @@ export default async function TransactionsPage({
     balanceQuery = balanceQuery.eq("created_by", user.id).eq("type", "expense");
   }
 
-  const [txResult, countResult, matResult, profilesResult, balanceTxResult] =
+  // Полный порядок для постраничной загрузки (balanceQuery переиспользуется
+  // между страницами, поэтому сортировка задаётся один раз): created_at +
+  // уникальный id, иначе range() может дублировать и терять строки.
+  balanceQuery = balanceQuery
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  const [txResult, countResult, matResult, profilesResult, balanceTxRows] =
     await Promise.all([
       // Paginated list — includes deleted rows so an admin can toggle
       // "показать удалённые"; the client hides them by default.
       txQuery
         .order("transaction_date", { ascending: false })
         .order("created_at", { ascending: false })
+        // id уникален — третий ключ делает порядок полным: при пакетной
+        // вставке строк с одинаковым created_at страницы range() иначе
+        // могут дублировать или терять записи.
+        .order("id", { ascending: false })
         .range(rangeFrom, rangeTo),
 
       // Total count — active (non-deleted) rows only for the headline
@@ -83,9 +95,36 @@ export default async function TransactionsPage({
         ? supabase.from("profiles").select("*").eq("company_id", company_id).eq("id", user.id)
         : supabase.from("profiles").select("*").eq("company_id", company_id),
 
-      // Lightweight all-tx for balance cards (3 fields only) — active only
-      balanceQuery,
+      // Paginate the full active history so balances do not silently truncate
+      // at PostgREST's default row limit. balanceQuery carries the full
+      // (created_at, id) order set above, so pages never overlap.
+      fetchAllPages((from, to) => balanceQuery.range(from, to)),
     ]);
+
+  // ── Ошибки чтения: сбой не должен выглядеть как пустой журнал ─────────
+  // Логируем с контекстом (детали в UI не выводим) и передаём флаги в
+  // клиент: журнал и справочник материалов показывают видимую ошибку,
+  // счётчик и профили деградируют мягко («—» вместо выдуманных нулей/имён).
+  if (txResult.error)
+    console.error(
+      "[transactions] не удалось загрузить журнал транзакций:",
+      txResult.error.message
+    );
+  if (countResult.error)
+    console.error(
+      "[transactions] не удалось получить количество записей:",
+      countResult.error.message
+    );
+  if (matResult.error)
+    console.error(
+      "[transactions] не удалось загрузить справочник материалов:",
+      matResult.error.message
+    );
+  if (profilesResult.error)
+    console.error(
+      "[transactions] не удалось загрузить профили сотрудников:",
+      profilesResult.error.message
+    );
 
   // ── Фаза 6: справочник контрагентов и прайс ──────────────────────────
   // Fail-open: таблицы появляются только в миграции 042/045. Пока их нет,
@@ -108,10 +147,19 @@ export default async function TransactionsPage({
     price: Number(r.price),
   }));
 
-  const totalCount = countResult.count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  // Сбой счётчика не должен превращаться в «Записей нет» и прятать
+  // пагинацию: при ошибке отдаём null, а число страниц строим по строкам.
+  const countFailed = Boolean(countResult.error);
+  const countedTotal = countResult.count ?? 0;
+  const totalCount = countFailed ? null : countedTotal;
+  const totalPages = countFailed
+    ? null
+    : Math.max(1, Math.ceil(countedTotal / PAGE_SIZE));
 
   const matMap = new Map((matResult.data ?? []).map((m) => [m.id, m]));
+  // Сбой справочника: matMap пуст, и подставлять «Неизвестный материал» с
+  // пустой единицей нельзя — это выглядит как поломка данных. Нейтральное «—».
+  const materialsFailed = Boolean(matResult.error);
   const profileMap = new Map((profilesResult.data ?? []).map((p) => [p.id, p]));
   // phone → full_name for WhatsApp sender lookup
   const phoneMap = new Map(
@@ -158,8 +206,8 @@ export default async function TransactionsPage({
       created_at: tx.created_at,
       material_id: tx.material_id,
       created_by: tx.created_by ?? null,
-      material_name: matMap.get(tx.material_id)?.name ?? "Неизвестный материал",
-      material_unit: matMap.get(tx.material_id)?.unit ?? "",
+      material_name: matMap.get(tx.material_id)?.name ?? (materialsFailed ? "—" : "Неизвестный материал"),
+      material_unit: matMap.get(tx.material_id)?.unit ?? (materialsFailed ? "—" : ""),
       creator_name: creatorName,
       source: tx.source ?? "manual",
       // Новые колонки читаем через rawTx: до применения миграций их нет,
@@ -170,6 +218,12 @@ export default async function TransactionsPage({
       deleted_by_name: deletedBy ? profileMap.get(deletedBy)?.full_name ?? "—" : null,
     };
   });
+
+  // Точное число страниц при сбое счётчика неизвестно: «Следующая» активна,
+  // только если текущая страница заполнена целиком (значит, могут быть ещё).
+  const hasNextPage = countFailed
+    ? transactions.length >= PAGE_SIZE
+    : page < (totalPages ?? 1);
 
   const materials: Material[] = (matResult.data ?? []).map((m) => {
     const raw = m as Record<string, unknown>;
@@ -192,7 +246,7 @@ export default async function TransactionsPage({
   for (const m of matResult.data ?? []) {
     balMap.set(m.id, { material_id: m.id, name: m.name, unit: m.unit, balance: 0, totalIn: 0, totalOut: 0 });
   }
-  for (const tx of balanceTxResult.data ?? []) {
+  for (const tx of balanceTxRows) {
     const b = balMap.get(tx.material_id);
     if (!b) continue;
     const qty = Number(tx.quantity);
@@ -220,8 +274,12 @@ export default async function TransactionsPage({
       initialBalances={initialBalances}
       balancesByMaterial={balancesByMaterial}
       page={page}
-      totalPages={totalPages}
-      totalCount={totalCount}
+      totalPages={totalPages ?? undefined}
+      totalCount={totalCount ?? undefined}
+      countUnknown={countFailed}
+      hasNextPage={hasNextPage}
+      loadError={Boolean(txResult.error)}
+      materialsError={Boolean(matResult.error)}
       initialMaterialId={searchParams.material_id}
       isAdmin={isAdmin}
       role={profile?.role ?? "warehouse"}
