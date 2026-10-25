@@ -3,6 +3,8 @@ import { createClient } from "@/utils/supabase/server";
 import ProduceClient, { type ProduceMaterial } from "@/components/produce/ProduceClient";
 import NoCompanyState from "@/components/ui/NoCompanyState";
 import Link from "next/link";
+import RefreshButton from "@/components/ui/RefreshButton";
+import { fetchAllPages } from "@/lib/supabase/fetchAllPages";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -29,11 +31,48 @@ export default async function ProducePage() {
   // Raw = "Бетон" + whatever is referenced as a rebar target (Арматура/Проволока).
   // Products include category-Б перемычки that have NO norms yet — they can still
   // be produced (штука only, no auto-deduction).
-  const { data: allMats } = await supabase
+  const { data: allMats, error: matsError } = await supabase
     .from("materials")
     .select("id, name, unit, norm_concrete, norm_rebar, rebar_material_name")
     .eq("company_id", company_id)
     .order("name");
+
+  // ── Ошибка чтения ≠ пустой справочник ─────────────────────
+  // Иначе сбой запроса выдаёт себя за «материалов нет» и предлагает
+  // заполнить нормы, хотя материалы существуют.
+  if (matsError) {
+    console.error(
+      "[produce] не удалось загрузить справочник материалов:",
+      matsError.message
+    );
+    return (
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-[var(--text)]">Быстрый выпуск</h1>
+        </div>
+        <div
+          role="alert"
+          className="flex flex-col items-center justify-center py-20 text-center bg-[var(--card)] rounded-xl border border-[var(--border)]"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-[var(--danger-bg)] flex items-center justify-center mb-4">
+            <svg className="w-7 h-7 text-[var(--danger)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-[var(--text)] mb-1">
+            Не удалось загрузить справочник материалов
+          </p>
+          <p className="text-xs text-[var(--muted)] mb-4 max-w-sm">
+            Материалы не получены — это не значит, что их нет. Нормы расхода
+            заполнять не нужно, повторите попытку.
+          </p>
+          <RefreshButton className="dp-btn-primary rounded-xl">
+            Обновить
+          </RefreshButton>
+        </div>
+      </div>
+    );
+  }
 
   const rawNames = new Set<string>(["Бетон"]);
   for (const m of allMats ?? []) {
@@ -78,35 +117,49 @@ export default async function ProducePage() {
   const rawList = (allMats ?? []).filter((m) => rawNames.has(m.name));
   const rawIds = rawList.map((m) => m.id);
 
-  const [{ data: freqRows }, { data: rawTx }] = await Promise.all([
-    supabase
-      .from("material_transactions")
-      .select("material_id, quantity")
-      .eq("company_id", company_id)
-      .is("deleted_at", null)
-      .eq("type", "income")
-      .in("material_id", matIds)
-      .gte("transaction_date", sinceStr),
+  const [freqRows, rawTx] = await Promise.all([
+    fetchAllPages((from, to) =>
+      supabase
+        .from("material_transactions")
+        .select("material_id, quantity")
+        .eq("company_id", company_id)
+        .is("deleted_at", null)
+        .eq("type", "income")
+        .in("material_id", matIds)
+        .gte("transaction_date", sinceStr)
+        // Полный порядок: created_at + уникальный id, иначе страницы
+        // range() могут пересекаться и терять строки.
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to)
+    ),
     // Raw stock balances (concrete + each rebar target) for the cart's soft check
     rawIds.length > 0
-      ? supabase
-          .from("material_transactions")
-          .select("material_id, type, quantity")
-          .eq("company_id", company_id)
-          .is("deleted_at", null)
-          .in("material_id", rawIds)
-      : Promise.resolve({ data: [] as { material_id: string; type: string; quantity: number }[] }),
+      ? fetchAllPages((from, to) =>
+          supabase
+            .from("material_transactions")
+            .select("material_id, type, quantity")
+            .eq("company_id", company_id)
+            .is("deleted_at", null)
+            .in("material_id", rawIds)
+            // Полный порядок: created_at + уникальный id, иначе страницы
+            // range() могут пересекаться и терять строки.
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to)
+        )
+      : Promise.resolve([] as { material_id: string; type: string; quantity: number }[]),
   ]);
 
   // Aggregate frequency counts
   const freqMap = new Map<string, number>();
-  for (const row of freqRows ?? []) {
+  for (const row of freqRows) {
     freqMap.set(row.material_id, (freqMap.get(row.material_id) ?? 0) + Number(row.quantity));
   }
 
   // Raw balances by material id → then by name
   const balById = new Map<string, number>();
-  for (const t of rawTx ?? []) {
+  for (const t of rawTx) {
     const q = Number(t.quantity);
     const delta = t.type === "income" || t.type === "return" ? q : -q;
     balById.set(t.material_id, (balById.get(t.material_id) ?? 0) + delta);
