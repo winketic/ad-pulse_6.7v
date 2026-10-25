@@ -7,6 +7,10 @@ import {
   createTransaction,
 } from "@/app/(dashboard)/dashboard/transactions/actions";
 import { useToast } from "@/components/ui/Toast";
+import NumericKeypad, {
+  MAX_QTY_DIGITS,
+  digitsToQuantity,
+} from "@/components/produce/NumericKeypad";
 
 export type ProduceMaterial = {
   id: string;
@@ -25,8 +29,6 @@ export type RawStock = { name: string; unit: string; balance: number };
 
 type CartItem = { material_id: string; qty: number };
 
-const MAX_DIGITS = 6;
-
 // Series prefix for anchor chips: "2ПБ16-2" → "2ПБ"
 function seriesOf(name: string): string {
   const m = name.match(/^(\d+\s?ПБ)/i);
@@ -34,40 +36,6 @@ function seriesOf(name: string): string {
 }
 
 const fmt = (n: number) => Number(n.toFixed(2)).toLocaleString("ru-RU");
-
-// ─── Numpad key ───────────────────────────────────────────
-function Key({
-  children,
-  onPress,
-  variant = "digit",
-  disabled = false,
-  ariaLabel,
-}: {
-  children: React.ReactNode;
-  onPress: () => void;
-  variant?: "digit" | "action" | "submit";
-  disabled?: boolean;
-  ariaLabel?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onPress}
-      disabled={disabled}
-      aria-label={ariaLabel}
-      className={`h-12 rounded-xl text-xl font-semibold select-none tap-scale transition-colors disabled:opacity-35 ${
-        variant === "submit"
-          ? "bg-[var(--accent)] text-[var(--accent-text)] shadow-[var(--glow-accent)]"
-          : variant === "action"
-          ? "bg-[var(--surface-2)] text-[var(--muted)] hover:bg-[var(--surface-3)]"
-          : "num bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)] hover:bg-[var(--surface-2)]"
-      }`}
-      style={{ WebkitTapHighlightColor: "transparent" }}
-    >
-      {children}
-    </button>
-  );
-}
 
 // ─── Main ─────────────────────────────────────────────────
 export default function ProduceClient({
@@ -115,7 +83,7 @@ export default function ProduceClient({
   );
 
   const selected = materials.find((m) => m.id === selectedId) ?? null;
-  const qtyNum = parseInt(qty || "0", 10);
+  const qtyNum = digitsToQuantity(qty);
   const isNormed = (m: ProduceMaterial) => m.norm_concrete != null && m.norm_rebar != null;
 
   // ── Live cart aggregate + per-item soft flags (running balances) ──────────
@@ -158,10 +126,6 @@ export default function ProduceClient({
     listRef.current
       ?.querySelector(`[data-series="${s}"]`)
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
-
-  const pressDigit = (d: string) =>
-    setQty((p) => (p.length >= MAX_DIGITS ? p : p === "" && d === "0" ? p : p + d));
-  const backspace = () => setQty((p) => p.slice(0, -1));
 
   // Add current selection+qty to the cart (merge same material), keep selection.
   const addToCart = useCallback(() => {
@@ -361,8 +325,14 @@ export default function ProduceClient({
         </div>
       </div>
 
-      {/* Entry: list | numpad — fixed height, cart takes the rest */}
-      <div className="grid grid-cols-[42%_1fr] gap-2 px-3 shrink-0" style={{ height: 274 }}>
+      {/* Entry: list | keypad — fixed height, cart takes the rest.
+          На телефоне список у́же (40%), чтобы клавиши были ≥44 px по ширине;
+          с sm — прежние 42/58. Сетка клавиатуры всегда w-full своей колонки,
+          без горизонтального переполнения (minmax(0,1fr) + min-w-0). */}
+      <div
+        className="grid grid-cols-[40%_minmax(0,1fr)] gap-2 px-3 shrink-0 sm:grid-cols-[42%_minmax(0,1fr)]"
+        style={{ height: 288 }}
+      >
         <div ref={listRef} className="overflow-y-auto snap-y pr-0.5 space-y-0.5 pb-1">
           {filtered ? (
             filtered.length === 0 ? (
@@ -388,40 +358,35 @@ export default function ProduceClient({
           )}
         </div>
 
-        <div className="flex flex-col min-h-0">
-          <div className="flex items-baseline justify-center gap-1.5 pb-1.5 shrink-0">
-            <span
-              className={`num text-4xl font-bold leading-none tracking-tighter ${qty ? "text-[var(--text)]" : "text-[var(--muted-2)]"}`}
-            >
-              {qty || "0"}
-            </span>
-            <span className="text-sm text-[var(--muted)]">{selected?.unit ?? "шт"}</span>
-          </div>
-          <div className="grid grid-cols-3 gap-1.5 content-start">
-            {["7", "8", "9", "4", "5", "6", "1", "2", "3"].map((d) => (
-              <Key key={d} onPress={() => pressDigit(d)}>
-                {d}
-              </Key>
-            ))}
-            <Key onPress={backspace} variant="action" ariaLabel="Стереть">
-              <svg className="w-5 h-5 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" />
-              </svg>
-            </Key>
-            <Key onPress={() => pressDigit("0")}>0</Key>
-            <Key onPress={addToCart} variant="submit" disabled={!selected || qtyNum <= 0} ariaLabel="Добавить в список">
-              <svg className="w-6 h-6 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.6}>
+        <NumericKeypad
+          value={qty}
+          onChange={setQty}
+          unit={selected?.unit ?? "шт"}
+          maxDigits={MAX_QTY_DIGITS}
+          primaryAction={{
+            icon: (
+              <svg
+                aria-hidden="true"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.6}
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
-            </Key>
-          </div>
-        </div>
+            ),
+            ariaLabel: "Добавить в список",
+            onClick: addToCart,
+            disabled: !selected || qtyNum <= 0,
+          }}
+        />
       </div>
 
-      {/* Add hint */}
-      <p className="px-4 pt-1.5 pb-1 text-[11px] text-[var(--muted-2)] shrink-0">
+      {/* Add hint — одна строка: место внизу отдано списку */}
+      <p className="truncate px-4 py-1 text-[11px] text-[var(--muted-2)] shrink-0">
         {selected
-          ? `Выбрано: ${selected.name}${qtyNum > 0 ? ` — ${qtyNum} шт. Нажмите + чтобы добавить в список.` : " — наберите количество"}`
+          ? `Выбрано: ${selected.name}${qtyNum > 0 ? ` · ${qtyNum} шт` : ""}. + — добавить в список`
           : "Выберите перемычку"}
       </p>
 
