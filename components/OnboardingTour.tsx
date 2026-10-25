@@ -69,7 +69,10 @@ export default function OnboardingTour() {
   useEffect(() => {
     if (pathname !== "/dashboard") return;
     if (typeof window === "undefined") return;
-    if (localStorage.getItem(TOUR_KEY)) return;
+    // ?tour=1 replays the tour on demand (support, QA, demos): without it the
+    // flag would keep it hidden forever once dismissed.
+    const replay = new URLSearchParams(window.location.search).get("tour") === "1";
+    if (!replay && localStorage.getItem(TOUR_KEY)) return;
     if (window.innerWidth < 1024) return;
 
     let driverInstance: { drive: () => void; destroy: () => void } | null = null;
