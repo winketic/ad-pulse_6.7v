@@ -184,7 +184,7 @@ export default function DashboardShell({
         className="hidden lg:flex items-center px-6 shrink-0 h-14"
         style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)" }}
       >
-        <Link href="/dashboard" className="flex items-center gap-2.5 shrink-0 mr-6">
+        <Link href="/dashboard" className="group flex items-center gap-2.5 shrink-0 mr-6 transition-opacity duration-150 hover:opacity-80">
           <Logo size={26} />
           <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>AD Pulse</span>
         </Link>
@@ -238,7 +238,7 @@ export default function DashboardShell({
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="flex items-center gap-2 h-9 pl-1.5 pr-2.5 rounded-lg transition-colors duration-150 hover:bg-[var(--surface-2)]"
+            className="flex items-center gap-2 h-9 pl-1.5 pr-2.5 rounded-lg transition-colors duration-150 hover:bg-[var(--surface-3)] cursor-pointer"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
           >

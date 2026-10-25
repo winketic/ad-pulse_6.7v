@@ -345,6 +345,7 @@ select:-webkit-autofill:active {
 
 /* ── driver.js tour overrides ─────────────────────────── */
 .driver-popover.adpulse-tour {
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   background-color: #00f5c4 !important;
   color: #05050a !important;
   border: none !important;

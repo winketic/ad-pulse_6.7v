@@ -155,6 +155,7 @@ function CredentialsForm({
 function ResubscribeButton() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<"idle" | "ok" | "err">("idle");
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   async function handleClick() {
     setLoading(true);
@@ -162,9 +163,19 @@ function ResubscribeButton() {
     try {
       const res = await fetch("/api/wazzup/resubscribe", { method: "POST" });
       const data = await res.json();
-      setStatus(data.ok ? "ok" : "err");
-    } catch {
+      if (data.ok) {
+        setStatus("ok");
+        setErrorText(null);
+      } else {
+        // Detail stays in the console; the UI gets a named, actionable state.
+        console.error("[wazzup] resubscribe failed:", data);
+        setStatus("err");
+        setErrorText("не удалось зарегистрировать webhook в Wazzup");
+      }
+    } catch (e) {
+      console.error("[wazzup] resubscribe request failed:", e);
       setStatus("err");
+      setErrorText("нет связи с сервером");
     } finally {
       setLoading(false);
     }
@@ -191,7 +202,11 @@ function ResubscribeButton() {
         Обновить webhook
       </button>
       {status === "ok" && <span className="text-xs" style={{ color: "#00f5c4" }}>✓ Зарегистрирован</span>}
-      {status === "err" && <span className="text-xs" style={{ color: "#f87171" }}>Ошибка — см. логи</span>}
+      {status === "err" && (
+        <span className="text-xs" style={{ color: "#f87171" }}>
+          Не получилось: {errorText ?? "неизвестная ошибка"} — попробуйте ещё раз
+        </span>
+      )}
     </div>
   );
 }
