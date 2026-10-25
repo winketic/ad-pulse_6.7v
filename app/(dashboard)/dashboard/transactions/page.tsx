@@ -20,8 +20,9 @@ const PAGE_SIZE = 50;
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: { page?: string; material_id?: string };
+  searchParams: Promise<{ page?: string; material_id?: string }>;
 }) {
+  const sp = await searchParams;
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
@@ -41,7 +42,7 @@ export default async function TransactionsPage({
   const isAdmin = profile?.role === "admin";
   const isWorkshop = profile?.role === "workshop";
 
-  const page = Math.max(1, parseInt(searchParams.page ?? "1", 10));
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10));
   const rangeFrom = (page - 1) * PAGE_SIZE;
   const rangeTo = rangeFrom + PAGE_SIZE - 1;
 
@@ -280,7 +281,7 @@ export default async function TransactionsPage({
       hasNextPage={hasNextPage}
       loadError={Boolean(txResult.error)}
       materialsError={Boolean(matResult.error)}
-      initialMaterialId={searchParams.material_id}
+      initialMaterialId={sp.material_id}
       isAdmin={isAdmin}
       role={profile?.role ?? "warehouse"}
       counterparties={counterparties}

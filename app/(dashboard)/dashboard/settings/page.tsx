@@ -42,9 +42,10 @@ const READ_ERROR_LABELS = {
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: { tab?: string; wazzup?: string };
+  searchParams: Promise<{ tab?: string; wazzup?: string }>;
 }) {
-  const rawTab = searchParams.tab ?? "profile";
+  const sp = await searchParams;
+  const rawTab = sp.tab ?? "profile";
   const initialTab: TabId = VALID_TABS.includes(rawTab as TabId)
     ? (rawTab as TabId)
     : "profile";
@@ -263,7 +264,7 @@ export default async function SettingsPage({
       isAdmin={isAdmin}
       canEditCompany={canEditCompany}
       initialTab={initialTab}
-      wazzupFlash={searchParams.wazzup ?? null}
+      wazzupFlash={sp.wazzup ?? null}
       thresholdSection={thresholdSection}
     />
   );
