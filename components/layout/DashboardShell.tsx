@@ -225,6 +225,7 @@ export default function DashboardShell({
         <Link
           href={primaryHref}
           prefetch
+          id="tour-primary-action"
           className="flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-sm font-semibold transition-colors duration-150 mr-3"
           style={{ background: "var(--accent)", color: "var(--accent-text)" }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--accent-hover)"; }}
@@ -238,6 +239,7 @@ export default function DashboardShell({
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
+            id="tour-user-menu"
             className="flex items-center gap-2 h-9 pl-1.5 pr-2.5 rounded-lg transition-colors duration-150 hover:bg-[var(--surface-3)] cursor-pointer"
             aria-haspopup="menu"
             aria-expanded={menuOpen}

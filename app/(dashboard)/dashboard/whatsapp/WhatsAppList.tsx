@@ -38,6 +38,13 @@ export type WazzupMaterial = {
   unit: string;
 };
 
+type QueueTab = "queue" | "chats";
+
+const TABS: { id: QueueTab; label: string }[] = [
+  { id: "queue", label: "Очередь" },
+  { id: "chats", label: "Разрешённые чаты" },
+];
+
 const TX_TYPE_LABELS: Record<TxType, string> = {
   income:  "Приход",
   expense: "Расход",
@@ -46,10 +53,10 @@ const TX_TYPE_LABELS: Record<TxType, string> = {
 };
 
 const TX_TYPE_COLORS: Record<TxType, string> = {
-  income:  "text-[#00f5c4]",
-  expense: "text-orange-400",
-  defect:  "text-red-400",
-  return:  "text-blue-400",
+  income:  "text-[var(--success)]",
+  expense: "text-[var(--warning)]",
+  defect:  "text-[var(--danger)]",
+  return:  "text-[var(--info)]",
 };
 
 // ── Helpers ───────────────────────────────────────────────
@@ -75,31 +82,70 @@ function truncate(text: string | null, len = 80) {
 // ── Status badge ──────────────────────────────────────────
 
 function StatusBadge({ status }: { status: "green" | "yellow" | "gray" }) {
-  if (status === "green") return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#00f5c4]/10 text-[#00f5c4] text-xs font-medium border border-[#00f5c4]/20">
-      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-      </svg>
-      Создано
-    </span>
-  );
-  if (status === "yellow") return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-400/10 text-yellow-400 text-xs font-medium border border-yellow-400/20">
-      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01" />
-      </svg>
-      Проверка
-    </span>
-  );
+  const config =
+    status === "green"
+      ? {
+          label: "Создано",
+          color: "var(--success)",
+          background: "var(--success-bg)",
+          border: "color-mix(in srgb, var(--success) 24%, transparent)",
+          icon: "M5 13l4 4L19 7",
+        }
+      : status === "yellow"
+        ? {
+            label: "Проверка",
+            color: "var(--warning)",
+            background: "var(--warning-bg)",
+            border: "color-mix(in srgb, var(--warning) 24%, transparent)",
+            icon: "M12 9v2m0 4h.01",
+          }
+        : {
+            label: "Не распознано",
+            color: "var(--muted)",
+            background: "var(--bg3)",
+            border: "var(--border)",
+            icon: "M6 18L18 6M6 6l12 12",
+          };
+
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#888888]/10 text-[var(--muted)] text-xs font-medium border border-[#888888]/20">
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap shrink-0"
+      style={{ color: config.color, background: config.background, border: `1px solid ${config.border}` }}
+    >
       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        <path strokeLinecap="round" strokeLinejoin="round" d={config.icon} />
       </svg>
-      Не распознано
+      {config.label}
     </span>
   );
 }
+
+// ── Numbered explainer (shared by both empty states) ──────
+
+function InfoSteps({ steps }: { steps: { title: string; text: string }[] }) {
+  return (
+    <ol className="grid gap-2.5 sm:grid-cols-3 text-left">
+      {steps.map((step, i) => (
+        <li
+          key={step.title}
+          className="rounded-lg p-3.5"
+          style={{ background: "var(--bg3)", border: "1px solid var(--border)" }}
+        >
+          <span
+            className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold mb-2"
+            style={{ background: "var(--accent-15)", color: "var(--accent)" }}
+          >
+            {i + 1}
+          </span>
+          <p className="text-xs font-semibold text-[var(--text)]">{step.title}</p>
+          <p className="text-[11px] text-[var(--muted)] mt-1 leading-relaxed">{step.text}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+const CARD_STYLE = { background: "var(--card)", border: "1px solid var(--border)" } as const;
 
 // ── Confirm modal (dark) ──────────────────────────────────
 
@@ -155,7 +201,7 @@ function ConfirmModal({
         onClick={onClose}
         onTouchMove={(e) => e.preventDefault()}
       />
-      <div className="relative rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[92dvh] flex flex-col" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+      <div className="relative rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[92dvh] flex flex-col" style={CARD_STYLE}>
         <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
           <h2 className="text-sm font-semibold text-[var(--text)]">Подтвердить транзакцию</h2>
           <button onClick={onClose} className="p-1 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg3)] transition-colors">
@@ -168,7 +214,7 @@ function ConfirmModal({
         <div className="overflow-y-auto flex-1 min-h-0">
           <div className="px-5 pt-4">
             <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Исходное сообщение</p>
-            <p className="text-sm text-[var(--text)] rounded-lg px-3 py-2.5 leading-relaxed"
+            <p className="text-sm text-[var(--text)] rounded-lg px-3 py-2.5 leading-relaxed break-words"
               style={{ background: "var(--bg3)", border: "1px solid var(--border)" }}>
               {message.raw_text || "—"}
             </p>
@@ -255,46 +301,46 @@ function MessageDetailDrawer({
     <>
       <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
       <div
-        className="fixed right-0 top-0 h-full z-50 flex flex-col"
-        style={{ width: 420, background: "var(--bg)", borderLeft: "1px solid var(--border)" }}
+        className="fixed right-0 top-0 h-full w-full sm:w-[420px] max-w-full z-50 flex flex-col"
+        style={{ background: "var(--bg)", borderLeft: "1px solid var(--border)" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 shrink-0"
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 shrink-0"
           style={{ borderBottom: "1px solid var(--border)" }}>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <button onClick={onClose}
-              className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg3)] transition-colors">
+              className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg3)] transition-colors shrink-0">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
             <StatusBadge status={status} />
           </div>
-          <span className="text-xs text-[var(--muted)]">{formatDate(message.created_at)}</span>
+          <span className="text-xs text-[var(--muted)] whitespace-nowrap">{formatDate(message.created_at)}</span>
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-5 space-y-5">
 
           {/* Sender */}
           <div>
             <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Отправитель</p>
             {sender ? (
-              <div>
-                <p className="text-sm font-medium text-[var(--text)]">{sender.name}</p>
-                {sender.position && <p className="text-xs text-[var(--muted)] mt-0.5">{sender.position}</p>}
-                <p className="text-xs text-[var(--muted)] mt-0.5 font-mono">{message.sender_phone}</p>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--text)] truncate">{sender.name}</p>
+                {sender.position && <p className="text-xs text-[var(--muted)] mt-0.5 truncate">{sender.position}</p>}
+                <p className="text-xs text-[var(--muted)] mt-0.5 font-mono truncate">{message.sender_phone}</p>
               </div>
             ) : (
-              <p className="text-sm text-[var(--text)] font-mono">{message.sender_phone || "—"}</p>
+              <p className="text-sm text-[var(--text)] font-mono truncate">{message.sender_phone || "—"}</p>
             )}
           </div>
 
           {/* Raw message */}
           <div>
             <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Исходное сообщение</p>
-            <div className="rounded-xl px-4 py-3" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-              <p className="text-sm text-[var(--text)] leading-relaxed whitespace-pre-wrap">
+            <div className="rounded-xl px-4 py-3" style={CARD_STYLE}>
+              <p className="text-sm text-[var(--text)] leading-relaxed whitespace-pre-wrap break-words">
                 {message.raw_text || "—"}
               </p>
             </div>
@@ -320,10 +366,10 @@ function MessageDetailDrawer({
           {pr && (pr.type || pr.material_name || pr.quantity != null) && (
             <div>
               <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Результат парсинга</p>
-              <div className="rounded-xl px-4 py-3 space-y-2.5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+              <div className="rounded-xl px-4 py-3 space-y-2.5" style={CARD_STYLE}>
                 {pr.type && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[var(--muted)]">Тип операции</span>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs text-[var(--muted)] shrink-0">Тип операции</span>
                     <span className={`text-xs font-semibold ${TX_TYPE_COLORS[pr.type]}`}>
                       {TX_TYPE_LABELS[pr.type]}
                     </span>
@@ -332,12 +378,12 @@ function MessageDetailDrawer({
                 {pr.material_name && (
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-xs text-[var(--muted)] shrink-0">Материал</span>
-                    <span className="text-xs text-[var(--text)] font-medium text-right">{pr.material_name}</span>
+                    <span className="text-xs text-[var(--text)] font-medium text-right break-words min-w-0">{pr.material_name}</span>
                   </div>
                 )}
                 {pr.quantity != null && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[var(--muted)]">Количество</span>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-xs text-[var(--muted)] shrink-0">Количество</span>
                     <span className="text-xs text-[var(--text)] font-medium">
                       {pr.quantity}{pr.unit ? " " + pr.unit : ""}
                     </span>
@@ -348,13 +394,13 @@ function MessageDetailDrawer({
                     <div className="h-px" style={{ background: "var(--border)" }} />
                     <div>
                       <span className="text-xs text-[var(--muted)]">Примечание</span>
-                      <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed">{pr.note}</p>
+                      <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed break-words">{pr.note}</p>
                     </div>
                   </>
                 )}
-                <div className="flex items-center justify-between pt-0.5" style={{ borderTop: "1px solid var(--border)" }}>
+                <div className="flex items-center justify-between gap-4 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
                   <span className="text-xs text-[var(--muted)]">Уверенность</span>
-                  <span className={`text-xs font-medium ${pr.confidence === "high" ? "text-[#00f5c4]" : "text-yellow-400"}`}>
+                  <span className={`text-xs font-medium ${pr.confidence === "high" ? "text-[var(--success)]" : "text-[var(--warning)]"}`}>
                     {pr.confidence === "high" ? "Высокая" : "Низкая"}
                   </span>
                 </div>
@@ -366,11 +412,11 @@ function MessageDetailDrawer({
           {pr?.transaction_created && (
             <a
               href={`/dashboard/transactions?wazzup_message_id=${message.id}`}
-              className="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors"
-              style={{ background: "rgba(0,245,196,0.08)", border: "1px solid rgba(0,245,196,0.2)", color: "#00f5c4" }}
+              className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors"
+              style={{ background: "var(--accent-15)", border: "1px solid var(--border)", color: "var(--accent)" }}
             >
               <span>Перейти к транзакции</span>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
             </a>
@@ -400,6 +446,257 @@ function MessageDetailDrawer({
   );
 }
 
+// ── Queue items ───────────────────────────────────────────
+
+function CopyIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+    </svg>
+  );
+}
+
+function MessageCard({
+  message,
+  sender,
+  onSelect,
+  onConfirm,
+  onCopyChatId,
+}: {
+  message: WazzupMessage;
+  sender: { name: string; position: string | null } | null;
+  onSelect: () => void;
+  onConfirm: () => void;
+  onCopyChatId: (chatId: string) => void;
+}) {
+  const pr = message.parse_result;
+  const status = messageStatus(message);
+  const chatId = message.chat_id;
+  const parsedSummary = [
+    pr?.type ? TX_TYPE_LABELS[pr.type] : null,
+    pr?.material_name,
+    pr?.quantity != null ? `${pr.quantity}${pr.unit ? " " + pr.unit : ""}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <div className="rounded-xl overflow-hidden" style={CARD_STYLE}>
+      <button
+        type="button"
+        onClick={onSelect}
+        className="block w-full text-left px-4 pt-3.5 pb-3 hover:bg-[var(--bg3)] transition-colors"
+      >
+        <span className="flex items-start justify-between gap-3">
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-[var(--text)] truncate">
+              {sender?.name || message.sender_phone || "—"}
+            </span>
+            {sender?.position && (
+              <span className="block text-[11px] text-[var(--muted)] truncate mt-0.5">{sender.position}</span>
+            )}
+            <span className="block text-[11px] text-[var(--muted)] mt-1">{formatDate(message.created_at)}</span>
+          </span>
+          <StatusBadge status={status} />
+        </span>
+
+        <span className="block text-sm text-[var(--text)] mt-2 line-clamp-2 break-words">
+          {message.raw_text || "—"}
+        </span>
+
+        {parsedSummary && (
+          <span className="block text-xs text-[var(--muted)] mt-1.5 truncate">{parsedSummary}</span>
+        )}
+      </button>
+
+      <div
+        className="flex items-center gap-2 px-3 sm:px-4 py-2"
+        style={{ borderTop: "1px solid var(--border)" }}
+      >
+        {chatId ? (
+          <button
+            type="button"
+            onClick={() => onCopyChatId(chatId)}
+            title="Скопировать Chat ID"
+            className="flex items-center gap-1.5 min-w-0 text-[11px] sm:text-xs font-mono text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
+          >
+            <CopyIcon />
+            <span className="truncate">{chatId}</span>
+          </button>
+        ) : (
+          <span className="text-[11px] sm:text-xs text-[var(--muted)]">Без чата</span>
+        )}
+
+        <div className="flex-1" />
+
+        {status === "yellow" && (
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-colors"
+            style={{ background: "var(--accent)", color: "var(--accent-text)" }}
+          >
+            Проверить
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProcessedRow({
+  message,
+  sender,
+  onSelect,
+}: {
+  message: WazzupMessage;
+  sender: { name: string; position: string | null } | null;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--bg3)] transition-colors border-b border-[var(--border)] last:border-b-0"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="text-sm font-medium text-[var(--text)] truncate">
+            {sender?.name || message.sender_phone || "—"}
+          </span>
+          <span className="hidden sm:inline text-[11px] text-[var(--muted)] whitespace-nowrap shrink-0">
+            {formatDate(message.created_at)}
+          </span>
+        </span>
+        <span className="block text-xs text-[var(--muted)] truncate mt-0.5">
+          {truncate(message.raw_text, 90)}
+        </span>
+      </span>
+      <StatusBadge status={messageStatus(message)} />
+    </button>
+  );
+}
+
+function QueueEmptyState({
+  hasHistory,
+  onOpenSettings,
+  onOpenChats,
+}: {
+  hasHistory: boolean;
+  onOpenSettings: () => void;
+  onOpenChats: () => void;
+}) {
+  return (
+    <div className="rounded-xl px-4 py-8 sm:px-8 sm:py-10 text-center" style={CARD_STYLE}>
+      <div
+        className="w-12 h-12 rounded-full mx-auto flex items-center justify-center"
+        style={{ background: "var(--bg3)", border: "1px solid var(--border)" }}
+      >
+        <svg className="w-6 h-6" style={{ color: "var(--accent)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      </div>
+
+      <h2 className="text-base font-semibold text-[var(--text)] mt-4">
+        {hasHistory ? "Всё обработано" : "Очередь пуста"}
+      </h2>
+      <p className="text-sm text-[var(--muted)] mt-1.5 max-w-md mx-auto leading-relaxed">
+        Сюда попадают сообщения из WhatsApp, которым нужно ваше подтверждение: сервис разбирает текст, а вы проверяете результат.
+      </p>
+
+      {!hasHistory && (
+        <div className="mt-6">
+          <InfoSteps
+            steps={[
+              { title: "Сообщение из WhatsApp", text: "Приходит в чат, разрешённый для интеграции." },
+              { title: "Автоматический разбор", text: "Сервис определяет материал, тип операции и количество." },
+              { title: "Подтверждение", text: "Вы проверяете данные — создаётся транзакция." },
+            ]}
+          />
+        </div>
+      )}
+
+      <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2">
+        <button type="button" onClick={onOpenSettings} className="dp-btn-primary">
+          Настройки подключения
+        </button>
+        <button type="button" onClick={onOpenChats} className="dp-btn-secondary">
+          Разрешённые чаты
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Allowed chats panel ───────────────────────────────────
+
+function ReadonlyChatsCard({ allowedChatIds }: { allowedChatIds: string[] }) {
+  return (
+    <div className="rounded-xl p-4 sm:p-5" style={CARD_STYLE}>
+      <h3 className="text-sm font-semibold text-[var(--text)]">Разрешённые чаты</h3>
+      {allowedChatIds.length === 0 ? (
+        <p className="text-xs text-[var(--muted)] mt-2 leading-relaxed">
+          Список пуст — обрабатываются все входящие сообщения.
+        </p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {allowedChatIds.map((id) => (
+            <li
+              key={id}
+              className="px-3 py-2 rounded-lg text-xs font-mono text-[var(--text)] truncate"
+              style={{ background: "var(--bg3)", border: "1px solid var(--border)" }}
+            >
+              {id}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="text-[11px] text-[var(--muted)] mt-3">
+        Управлять списком может администратор компании.
+      </p>
+    </div>
+  );
+}
+
+function ChatsPanel({
+  allowedChatIds,
+  isAdmin,
+}: {
+  allowedChatIds: string[];
+  isAdmin: boolean;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl p-4 sm:p-5" style={CARD_STYLE}>
+        <h2 className="text-sm font-semibold text-[var(--text)]">Зачем нужен список</h2>
+        <p className="text-sm text-[var(--muted)] mt-1.5 leading-relaxed">
+          В очередь попадают сообщения только из разрешённых чатов. Остальные переписки игнорируются — так в учёт не попадают личные чаты и служебные рассылки.
+        </p>
+
+        {isAdmin && (
+          <div className="mt-4">
+            <p className="text-xs font-medium text-[var(--muted)] mb-2">Как добавить чат</p>
+            <InfoSteps
+              steps={[
+                { title: "Скопируйте Chat ID", text: "В «Очереди» нажмите на Chat ID под сообщением." },
+                { title: "Вставьте в список", text: "Введите ID в поле ниже и нажмите «Добавить»." },
+                { title: "Готово", text: "Новые сообщения из этого чата начнут попадать в очередь." },
+              ]}
+            />
+          </div>
+        )}
+      </div>
+
+      {isAdmin ? (
+        <AllowedChatsCard initialChatIds={allowedChatIds} />
+      ) : (
+        <ReadonlyChatsCard allowedChatIds={allowedChatIds} />
+      )}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────
 
 export default function WhatsAppList({
@@ -422,6 +719,7 @@ export default function WhatsAppList({
   senderMap?: Record<string, { name: string; position: string | null }>;
 }) {
   const [messages, setMessages] = useState<WazzupMessage[]>(initialMessages);
+  const [activeTab, setActiveTab] = useState<QueueTab>("queue");
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -435,8 +733,7 @@ export default function WhatsAppList({
     setTimeout(() => setToast(null), 3000);
   };
 
-  function handleCopyChatId(e: React.MouseEvent, msgId: string, chatId: string) {
-    e.stopPropagation();
+  function copyChatId(chatId: string) {
     const done = () => {
       showToast("Chat ID скопирован");
     };
@@ -497,46 +794,163 @@ export default function WhatsAppList({
   const selectedMessage = selectedMsgId ? messages.find((m) => m.id === selectedMsgId) ?? null : null;
   const confirmingMessage = confirmingId ? messages.find((m) => m.id === confirmingId) ?? null : null;
 
+  const queueMessages = messages.filter((m) => messageStatus(m) === "yellow");
+  const processedMessages = messages.filter((m) => messageStatus(m) !== "yellow");
+  const senderFor = (msg: WazzupMessage) =>
+    msg.sender_phone ? senderMap[msg.sender_phone] ?? null : null;
+
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-bold text-[var(--text)]">WhatsApp</h1>
-          <p className="text-sm text-[var(--muted)] mt-0.5">Входящие сообщения и автоматически созданные транзакции</p>
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="min-w-0">
+          <h1 className="text-display text-[var(--text)]">WhatsApp</h1>
+          <p className="text-sm text-[var(--muted)] mt-1">
+            {queueMessages.length > 0
+              ? `На проверке: ${queueMessages.length} · всего ${messages.length}`
+              : messages.length > 0
+                ? `Все сообщения обработаны · всего ${messages.length}`
+                : "Входящие сообщения, разбор и подтверждение"}
+          </p>
         </div>
         <button
+          type="button"
           onClick={() => setSettingsOpen(true)}
           title="Настройки подключения"
-          className="p-2 rounded-lg transition-colors text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg3)]"
+          className="dp-btn-secondary shrink-0 px-3 sm:px-4"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
+          <span className="hidden sm:inline">Настройки</span>
         </button>
       </div>
+
+      {/* Tabs */}
+      <div
+        role="tablist"
+        aria-label="Разделы WhatsApp"
+        className="flex gap-1 p-1 rounded-xl mb-5"
+        style={{ background: "var(--bg3)", border: "1px solid var(--border)" }}
+      >
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          const count = tab.id === "queue" ? queueMessages.length : allowedChatIds.length;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              id={`whatsapp-tab-${tab.id}`}
+              aria-selected={isActive}
+              aria-controls={`whatsapp-panel-${tab.id}`}
+              onClick={() => setActiveTab(tab.id)}
+              className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors"
+              style={{
+                background: isActive ? "var(--accent)" : "transparent",
+                color: isActive ? "var(--accent-text)" : "var(--muted)",
+              }}
+            >
+              <span className="truncate">{tab.label}</span>
+              {count > 0 && (
+                <span
+                  className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold tabular-nums shrink-0"
+                  style={
+                    isActive
+                      ? { background: "rgba(4,18,14,0.16)", color: "var(--accent-text)" }
+                      : { background: "var(--card)", color: "var(--muted)", border: "1px solid var(--border)" }
+                  }
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Queue panel — stays mounted so tab switching doesn't reset state */}
+      <section
+        role="tabpanel"
+        id="whatsapp-panel-queue"
+        aria-labelledby="whatsapp-tab-queue"
+        className={activeTab === "queue" ? "" : "hidden"}
+      >
+        {queueMessages.length === 0 ? (
+          <QueueEmptyState
+            hasHistory={messages.length > 0}
+            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenChats={() => setActiveTab("chats")}
+          />
+        ) : (
+          <div className="space-y-3">
+            {queueMessages.map((msg) => (
+              <MessageCard
+                key={msg.id}
+                message={msg}
+                sender={senderFor(msg)}
+                onSelect={() => setSelectedMsgId(msg.id)}
+                onConfirm={() => setConfirmingId(msg.id)}
+                onCopyChatId={copyChatId}
+              />
+            ))}
+          </div>
+        )}
+
+        {processedMessages.length > 0 && (
+          <details className="mt-6 [&[open]_.chevron]:rotate-180">
+            <summary className="flex items-center gap-2 px-1 py-2 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-sm font-medium text-[var(--muted)] hover:text-[var(--text)] transition-colors">
+              <svg className="chevron w-4 h-4 transition-transform shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              Обработанные · {processedMessages.length}
+            </summary>
+            <div className="mt-2 rounded-xl overflow-hidden" style={CARD_STYLE}>
+              {processedMessages.map((msg) => (
+                <ProcessedRow
+                  key={msg.id}
+                  message={msg}
+                  sender={senderFor(msg)}
+                  onSelect={() => setSelectedMsgId(msg.id)}
+                />
+              ))}
+            </div>
+          </details>
+        )}
+      </section>
+
+      {/* Allowed chats panel — also stays mounted to keep its input/list state */}
+      <section
+        role="tabpanel"
+        id="whatsapp-panel-chats"
+        aria-labelledby="whatsapp-tab-chats"
+        className={activeTab === "chats" ? "" : "hidden"}
+      >
+        <ChatsPanel allowedChatIds={allowedChatIds} isAdmin={isAdmin} />
+      </section>
 
       {/* Settings drawer */}
       {settingsOpen && (
         <div className="fixed inset-0 z-40 bg-black/50" onClick={() => setSettingsOpen(false)} />
       )}
       <div
-        className={`fixed right-0 top-0 h-full z-50 flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`fixed right-0 top-0 h-full w-full sm:w-[380px] max-w-full z-50 flex flex-col transition-transform duration-300 ease-in-out ${
           settingsOpen ? "translate-x-0" : "translate-x-full"
         }`}
-        style={{ width: 380, background: "var(--bg)", borderLeft: "1px solid var(--border)" }}
+        style={{ background: "var(--bg)", borderLeft: "1px solid var(--border)" }}
       >
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
           <span className="text-sm font-semibold text-[var(--text)]">Настройки WhatsApp</span>
           <button onClick={() => setSettingsOpen(false)}
-            className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg3)] transition-colors">
+            className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--bg3)] transition-colors shrink-0">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-          <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-5 space-y-5">
+          <div className="rounded-xl p-4" style={CARD_STYLE}>
             <div className="flex items-center gap-2 mb-3">
               <span className={`w-2 h-2 rounded-full shrink-0 ${channelIds.length > 0 ? "bg-[#25D366]" : "bg-[#888888]"}`} />
               <span className="text-sm font-medium text-[var(--text)]">
@@ -548,7 +962,7 @@ export default function WhatsAppList({
                 <p className="text-xs font-medium text-[var(--muted)]">Channel ID</p>
                 {channelIds.map((id) => (
                   <span key={id} className="block px-2 py-1 rounded-lg text-xs font-mono truncate"
-                    style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "#9ca3af" }}>{id}</span>
+                    style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--muted)" }}>{id}</span>
                 ))}
               </div>
             )}
@@ -560,147 +974,22 @@ export default function WhatsAppList({
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => { setSettingsOpen(false); setActiveTab("chats"); }}
+            className="dp-btn-secondary w-full"
+          >
+            Разрешённые чаты
+          </button>
+
           {isAdmin && (
             <>
-              <AllowedChatsCard initialChatIds={allowedChatIds} />
               <ResubscribeButton />
             </>
           )}
         </div>
       </div>
-
-      {/* Message list */}
-      {messages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
-            style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-            <svg className="w-7 h-7 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-          </div>
-          <p className="text-[var(--muted)] text-sm">Сообщений пока нет</p>
-          <p className="text-[var(--muted)] text-xs mt-1">Подключите WhatsApp в Настройках, чтобы начать получать сообщения</p>
-        </div>
-      ) : (
-        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)", background: "var(--card)" }}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--bg3)" }}>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--muted)] w-36">Дата</th>
-                  <th id="tour-sender-col" className="text-left px-4 py-3 text-xs font-medium text-[var(--muted)] w-36">Отправитель</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--muted)] w-32">Chat ID</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--muted)]">Сообщение</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--muted)] w-32">Статус</th>
-                  <th className="px-4 py-3 w-24" />
-                </tr>
-              </thead>
-              <tbody>
-                {messages.map((msg, i) => {
-                  const status = messageStatus(msg);
-                  const pr = msg.parse_result;
-                  const sender = msg.sender_phone ? senderMap[msg.sender_phone] : null;
-                  const isSelected = msg.id === selectedMsgId;
-                  return (
-                    <tr
-                      key={msg.id}
-                      onClick={() => setSelectedMsgId(msg.id)}
-                      className="cursor-pointer transition-colors"
-                      style={{
-                        borderTop: i > 0 ? "1px solid var(--border)" : undefined,
-                        background: isSelected ? "rgba(0,245,196,0.04)" : undefined,
-                      }}
-                      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "var(--bg3)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = isSelected ? "rgba(0,245,196,0.04)" : ""; }}
-                    >
-                      <td className="px-4 py-3 text-[var(--muted)] text-xs whitespace-nowrap">
-                        {formatDate(msg.created_at)}
-                      </td>
-                      <td className="px-4 py-3 text-xs whitespace-nowrap">
-                        {msg.chat_id ? (
-                          <button
-                            onClick={(e) => handleCopyChatId(e, msg.id, msg.chat_id!)}
-                            title="Нажмите чтобы скопировать Chat ID для раздела Разрешённые чаты"
-                            className="group relative flex items-center gap-1.5 text-left cursor-pointer"
-                          >
-                            <div>
-                              {sender ? (
-                                <>
-                                  <span className="text-[var(--text)] font-medium group-hover:text-[#00f5c4] transition-colors">{sender.name}</span>
-                                  {sender.position && <span className="block text-[var(--muted)] text-[10px]">{sender.position}</span>}
-                                </>
-                              ) : (
-                                <span className="text-[var(--muted)] font-mono group-hover:text-[#00f5c4] transition-colors">{msg.sender_phone || "—"}</span>
-                              )}
-                            </div>
-                            <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-[var(--muted)] group-hover:text-[#00f5c4]">
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                              </svg>
-                            </span>
-                          </button>
-                        ) : (
-                          <span className="text-[var(--muted)]">
-                            {sender ? sender.name : (msg.sender_phone || "—")}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-xs whitespace-nowrap">
-                        {msg.chat_id ? (
-                          <button
-                            onClick={(e) => handleCopyChatId(e, msg.id, msg.chat_id!)}
-                            title="Скопировать Chat ID"
-                            className="group flex items-center gap-1.5 cursor-pointer font-mono text-[var(--muted)] hover:text-[#00f5c4] transition-colors"
-                          >
-                            <span>
-                              {msg.chat_id.length > 12 ? msg.chat_id.slice(0, 12) + "…" : msg.chat_id}
-                            </span>
-                            <span className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                              </svg>
-                            </span>
-                          </button>
-                        ) : (
-                          <span className="text-[var(--muted)]">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-[var(--text)] text-sm">{truncate(msg.raw_text)}</p>
-                        {pr && (pr.type || pr.material_name || pr.quantity != null) && (
-                          <p className="text-xs text-[var(--muted)] mt-0.5">
-                            {[
-                              pr.type ? TX_TYPE_LABELS[pr.type] : null,
-                              pr.material_name,
-                              pr.quantity != null ? `${pr.quantity}${pr.unit ? " " + pr.unit : ""}` : null,
-                            ].filter(Boolean).join(" · ")}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={status} />
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {status === "yellow" && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setConfirmingId(msg.id); }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                            style={{ background: "rgba(0,245,196,0.1)", color: "#00f5c4", border: "1px solid rgba(0,245,196,0.2)" }}
-                          >
-                            Проверить
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* Message detail drawer */}
       {selectedMessage && (
@@ -728,7 +1017,7 @@ export default function WhatsAppList({
       {/* Toast */}
       {toast && (
         <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg ${
-          toast.ok ? "bg-[#00f5c4] text-[#05050a]" : "bg-red-500 text-white"
+          toast.ok ? "bg-[var(--accent)] text-[var(--accent-text)]" : "bg-red-500 text-white"
         }`}>
           {toast.text}
         </div>

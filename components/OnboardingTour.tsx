@@ -2,63 +2,58 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import type { DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
 
 const TOUR_KEY = "ad_pulse_tour_done";
 
-const STEPS = [
+// Steps mirror the real desktop header: two nav tabs, the primary action and
+// the profile menu. Материалы/WhatsApp/Настройки живут в меню профиля, поэтому
+// якоря у них нет — о них рассказывает финальный шаг без element, который
+// driver.js показывает по центру экрана.
+const STEPS: DriveStep[] = [
   {
     element: "#tour-nav-overview",
     popover: {
       title: "Обзор",
-      description: "Главная страница: остатки, движение за день, быстрые показатели по вашему складу.",
-      side: "right" as const,
-      align: "start" as const,
-    },
-  },
-  {
-    element: "#tour-nav-materials",
-    popover: {
-      title: "Материалы",
-      description: "Справочник материалов: добавляйте позиции, задавайте единицы измерения и нормы ГОСТ.",
-      side: "right" as const,
-      align: "start" as const,
+      description: "Остатки, движение за день и быстрые показатели по вашему складу.",
+      side: "bottom",
+      align: "start",
     },
   },
   {
     element: "#tour-nav-transactions",
     popover: {
       title: "Движение",
-      description: "Все операции: приход, расход, брак, возврат. Можно фильтровать и экспортировать в Excel.",
-      side: "right" as const,
-      align: "start" as const,
+      description: "Все операции: приход, расход, брак, возврат. Фильтры и экспорт в Excel.",
+      side: "bottom",
+      align: "start",
     },
   },
   {
-    element: "#tour-nav-whatsapp",
+    element: "#tour-primary-action",
     popover: {
-      title: "WhatsApp",
-      description: "Сообщения из WhatsApp автоматически распознаются и превращаются в транзакции. Здесь — очередь на проверку.",
-      side: "right" as const,
-      align: "start" as const,
+      title: "Выпуск",
+      description: "Основное действие: выпуск или движение. На телефоне — центральная кнопка внизу.",
+      side: "bottom",
+      align: "end",
     },
   },
   {
-    element: "#tour-sender-col",
+    element: "#tour-user-menu",
     popover: {
-      title: "Разрешённые чаты",
-      description: "Нажмите на отправителя чтобы скопировать Chat ID. Добавьте его в Разрешённые чаты чтобы обрабатывать сообщения только от нужных контактов или групп.",
-      side: "bottom" as const,
-      align: "start" as const,
+      title: "Профиль",
+      description: "Меню профиля: Материалы, WhatsApp, Настройки и выход.",
+      side: "bottom",
+      align: "end",
     },
   },
   {
-    element: "#tour-nav-settings",
+    // No element — driver.js centers this closing popover.
     popover: {
-      title: "Настройки",
-      description: "Пригласите коллег, подключите Telegram-уведомления и настройте пороги остатков.",
-      side: "right" as const,
-      align: "start" as const,
+      title: "Всё под рукой",
+      description:
+        "Материалы, WhatsApp, Настройки и приглашения — в меню профиля. На телефоне они в нижней навигации и кнопке «Ещё».",
     },
   },
 ];
@@ -76,11 +71,14 @@ export default function OnboardingTour() {
     if (window.innerWidth < 1024) return;
 
     let driverInstance: { drive: () => void; destroy: () => void } | null = null;
+    let cancelled = false;
 
     import("driver.js").then(({ driver }) => {
-      // Skip steps whose target element isn't in the DOM (e.g. table columns on other pages)
+      if (cancelled) return;
+      // Skip steps whose target element isn't in the DOM (e.g. header items
+      // hidden for a role). Steps without `element` always survive.
       const availableSteps = STEPS.filter(
-        (s) => !s.element || !!document.querySelector(s.element)
+        (s) => typeof s.element !== "string" || !!document.querySelector(s.element)
       );
       if (availableSteps.length === 0) return;
 
@@ -89,6 +87,7 @@ export default function OnboardingTour() {
         animate: true,
         overlayOpacity: 0.75,
         showProgress: true,
+        progressText: "{{current}} из {{total}}",
         nextBtnText: "Далее →",
         prevBtnText: "← Назад",
         doneBtnText: "Готово",
@@ -99,12 +98,14 @@ export default function OnboardingTour() {
         },
       });
 
-      // Small delay so the sidebar renders its nav items before driver tries to find them
-      const t = setTimeout(() => driverInstance?.drive(), 600);
-      return () => clearTimeout(t);
+      // Small delay so the header renders its nav items before driver tries to find them
+      setTimeout(() => {
+        if (!cancelled) driverInstance?.drive();
+      }, 600);
     });
 
     return () => {
+      cancelled = true;
       driverInstance?.destroy();
     };
   }, [pathname]);

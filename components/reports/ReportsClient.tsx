@@ -670,6 +670,8 @@ export default function ReportsClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [exporting, setExporting] = useState(false);
+  // Пояснение «Как считается?» — текст и вёрстка, расчёты не затрагивает.
+  const [financeHowOpen, setFinanceHowOpen] = useState(false);
 
   const handleApply = useCallback(
     (newFrom: string, newTo: string) => {
@@ -742,17 +744,91 @@ export default function ReportsClient({
       {/* ── Финансы за период ───────────────────────────── */}
       <div className={`bg-[var(--card)] rounded-xl border border-[var(--border)] mb-4 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
         <div className="px-5 py-4 border-b border-[var(--border)]">
-          <h2 className="text-sm font-semibold text-[var(--text)]">Финансы за период</h2>
-          <p className="text-xs text-[var(--muted)] mt-0.5">
-            Выручка, затраты на сырьё и маржа по материалам
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+            <h2 className="text-sm font-semibold text-[var(--text)]">Финансы за период</h2>
+            <button
+              type="button"
+              onClick={() => setFinanceHowOpen((v) => !v)}
+              aria-expanded={financeHowOpen}
+              aria-controls="finance-how"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1 text-[11px] font-medium text-[var(--muted)] transition-colors hover:border-[var(--accent)]/40 hover:text-[var(--accent)]"
+            >
+              Как считается?
+              <svg
+                className={`h-3 w-3 transition-transform ${financeHowOpen ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+          <p className="text-xs text-[var(--muted)] mt-1">
+            Сколько выручили за продукцию и сколько ушло на сырьё.
           </p>
+
+          {financeHowOpen && (
+            <div
+              id="finance-how"
+              className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--bg3)] px-3.5 py-3 space-y-2.5"
+            >
+              <div className="space-y-1">
+                <p className="font-mono text-[12px] text-[var(--text)] break-words">
+                  Себестоимость = Σ (количество × цена материала)
+                </p>
+                <p className="text-[11px] text-[var(--muted)] leading-relaxed">
+                  Сырьё, списанное в производство, по средней цене закупки из приходов
+                  за период.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-mono text-[12px] text-[var(--text)] break-words">
+                  Выручка = выпуск × цена продукции
+                </p>
+                <p className="text-[11px] text-[var(--muted)] leading-relaxed">
+                  Отгрузки продукции (расход) по цене, указанной в транзакции.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-mono text-[12px] text-[var(--text)] break-words">
+                  Маржа = выручка − себестоимость
+                </p>
+                <p className="text-[11px] text-[var(--muted)] leading-relaxed">
+                  Без зарплат, энергии и амортизации — это не чистая прибыль.
+                </p>
+              </div>
+
+              <p className="border-t border-[var(--border)] pt-2.5 text-[11px] text-[var(--muted-2)] leading-relaxed">
+                Цены берутся только из транзакций — из поля «Цена за ед.» при приходе
+                сырья и при отгрузке продукции. Строки без цены считаются по нулю и
+                занижают суммы. Плитка «Затраты на сырьё» — это все закупки сырья за
+                период, она не равна себестоимости списанного.
+              </p>
+
+              {!finance.hasAnyPrice && (
+                <p className="rounded-md border border-[var(--warning)]/30 bg-[var(--warning)]/10 px-3 py-2 text-[11px] text-[var(--muted)] leading-relaxed">
+                  <b className="text-[var(--text)]">Считать нечего:</b> в транзакциях за
+                  период нет ни одной цены. Заполните «Цену за ед.» — без неё выручка и
+                  себестоимость будут нулевыми.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {!finance.hasAnyPrice ? (
-          <p className="text-sm text-[var(--muted)] text-center py-8 px-5">
-            Укажите цены в транзакциях (приход сырья и отгрузка продукции) —
-            здесь появятся выручка и маржа.
-          </p>
+          <div className="px-5 py-8 text-center">
+            <p className="text-sm font-medium text-[var(--text)]">
+              Цен в транзакциях нет — считать нечего
+            </p>
+            <p className="mx-auto mt-1.5 max-w-md text-xs text-[var(--muted)] leading-relaxed">
+              Чтобы здесь появились выручка, затраты и маржа, укажите «Цену за ед.» в
+              транзакциях: при приходе сырья и при отгрузке продукции.
+            </p>
+          </div>
         ) : (
           <div className="p-4 sm:p-5 space-y-5">
             {/* 3 stat tiles */}
@@ -779,6 +855,17 @@ export default function ReportsClient({
                 <p className="text-[11px] text-[var(--muted-2)] mt-0.5">выручка − списанное сырьё</p>
               </div>
             </div>
+
+            {(finance.revenueTotal === 0 || finance.productionRawCost === 0) && (
+              <p className="rounded-lg border border-[var(--warning)]/30 bg-[var(--warning)]/10 px-3.5 py-2.5 text-[11px] text-[var(--muted)] leading-relaxed">
+                <b className="text-[var(--text)]">Почему нули:</b>{" "}
+                {finance.revenueTotal === 0 &&
+                  "нет отгрузок продукции с ценой — выручку считать не из чего. "}
+                {finance.productionRawCost === 0 &&
+                  "себестоимость = 0: за период нет ни списаний сырья в производство, ни приходов сырья с ценой (по ним берётся средняя цена закупки). "}
+                Проверьте «Цену за ед.» в транзакциях.
+              </p>
+            )}
 
             {/* Выручка по контрагентам */}
             {finance.revenueByCounterparty.length > 0 && (
@@ -865,11 +952,13 @@ export default function ReportsClient({
               </div>
             )}
 
-            {/* Пояснение к марже */}
+            {/* Пояснение к марже — цифры те же, что в плитках */}
             <p className="text-xs text-[var(--muted-2)] leading-relaxed">
-              Маржа по материалам = выручка − стоимость списанного в производстве сырья
-              ({money(finance.productionRawCost)}). Считается <b>без учёта зарплат, энергии,
-              амортизации</b> — это <b>не чистая прибыль</b>.
+              В марже себестоимость — <span className="num">{money(finance.productionRawCost)}</span>:
+              сырьё, списанное в производство. Закупки сырья за период —{" "}
+              <span className="num">{money(finance.rawCostTotal)}</span> — это другая цифра.
+              Считается <b>без учёта зарплат, энергии и амортизации</b>, поэтому это{" "}
+              <b>не чистая прибыль</b>.
             </p>
           </div>
         )}
