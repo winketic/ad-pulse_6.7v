@@ -65,3 +65,7 @@ build.log
 
 # playwright run output
 /test-results/
+.env*
+# ...but keep the templates that are meant to be committed
+!.env.local.example
+!.env.example

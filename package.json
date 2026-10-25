@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint . --ext .ts,.tsx",
     "test": "playwright test --config tests/playwright.config.ts",
     "test:e2e": "playwright test --config tests/playwright.config.ts --project=e2e",
     "test:unit": "playwright test --config tests/unit/playwright.unit.config.ts",
@@ -16,7 +16,8 @@
     "test:smoke": "playwright test --config tests/playwright.config.ts smoke",
     "test:smoke:desktop": "playwright test --config tests/playwright.config.ts smoke --project=desktop-chrome --project=desktop-safari",
     "test:smoke:mobile": "playwright test --config tests/playwright.config.ts smoke --project=ios-iphone --project=ios-ipad --project=android-phone --project=android-tablet",
-    "test:report": "playwright show-report tests/playwright-report"
+    "test:report": "playwright show-report tests/playwright-report",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.57.0",
