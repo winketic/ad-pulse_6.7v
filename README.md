@@ -160,3 +160,6 @@ UPDATE profiles
 SET company_id = '<company-uuid>', role = 'admin'
 WHERE id = '<user-uuid>';
 ```
+
+
+<!-- AICS deploy check: 2026-10-29T15:18:24Z -->
