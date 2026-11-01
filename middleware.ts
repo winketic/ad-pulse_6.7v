@@ -48,6 +48,13 @@ export async function middleware(request: NextRequest) {
       }
     }
 
+    // Swagger docs — only the platform owner
+    if (pathname.startsWith("/docs") || pathname.startsWith("/api-docs/")) {
+      if (!isPlatformOwnerEmail(user.email)) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+    }
+
     if (pathname.startsWith("/dashboard/") && !pathname.startsWith("/dashboard/settings")) {
       const { data: profile } = await supabase
         .from("profiles")
