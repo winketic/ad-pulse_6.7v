@@ -19,6 +19,9 @@ const PUBLIC_PATHS = [
   // редиректил его на /login, и cron-маршруты ни разу не выполнялись.
   // Сами маршруты проверяют CRON_SECRET.
   "/api/cron/",
+  // Документация API — открыта для команды и интеграторов.
+  "/docs",
+  "/api-docs/",
 ];
 
 export async function middleware(request: NextRequest) {
