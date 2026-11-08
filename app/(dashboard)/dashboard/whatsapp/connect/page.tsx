@@ -33,7 +33,12 @@ export default async function WhatsAppConnectPage() {
   let initialSession = null;
   if (isAdmin && companyId && gatewayConfigured()) {
     try {
-      initialSession = await getSession(companyId);
+      // Страница не должна ждать шлюз дольше пары секунд: если он лежит,
+      // показываем состояние «не подключён» и клиент попробует сам.
+      initialSession = await Promise.race([
+        getSession(companyId),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+      ]);
     } catch (err) {
       console.warn("[whatsapp/connect] статус шлюза недоступен:", err);
     }
