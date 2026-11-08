@@ -56,7 +56,15 @@ export async function POST(
   }
 
   if (body.event === "message.add") {
-    // Отвечаем 200 сразу: шлюз ретраит на 5xx и ждёт не больше 15 секунд.
+    // Отладочный режим: тот, кто знает токен вебхука, может дождаться обработки
+    // и увидеть причину отказа. Обычный вызов отвечает 200 сразу.
+    const wantsDebug =
+      request.headers.get("x-whatsapp-debug") === expected;
+    if (wantsDebug) {
+      const errors = await processMessages(body.data as InboundMessage[]);
+      return NextResponse.json({ ok: errors.length === 0, errors });
+    }
+
     void processMessages(body.data as InboundMessage[]).catch((err) =>
       console.error("[whatsapp/webhook] processing failed", err)
     );
@@ -113,22 +121,27 @@ async function processSessionStatuses(items: SessionStatusItem[]): Promise<void>
   }
 }
 
-async function processMessages(messages: InboundMessage[]): Promise<void> {
+async function processMessages(messages: InboundMessage[]): Promise<string[]> {
   const service = createServiceClient();
+  const errors: string[] = [];
 
   for (const msg of messages) {
     try {
-      await processOne(service, msg);
+      const reason = await processOne(service, msg);
+      if (reason) errors.push(`${msg?.message_id}: ${reason}`);
     } catch (err) {
+      const text = err instanceof Error ? err.message : String(err);
+      errors.push(`${msg?.message_id}: ${text}`);
       console.error("[whatsapp/webhook] сообщение пропущено", msg?.message_id, err);
     }
   }
+  return errors;
 }
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
-async function processOne(service: ServiceClient, msg: InboundMessage): Promise<void> {
-  if (!msg?.message_id || !msg.company_id || !msg.chat_id) return;
+async function processOne(service: ServiceClient, msg: InboundMessage): Promise<string | null> {
+  if (!msg?.message_id || !msg.company_id || !msg.chat_id) return "неполный payload";
 
   // ── Компания должна иметь подключённую сессию ──────────────────────────
   // company_id приходит от шлюза, но принимаем его только если для компании
@@ -143,7 +156,7 @@ async function processOne(service: ServiceClient, msg: InboundMessage): Promise<
     console.warn(
       `[whatsapp/webhook] нет сессии для компании ${msg.company_id} — сообщение отброшено`
     );
-    return;
+    return "нет сессии WhatsApp для компании";
   }
 
   // ── Чат: запомнить в любом случае, обрабатывать — только отмеченные ────
@@ -172,7 +185,7 @@ async function processOne(service: ServiceClient, msg: InboundMessage): Promise<
 
   // Новый чат появляется в списке выбора, но по умолчанию выключен:
   // клиент сам решит, что чекать. Молча включённый чат = мусор в отчётах.
-  if (!isWatched) return;
+  if (!isWatched) return `чат ${msg.chat_id} не отмечен для разбора`;
 
   // ── Идемпотентность ────────────────────────────────────────────────────
   const { data: existing } = await service
@@ -181,7 +194,7 @@ async function processOne(service: ServiceClient, msg: InboundMessage): Promise<
     .eq("message_id", msg.message_id)
     .maybeSingle();
 
-  if (existing?.id) return;
+  if (existing?.id) return null; // дубль
 
   const { data: saved, error } = await service
     .from("wazzup_messages")
@@ -206,7 +219,7 @@ async function processOne(service: ServiceClient, msg: InboundMessage): Promise<
 
   if (error) {
     console.error("[whatsapp/webhook] insert failed:", error.message);
-    return;
+    return `insert failed: ${error.message}`;
   }
 
   if (saved?.id) {
@@ -214,4 +227,5 @@ async function processOne(service: ServiceClient, msg: InboundMessage): Promise<
       console.error("[whatsapp/webhook] parseAndSave failed", err)
     );
   }
+  return null;
 }
