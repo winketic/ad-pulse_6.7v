@@ -31,7 +31,19 @@ drop function if exists public.sync_tx_whatsapp_message_id();
 alter table public.material_transactions
   drop column if exists wazzup_message_id;
 
--- ─── 3. Проверка ─────────────────────────────────────────────────────────────
+-- ─── 3. Остатки Wazzup в самой базе ──────────────────────────────────────────
+-- Функция get_wazzup_status досталась от прежней интеграции и обращается
+-- к удалённой таблице wazzup_tokens — то есть уже сломана и висит мёртвой.
+drop function if exists public.get_wazzup_status();
+
+-- Политика RLS осталась с прежним именем: сама она рабочая, но название
+-- путает. Пересоздаём с нейтральным.
+drop policy if exists "wazzup_msg: members can select own company" on public.whatsapp_messages;
+drop policy if exists whatsapp_messages_select on public.whatsapp_messages;
+create policy whatsapp_messages_select on public.whatsapp_messages
+  for select using (company_id = private.get_my_company_id());
+
+-- ─── 4. Проверка ─────────────────────────────────────────────────────────────
 -- 1) view не существует:
 --    select count(*) from information_schema.views
 --     where table_schema='public' and table_name='wazzup_messages';   -- 0
