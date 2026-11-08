@@ -137,7 +137,17 @@ export async function parseAndSave(messageId: string): Promise<void> {
   const autoCreate = result.confidence === "high" && allFound && !unitMismatch;
   // Only flag for review if SOMETHING was found but incomplete — not for irrelevant messages
   const hasAnyField = !!(result.type || result.material_id || result.quantity != null);
-  const needsReview = (!autoCreate && hasAnyField) || unitMismatch;
+  // Фото/голосовое, которое не удалось прочитать (нет OCR, кончились кредиты
+  // OpenAI, битый файл), иначе помечалось как «обработано» и исчезало из
+  // очереди — клиент просто не видел накладную.
+  const mediaUnreadable =
+    (msg.content_type === "image" ||
+      msg.content_type === "voice" ||
+      msg.content_type === "document") &&
+    !textToParse.trim();
+
+  const needsReview =
+    (!autoCreate && hasAnyField) || unitMismatch || mediaUnreadable;
 
   let transactionCreated = false;
 
@@ -183,7 +193,11 @@ export async function parseAndSave(messageId: string): Promise<void> {
     .update({
       parsed: true,
       needs_review: needsReview,
-      parse_result: { ...result, transaction_created: transactionCreated },
+      parse_result: {
+        ...result,
+        transaction_created: transactionCreated,
+        media_unreadable: mediaUnreadable,
+      },
     })
     .eq("id", messageId);
 }
