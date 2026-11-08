@@ -20,6 +20,8 @@ type ParseResult = {
   transaction_created: boolean;
   /** Медиа не удалось распознать (нет OCR, кончились кредиты OpenAI, битый файл) */
   media_unreadable?: boolean;
+  /** Похожее движение уже создано за последние 30 минут */
+  possible_duplicate?: boolean;
 };
 
 export type WazzupMessage = {
@@ -378,6 +380,13 @@ function MessageDetailDrawer({
               <p className="mt-2 text-xs" style={{ color: "#f0b400" }}>
                 Фото или голосовое не удалось распознать. Укажите операцию вручную —
                 иначе движение материала не создастся.
+              </p>
+            )}
+            {pr?.possible_duplicate && (
+              <p className="mt-2 text-xs" style={{ color: "#f0b400" }}>
+                Похоже на дубль: за последние 30 минут уже создано такое же движение
+                ({pr.type ?? "—"} {pr.quantity ?? "—"} {pr.unit ?? ""}). Подтвердите,
+                только если это действительно новая поставка.
               </p>
             )}
           </div>

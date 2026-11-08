@@ -158,12 +158,40 @@ export async function parseAndSave(messageId: string): Promise<void> {
       msg.content_type === "document") &&
     !textToParse.trim();
 
+  // Защита от двойного учёта. Два разных сообщения с одинаковым содержанием
+  // («80 тонн цемента» дважды) создают два движения — бухгалтерия удваивается.
+  // Если за последние 30 минут уже было такое же движение, отправляем на
+  // подтверждение: человек решит, это повторная поставка или дубль.
+  let possibleDuplicate = false;
+  if (autoCreate) {
+    const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const { data: recentSame } = await service
+      .from("material_transactions")
+      .select("id")
+      .eq("company_id", msg.company_id)
+      .eq("material_id", result.material_id!)
+      .eq("type", result.type!)
+      .eq("quantity", finalQuantity)
+      .gte("created_at", since)
+      .limit(1);
+
+    possibleDuplicate = (recentSame?.length ?? 0) > 0;
+    if (possibleDuplicate) {
+      console.warn(
+        `[parseAndSave] возможен дубль: ${result.type} ${finalQuantity} ${msg.company_id} за 30 минут уже было`
+      );
+    }
+  }
+
   const needsReview =
-    (!autoCreate && hasAnyField) || unitMismatch || mediaUnreadable;
+    (!autoCreate && hasAnyField) ||
+    unitMismatch ||
+    mediaUnreadable ||
+    possibleDuplicate;
 
   let transactionCreated = false;
 
-  if (autoCreate) {
+  if (autoCreate && !possibleDuplicate) {
     // Idempotency guard — a redelivered webhook (provider retry) must not
     // create a second transaction for the same inbound message.
     const { data: existingTx } = await service
@@ -209,6 +237,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
         ...result,
         transaction_created: transactionCreated,
         media_unreadable: mediaUnreadable,
+        possible_duplicate: possibleDuplicate,
       },
     })
     .eq("id", messageId);
