@@ -1,5 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
-import { readSecret } from "@/lib/env";
+import { chatCompletion, extractJson, llmAvailable } from "@/lib/llm";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -171,8 +171,7 @@ async function callGptParser(
   materials: { id: string; name: string; unit: string }[],
   context: string[] = []
 ): Promise<GptParsed | null> {
-  const apiKey = readSecret("OPENAI_API_KEY");
-  if (!apiKey) return null;
+  if (!llmAvailable()) return null;
 
   const materialsList = materials
     .map((m, i) => `${i + 1}. ${m.name} (${m.unit})`)
@@ -216,36 +215,25 @@ ${materialsList}${contextBlock}
 Ответь СТРОГО JSON без markdown:
 {"type":"income|expense|defect|return|null","material_name":"...или null","quantity":число_или_null,"unit":"...или null","note":"...или null"}`;
 
+  const raw = await chatCompletion(
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: text },
+    ],
+    { maxTokens: 200, temperature: 0, scope: "parser" }
+  );
+  if (!raw) return null;
+
+  const json = extractJson(raw);
+  if (!json) {
+    console.error("[parser] в ответе модели нет JSON");
+    return null;
+  }
+
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        max_tokens: 200,
-        temperature: 0,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: text },
-        ],
-      }),
-    });
-
-    if (!res.ok) {
-      console.error("[parser] GPT API request failed:", res.status);
-      return null;
-    }
-
-    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    const raw = data.choices?.[0]?.message?.content?.trim() ?? "";
-
-    const parsed = JSON.parse(raw) as GptParsed;
-    return parsed;
+    return JSON.parse(json) as GptParsed;
   } catch {
-    console.error("[parser] GPT parsing failed");
+    console.error("[parser] не удалось разобрать JSON модели");
     return null;
   }
 }
