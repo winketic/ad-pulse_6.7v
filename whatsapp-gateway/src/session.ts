@@ -36,6 +36,14 @@ const baileysLogger = (() => {
 
 const RECONNECT_MAX_DELAY_MS = 30_000;
 
+/**
+ * Защита от «лавины истории»: при первом подключении WhatsApp отдаёт старые
+ * сообщения, и без фильтра они превратились бы в десятки вымышленных
+ * транзакций по материалам. Всё старше суток игнорируем — свежие офлайн-
+ * сообщения при этом проходят (клиент мог быть не в сети несколько часов).
+ */
+const MAX_MESSAGE_AGE_MS = 24 * 60 * 60 * 1000;
+
 function jidToPhone(jid: string): string | null {
   const user = jid.split("@")[0]?.split(":")[0] ?? "";
   return /^\d{6,20}$/.test(user) ? user : null;
@@ -438,6 +446,11 @@ export class WhatsAppSession {
     const body = unwrapMessage(raw.message);
     if (!body) return null;
 
+    const rawTimestamp = raw.messageTimestamp
+      ? Number(raw.messageTimestamp) * 1000
+      : Date.now();
+    if (Date.now() - rawTimestamp > MAX_MESSAGE_AGE_MS) return null;
+
     const jid = key.remoteJid;
     const isGroup = isGroupJid(jid);
     const pushName = typeof raw.pushName === "string" ? raw.pushName : null;
@@ -474,9 +487,7 @@ export class WhatsAppSession {
     }
 
     const senderJid = isGroup ? key.participant ?? jid : jid;
-    const timestamp = raw.messageTimestamp
-      ? Number(raw.messageTimestamp) * 1000
-      : Date.now();
+    const timestamp = rawTimestamp;
 
     const messageId = key.id ?? `${jid}-${timestamp}`;
     const chatName = this.resolveChatName(jid, pushName);
