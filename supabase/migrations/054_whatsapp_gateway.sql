@@ -104,15 +104,11 @@ alter table public.whatsapp_chats    enable row level security;
 
 drop policy if exists whatsapp_sessions_select on public.whatsapp_sessions;
 create policy whatsapp_sessions_select on public.whatsapp_sessions
-  for select using (
-    company_id = (select company_id from public.profiles where id = auth.uid())
-  );
+  for select using (company_id = private.get_my_company_id());
 
 drop policy if exists whatsapp_chats_select on public.whatsapp_chats;
 create policy whatsapp_chats_select on public.whatsapp_chats
-  for select using (
-    company_id = (select company_id from public.profiles where id = auth.uid())
-  );
+  for select using (company_id = private.get_my_company_id());
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. Проверка

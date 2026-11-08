@@ -39,6 +39,19 @@ function formatLastMessage(iso: string | null): string {
   return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
 }
 
+/**
+ * Если сессия истекла, middleware редиректит на /login, а fetch молча идёт
+ * за редиректом и возвращает HTML страницы входа. Без этой проверки UI
+ * показывал бы «Ошибка загрузки статуса» вместо понятного сообщения.
+ */
+async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(url, init);
+  if (res.redirected && res.url.includes("/login")) {
+    throw new Error("Сессия истекла — обновите страницу и войдите снова");
+  }
+  return res;
+}
+
 export default function ConnectClient() {
   const [configured, setConfigured] = useState(true);
   const [session, setSession] = useState<GatewaySession | null>(null);
@@ -51,7 +64,7 @@ export default function ConnectClient() {
 
   const loadSession = useCallback(async () => {
     try {
-      const res = await fetch("/api/whatsapp/session", { cache: "no-store" });
+      const res = await apiFetch("/api/whatsapp/session", { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Ошибка загрузки статуса");
       setConfigured(data.configured !== false);
@@ -66,7 +79,7 @@ export default function ConnectClient() {
   const loadChats = useCallback(async () => {
     setLoadingChats(true);
     try {
-      const res = await fetch("/api/whatsapp/chats", { cache: "no-store" });
+      const res = await apiFetch("/api/whatsapp/chats", { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Ошибка загрузки чатов");
       setChats(data.chats ?? []);
@@ -106,7 +119,7 @@ export default function ConnectClient() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/whatsapp/session", { method: "POST" });
+      const res = await apiFetch("/api/whatsapp/session", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Не удалось начать подключение");
       setSession(data.session ?? null);
@@ -122,7 +135,7 @@ export default function ConnectClient() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/whatsapp/session", { method: "DELETE" });
+      const res = await apiFetch("/api/whatsapp/session", { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "Не удалось отвязать номер");
@@ -142,7 +155,7 @@ export default function ConnectClient() {
       prev.map((c) => (c.jid === chat.jid ? { ...c, isWatched: next } : c))
     );
     try {
-      const res = await fetch("/api/whatsapp/chats", {
+      const res = await apiFetch("/api/whatsapp/chats", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jid: chat.jid, isWatched: next, name: chat.name }),
