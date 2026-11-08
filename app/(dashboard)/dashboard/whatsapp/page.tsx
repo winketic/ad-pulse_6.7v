@@ -61,6 +61,19 @@ export default async function WhatsAppPage() {
       .not("phone", "is", null),
   ]);
 
+  // Собственный шлюз: select("*") — переживаем окно до применения миграции 054.
+  let gatewaySession: Record<string, unknown> | null = null;
+  try {
+    const { data } = await service
+      .from("whatsapp_sessions")
+      .select("*")
+      .eq("company_id", companyId)
+      .maybeSingle();
+    gatewaySession = data ?? null;
+  } catch (err) {
+    console.warn("[whatsapp/page] whatsapp_sessions недоступна:", err);
+  }
+
   const channelIds: string[] = tokenResult.data?.channel_ids ?? [];
   const webhookId: string | null = tokenResult.data?.webhook_id ?? null;
   const allowedChatIds: string[] = tokenResult.data?.allowed_chat_ids ?? [];
@@ -83,6 +96,8 @@ export default async function WhatsAppPage() {
       allowedChatIds={allowedChatIds}
       isAdmin={isAdmin}
       senderMap={senderMap}
+      gatewayStatus={(gatewaySession?.status as string | undefined) ?? null}
+      gatewayPhone={(gatewaySession?.phone_number as string | undefined) ?? null}
     />
   );
 }

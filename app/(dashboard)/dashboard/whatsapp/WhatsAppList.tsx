@@ -709,6 +709,8 @@ export default function WhatsAppList({
   allowedChatIds = [],
   isAdmin = false,
   senderMap = {},
+  gatewayStatus = null,
+  gatewayPhone = null,
 }: {
   messages: WazzupMessage[];
   materials: WazzupMaterial[];
@@ -718,6 +720,8 @@ export default function WhatsAppList({
   allowedChatIds?: string[];
   isAdmin?: boolean;
   senderMap?: Record<string, { name: string; position: string | null }>;
+  gatewayStatus?: string | null;
+  gatewayPhone?: string | null;
 }) {
   const [messages, setMessages] = useState<WazzupMessage[]>(initialMessages);
   const [activeTab, setActiveTab] = useState<QueueTab>("queue");
@@ -725,6 +729,11 @@ export default function WhatsAppList({
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectPending, startRejectTransition] = useTransition();
+
+  // Компания может быть подключена двумя путями: старый Wazzup (channelIds)
+  // или наш шлюз (gatewayStatus = 'open'). Второй раньше показывался как «не подключено».
+  const gatewayConnected = gatewayStatus === "open";
+  const isConnected = channelIds.length > 0 || gatewayConnected;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
@@ -953,10 +962,15 @@ export default function WhatsAppList({
         <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-5 space-y-5">
           <div className="rounded-xl p-4" style={CARD_STYLE}>
             <div className="flex items-center gap-2 mb-3">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${channelIds.length > 0 ? "bg-[#25D366]" : "bg-[#888888]"}`} />
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isConnected ? "bg-[#25D366]" : "bg-[#888888]"}`} />
               <span className="text-sm font-medium text-[var(--text)]">
-                {channelIds.length > 0 ? "Подключено" : "Не подключено"}
+                {isConnected ? "Подключено" : "Не подключено"}
               </span>
+              {gatewayConnected && (
+                <span className="ml-auto text-xs text-[var(--muted)]">
+                  свой номер{gatewayPhone ? ` · +${gatewayPhone}` : ""}
+                </span>
+              )}
             </div>
             {channelIds.length > 0 && (
               <div className="space-y-2">
