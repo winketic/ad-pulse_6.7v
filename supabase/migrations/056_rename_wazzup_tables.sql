@@ -1,10 +1,10 @@
 -- 056_rename_wazzup_tables.sql
--- Убираем Wazzup из схемы БД: переименовываем таблицы под собственный шлюз.
+-- Переименовываем таблицы под собственный шлюз (шаг 1 из 2).
 --
--- ВАЖНО: миграция написана так, чтобы её можно было применить ДО деплоя нового
--- кода. Старый деплой продолжит работать: для сообщений создаётся совместимый
--- view с прежним именем, а колонка-ссылка в транзакциях синхронизируется триггером.
--- Удалять совместимость будет отдельная миграция после деплоя (057).
+-- ПРИМЕНЯТЬ ДО ДЕПЛОЯ нового кода. Миграция совместимая: старый деплой
+-- продолжит работать через view с прежним именем и синхронизацию колонки.
+-- Окончательная зачистка (drop старого view/колонки/таблиц Wazzup) —
+-- в миграции 057, её применяем ПОСЛЕ деплоя.
 --
 -- Применять вручную в Supabase Dashboard → SQL Editor. Скрипт идемпотентный.
 
@@ -20,10 +20,18 @@ begin
   end if;
 end $$;
 
--- Совместимость: пока в проде старый код, он читает и пишет в это имя.
--- Простой view в Postgres автоматически обновляемый, поэтому INSERT работает.
+-- Совместимость для старого деплоя: пока новая версия не выкачена, приложение
+-- читает и пишет в прежнее имя. Простой view в Postgres обновляемый.
 create or replace view public.wazzup_messages as
   select * from public.whatsapp_messages;
+
+-- ВАЖНО: без security_invoker view выполняется от владельца и обходит RLS —
+-- тогда любая компания увидела бы чужие сообщения. Включаем права вызывающего.
+alter view public.wazzup_messages set (security_invoker = on);
+
+-- Права на view такие же, как были у таблицы (RLS всё равно применяется).
+grant select, insert, update on public.wazzup_messages to authenticated;
+grant select, insert, update on public.wazzup_messages to service_role;
 
 -- ─── 2. Ссылка из транзакций на сообщение ────────────────────────────────────
 alter table public.material_transactions
@@ -39,7 +47,7 @@ create index if not exists idx_mat_tx_whatsapp_msg
   on public.material_transactions(whatsapp_message_id)
   where whatsapp_message_id is not null;
 
--- Пока старый код пишет в wazzup_message_id, а новый — в whatsapp_message_id,
+-- Пока старый деплой пишет в wazzup_message_id, а новый — в whatsapp_message_id,
 -- держим обе колонки одинаковыми.
 create or replace function public.sync_tx_whatsapp_message_id()
 returns trigger
@@ -57,15 +65,11 @@ create trigger material_transactions_sync_message_id
   before insert or update on public.material_transactions
   for each row execute function public.sync_tx_whatsapp_message_id();
 
--- ─── 3. Wazzup-токены и конфиг больше не нужны ───────────────────────────────
--- Данные Wazzup больше не используются: подключение идёт через свой шлюз,
--- а он хранит сессии на своём сервере, не в Supabase.
-drop table if exists public.wazzup_tokens cascade;
-drop table if exists public.wazzup_config cascade;
-
--- ─── 4. Проверка ─────────────────────────────────────────────────────────────
+-- ─── 3. Проверка ─────────────────────────────────────────────────────────────
 -- select table_name, table_type from information_schema.tables
---  where table_schema='public' and table_name like '%azzup%' or table_name like 'whatsapp%';
+--  where table_schema = 'public' and table_name in ('wazzup_messages','whatsapp_messages');
 --
--- Ожидаем: whatsapp_messages (BASE TABLE), wazzup_messages (VIEW),
---          whatsapp_sessions, whatsapp_chats. wazzup_tokens/wazzup_config — нет.
+-- Ожидаем: whatsapp_messages — BASE TABLE, wazzup_messages — VIEW.
+--
+-- select relname, reloptions from pg_class where relname = 'wazzup_messages';
+-- Ожидаем в reloptions: {security_invoker=on}.
