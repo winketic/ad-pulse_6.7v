@@ -65,10 +65,13 @@ const TX_TYPE_COLORS: Record<TxType, string> = {
 
 // ── Helpers ───────────────────────────────────────────────
 
-function messageStatus(msg: WazzupMessage): "green" | "yellow" | "gray" {
+function messageStatus(msg: WazzupMessage): "green" | "yellow" | "gray" | "skip" {
   if (!msg.parsed) return "gray";
   if (msg.needs_review) return "yellow";
-  return "green";
+  // Сообщение разобрано, но движение не создано: это не операция
+  // («привет», «ок») — раньше такие показывались зелёным «Создано».
+  if (msg.parse_result?.transaction_created) return "green";
+  return "skip";
 }
 
 function formatDate(iso: string) {
@@ -85,7 +88,7 @@ function truncate(text: string | null, len = 80) {
 
 // ── Status badge ──────────────────────────────────────────
 
-function StatusBadge({ status }: { status: "green" | "yellow" | "gray" }) {
+function StatusBadge({ status }: { status: "green" | "yellow" | "gray" | "skip" }) {
   const config =
     status === "green"
       ? {
@@ -102,6 +105,14 @@ function StatusBadge({ status }: { status: "green" | "yellow" | "gray" }) {
             background: "var(--warning-bg)",
             border: "color-mix(in srgb, var(--warning) 24%, transparent)",
             icon: "M12 9v2m0 4h.01",
+          }
+        : status === "skip"
+        ? {
+            label: "Без движения",
+            color: "var(--muted)",
+            background: "var(--bg3)",
+            border: "1px solid var(--border)",
+            icon: "M5 12h14",
           }
         : {
             label: "Не распознано",

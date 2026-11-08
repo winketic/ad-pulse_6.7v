@@ -11,15 +11,27 @@ import {
 } from "@/lib/whatsapp/gateway";
 
 function convertUnits(qty: number, from: string, to: string): number | null {
-  const f = from.toLowerCase().trim();
-  const t = to.toLowerCase().trim();
+  const norm = (v: string) => v.toLowerCase().trim().replace(/[.\s]/g, "").replace(/^тонн?ы?$/, "тонна");
+  const f = norm(from);
+  const t = norm(to);
   if (f === t) return qty;
-  if ((f === "тонна" || f === "т") && t === "кг") return qty * 1000;
-  if (f === "кг" && (t === "тонна" || t === "т"))  return qty / 1000;
-  if (f === "кг"  && t === "г")                     return qty * 1000;
-  if (f === "г"   && t === "кг")                    return qty / 1000;
-  if ((f === "м3" || f === "куб") && t === "литр")  return qty * 1000;
-  if (f === "литр" && (t === "м3" || t === "куб"))  return qty / 1000;
+
+  // Русский язык даёт кучу форм: «тонн», «тонны», «тонну», «т».
+  // Раньше учитывались только «тонна» и «т», поэтому «80 тонн» уходило
+  // на ручной разбор вместо пересчёта в килограммы.
+  const isTon = (v: string) => /^(тонн|тонна|тонны|тонну|тоннами|т|tn|ton|tons)$/.test(v);
+  const isKg = (v: string) => /^(кг|kg|килограмм|килограмма|килограммы)$/.test(v);
+  const isGram = (v: string) => /^(г|g|грамм|грамма|граммы)$/.test(v);
+  const isM3 = (v: string) => /^(м3|м³|куб|кубм|m3|кубометр|кубометра|кубометры)$/.test(v);
+  const isLiter = (v: string) => /^(л|литр|литра|литры|liter|litre)$/.test(v);
+
+  if (isTon(f) && isKg(t)) return qty * 1000;
+  if (isKg(f) && isTon(t)) return qty / 1000;
+  if (isKg(f) && isGram(t)) return qty * 1000;
+  if (isGram(f) && isKg(t)) return qty / 1000;
+  if (isM3(f) && isLiter(t)) return qty * 1000;
+  if (isLiter(f) && isM3(t)) return qty / 1000;
+
   return null; // unknown pair → needs_review
 }
 
