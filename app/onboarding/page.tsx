@@ -264,7 +264,9 @@ export default function OnboardingPage() {
               <div className="space-y-3">
                 {(ROLE_FEATURES[userRole] ?? ROLE_FEATURES.warehouse).map((feat, i) => (
                   <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--bg3)] border border-[var(--border)]">
-                    <span className="text-xl">{feat.icon}</span>
+                    <svg className="w-4 h-4 shrink-0 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
                     <span className="text-sm text-[var(--text)]">{feat.text}</span>
                   </div>
                 ))}
@@ -273,7 +275,7 @@ export default function OnboardingPage() {
 
             {/* Error */}
             {error && (
-              <div className="mt-4 px-4 py-3 rounded-xl text-sm bg-red-500/10 text-red-400 border border-red-500/20">
+              <div className="mt-4 px-4 py-3 rounded-xl text-sm bg-red-50 text-red-700 border border-red-300">
                 {error}
               </div>
             )}
