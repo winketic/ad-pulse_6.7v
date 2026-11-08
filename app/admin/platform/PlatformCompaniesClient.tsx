@@ -107,7 +107,7 @@ export default function PlatformCompaniesClient({ companies, id }: { companies: 
                 </div>
                 <p className="flex items-center gap-2 text-sm text-[var(--muted)]"><Clock3 size={15} className="shrink-0" /><span>{formatDate(company.lastSeen)}</span></p>
                 <p className="flex items-center gap-2 text-sm text-[var(--muted)]"><Users size={15} className="shrink-0" /><span>{company.users} сотрудников</span></p>
-                <span className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${company.needsAttention ? "border-amber-500/20 bg-amber-500/10 text-amber-300" : "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"}`}>
+                <span className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${company.needsAttention ? "border-amber-300 bg-amber-50 text-amber-700" : "border-emerald-300 bg-emerald-50 text-emerald-700"}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${company.needsAttention ? "bg-amber-300" : "bg-emerald-400"}`} />
                   {company.users === 0 ? "Нет сотрудников" : company.needsAttention ? "Нет входов 30+ дней" : company.activeThisWeek ? "Активна" : "Неактивна за неделю"}
                 </span>

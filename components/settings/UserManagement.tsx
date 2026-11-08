@@ -16,10 +16,10 @@ const ROLES = [
 ];
 
 const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
-  admin: { bg: "bg-purple-500/15 border border-purple-500/20", text: "text-purple-300" },
-  manager: { bg: "bg-blue-500/15 border border-blue-500/20", text: "text-blue-300" },
-  warehouse: { bg: "bg-amber-500/15 border border-amber-500/20", text: "text-amber-300" },
-  workshop: { bg: "bg-emerald-500/15 border border-emerald-500/20", text: "text-emerald-300" },
+  admin: { bg: "bg-purple-50 border border-purple-200", text: "text-purple-700" },
+  manager: { bg: "bg-blue-50 border border-blue-200", text: "text-blue-700" },
+  warehouse: { bg: "bg-amber-50 border border-amber-200", text: "text-amber-700" },
+  workshop: { bg: "bg-emerald-50 border border-emerald-200", text: "text-emerald-700" },
 };
 
 const ROLE_ORDER: Record<string, number> = {

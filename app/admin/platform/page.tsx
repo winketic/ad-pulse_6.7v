@@ -112,7 +112,7 @@ export default async function PlatformOverviewPage() {
         {(attentionCount > 0 || stalePendingCount > 0) && (
           <section aria-labelledby="attention-heading" className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4 sm:p-5">
             <div className="mb-3 flex items-center gap-2">
-              <TriangleAlert size={18} className="text-amber-300" />
+              <TriangleAlert size={18} className="text-amber-600" />
               <h2 id="attention-heading" className="text-sm font-semibold text-[var(--text)]">Требуют внимания</h2>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
