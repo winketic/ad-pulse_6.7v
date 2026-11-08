@@ -3,11 +3,7 @@ import { parseMessage } from "./parser";
 import { transcribeVoice } from "./transcribeVoice";
 import { parseImageTransaction } from "./parseImage";
 import { sendTelegramAlert } from "@/lib/telegram/send";
-import {
-  GATEWAY_PROVIDER,
-  absoluteMediaUrl,
-  gatewayMediaToken,
-} from "@/lib/whatsapp/gateway";
+import { absoluteMediaUrl, gatewayMediaToken } from "@/lib/whatsapp/gateway";
 
 function convertUnits(qty: number, from: string, to: string): number | null {
   const norm = (v: string) => v.toLowerCase().trim().replace(/[.\s]/g, "").replace(/^тонн?ы?$/, "тонна");
@@ -49,10 +45,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
 
   let textToParse: string = msg.raw_text ?? "";
 
-  // Сообщения из нашего шлюза несут относительный путь /media/... и требуют
-  // токен собственного шлюза.
-  // Все сообщения приходят из собственного шлюза: медиа отдаётся по его токену.
-  const isGateway = msg.provider === GATEWAY_PROVIDER;
+  // Шлюз отдаёт относительный путь /media/..., скачиваем с его токеном.
   const mediaUrl = absoluteMediaUrl(msg.media_url ?? null);
 
   const needsMedia =

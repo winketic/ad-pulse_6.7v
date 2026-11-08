@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import SettingsTabs, { type TabId } from "./SettingsTabs";
 import ProfileCard from "./ProfileCard";
 import CompanySettings from "./CompanySettings";
 import UserManagement from "./UserManagement";
 import WhatsAppCard from "./WhatsAppCard";
 import TelegramCard from "./TelegramCard";
-import { useToast } from "@/components/ui/Toast";
 import type { UserRow } from "@/app/(dashboard)/dashboard/settings/actions";
 
 interface SettingsClientProps {
@@ -48,8 +46,6 @@ export default function SettingsClient({
   initialTab, thresholdSection,
 }: SettingsClientProps) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
-  const router = useRouter();
-  const { toast } = useToast();
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">

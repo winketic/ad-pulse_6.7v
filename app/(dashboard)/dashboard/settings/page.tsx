@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import SettingsClient from "@/components/settings/SettingsClient";
 import type { TabId } from "@/components/settings/SettingsTabs";
 import { listCompanyUsers } from "./actions";
