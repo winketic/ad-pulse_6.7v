@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { parseAndSave } from "@/lib/wazzup/parseAndSave";
 import { sendTelegramAlert } from "@/lib/telegram/send";
@@ -49,9 +49,13 @@ export async function POST(
   // Смена состояния сессии: приложение узнаёт, что WhatsApp отвалился,
   // не дожидаясь, пока админ откроет настройки.
   if (body.event === "session.status") {
-    void processSessionStatuses(body.data as SessionStatusItem[]).catch((err) =>
-      console.error("[whatsapp/webhook] status processing failed", err)
-    );
+    // after() — работа после ответа, которую Vercel не замораживает.
+    // Обычный void-вызов обрывался: функция засыпала сразу после res.json().
+    after(async () => {
+      await processSessionStatuses(body.data as SessionStatusItem[]).catch((err) =>
+        console.error("[whatsapp/webhook] status processing failed", err)
+      );
+    });
     return NextResponse.json({ ok: true });
   }
 
@@ -65,9 +69,11 @@ export async function POST(
       return NextResponse.json({ ok: errors.length === 0, errors });
     }
 
-    void processMessages(body.data as InboundMessage[]).catch((err) =>
-      console.error("[whatsapp/webhook] processing failed", err)
-    );
+    after(async () => {
+      await processMessages(body.data as InboundMessage[]).catch((err) =>
+        console.error("[whatsapp/webhook] processing failed", err)
+      );
+    });
     return NextResponse.json({ ok: true });
   }
 
