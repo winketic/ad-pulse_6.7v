@@ -4,6 +4,11 @@ import { transcribeVoice } from "./transcribeVoice";
 import { parseImageTransaction } from "./parseImage";
 import { sendTelegramAlert } from "@/lib/telegram/send";
 import { ensureFreshToken } from "./refreshToken";
+import {
+  GATEWAY_PROVIDER,
+  absoluteMediaUrl,
+  gatewayMediaToken,
+} from "@/lib/whatsapp/gateway";
 
 function convertUnits(qty: number, from: string, to: string): number | null {
   const f = from.toLowerCase().trim();
@@ -23,7 +28,8 @@ export async function parseAndSave(messageId: string): Promise<void> {
 
   const { data: msg, error: msgErr } = await service
     .from("wazzup_messages")
-    .select("id, raw_text, company_id, content_type, media_url, chat_id")
+    // select("*") — переживаем окно до применения миграции 054 (колонки provider/chat_name).
+    .select("*")
     .eq("id", messageId)
     .single();
 
@@ -32,22 +38,31 @@ export async function parseAndSave(messageId: string): Promise<void> {
 
   let textToParse: string = msg.raw_text ?? "";
 
+  // Сообщения из нашего шлюза несут относительный путь /media/... и требуют
+  // токен шлюза вместо OAuth-токена Wazzup.
+  const isGateway = msg.provider === GATEWAY_PROVIDER;
+  const mediaUrl = isGateway
+    ? absoluteMediaUrl(msg.media_url ?? null)
+    : (msg.media_url ?? null);
+
   const needsMedia =
     (msg.content_type === "voice" || msg.content_type === "image") &&
-    !!msg.media_url;
+    !!mediaUrl;
 
   if (needsMedia) {
     let accessToken = "";
     try {
-      accessToken = await ensureFreshToken(msg.company_id);
+      accessToken = isGateway
+        ? gatewayMediaToken()
+        : await ensureFreshToken(msg.company_id);
     } catch (e) {
       console.error("[parseAndSave] token refresh error:", e);
     }
 
-    if (accessToken) {
+    if (accessToken && mediaUrl) {
       if (msg.content_type === "voice") {
         try {
-          const transcription = await transcribeVoice(msg.media_url!, accessToken);
+          const transcription = await transcribeVoice(mediaUrl, accessToken);
           if (transcription) {
             textToParse = transcription;
             await service
@@ -60,7 +75,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
         }
       } else if (msg.content_type === "image") {
         try {
-          const extracted = await parseImageTransaction(msg.media_url!, accessToken);
+          const extracted = await parseImageTransaction(mediaUrl, accessToken);
           if (extracted && extracted !== "не удалось распознать") {
             textToParse = extracted;
             await service

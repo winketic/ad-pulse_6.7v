@@ -1,0 +1,146 @@
+# AD Pulse — WhatsApp Gateway
+
+Собственный шлюз WhatsApp на [Baileys](https://github.com/WhiskeySockets/Baileys) — замена Wazzup.
+Держим на своём VPS: клиент сканирует QR своим номером, шлюз отдаёт список его чатов
+с названиями, а входящие сообщения уходят вебхуком в AD Pulse.
+
+## Зачем
+
+- **Независимость от партнёров.** Нет Wazzup — нет ежемесячной платы за канал и нет чужого лимита.
+- **Клиент не разбирается с ID.** В настройках он видит названия чатов и ставит галочки.
+- **Свой номер клиента.** Привязка через QR как в WhatsApp Web, телефон продолжает работать.
+
+## Честные риски
+
+| Риск | Что делаем |
+|---|---|
+| Baileys — неофициальный доступ, нарушает ToS WhatsApp | Подключаем **отдельный выделенный номер**, не основной канал снабжения |
+| Возможен бан номера | Для пилота — тестовый номер; клиентам рекомендуем отдельный |
+| Нужен постоянный процесс и диск | Docker на VPS + volume для сессий |
+| Обновления протокола WhatsApp | Обновляем `baileys` регулярно, следим за релизами |
+
+## Архитектура
+
+```
+WhatsApp ──(Baileys, WebSocket)──► шлюз на VPS ──(HTTPS webhook)──► AD Pulse на Vercel
+                                        │
+                                        └── /media/... (фото, голосовые)
+```
+
+Шлюз не знает про материалы и остатки — он только транспорт.
+Вся бизнес-логика (парсинг, транзакции) остаётся в приложении.
+
+## Переменные окружения шлюза
+
+| Переменная | Обязательна | Описание |
+|---|---|---|
+| `GATEWAY_TOKEN` | да | Общий секрет для вызовов из приложения. `openssl rand -hex 32` |
+| `APP_WEBHOOK_TOKEN` | да | Тот же секрет, что в URL `/api/whatsapp/webhook/<token>` |
+| `APP_URL` | да | `https://pulse.altaidynamics.kz` |
+| `DATA_DIR` | да | `/app/data` в Docker (тут живут сессии) |
+| `PORT` | нет | `8080` по умолчанию |
+| `MEDIA_ENABLED` | нет | `true` — качать фото и голосовые |
+| `MEDIA_RETENTION_DAYS` | нет | `30` — чистка старых медиа |
+| `SYNC_HISTORY` | нет | `true` — подтягивать историю чатов при первом подключении |
+
+## Переменные окружения приложения (Vercel)
+
+| Переменная | Описание |
+|---|---|
+| `WHATSAPP_GATEWAY_URL` | Публичный HTTPS-адрес шлюза, без слэша на конце |
+| `WHATSAPP_GATEWAY_TOKEN` | Равен `GATEWAY_TOKEN` шлюза |
+| `WHATSAPP_WEBHOOK_TOKEN` | Равен `APP_WEBHOOK_TOKEN` шлюза |
+
+## Локальный запуск
+
+```bash
+cd whatsapp-gateway
+cp .env.example .env      # заполнить GATEWAY_TOKEN и APP_WEBHOOK_TOKEN
+npm install
+npm run build
+node dist/index.js
+```
+
+Проверка:
+
+```bash
+curl http://127.0.0.1:8080/health
+curl -X POST http://127.0.0.1:8080/sessions \
+  -H "Authorization: Bearer $GATEWAY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"companyId":"<uuid компании>"}'
+```
+
+## Деплой на VPS
+
+```bash
+# на сервере
+git clone <репозиторий> adpulse
+cd adpulse/whatsapp-gateway
+cp .env.example .env      # заполнить
+docker compose up -d --build
+docker compose logs -f
+```
+
+**Volume `./data` обязателен.** Без него после каждого рестарта контейнера
+клиенты сканируют QR заново.
+
+### TLS — три варианта
+
+**A. Отдельный сервер, 443 свободен — Caddy (проще всего)**
+
+```
+# Caddyfile
+wa.your-domain.kz {
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+**B. Порт 443 занят (например, VPN на том же сервере) — Cloudflare Tunnel**
+
+```bash
+cloudflared tunnel create adpulse-wa
+cloudflared tunnel route dns adpulse-wa wa.your-domain.kz
+cloudflared tunnel run --url http://127.0.0.1:8080 adpulse-wa
+```
+
+Туннель не занимает 443 и работает через исходящее соединение — конфликта с xray нет.
+
+**C. Нестандартный порт** — `https://wa.your-domain.kz:8443`.
+Годится для теста, но часть мобильных и корпоративных сетей такие порты режет.
+
+## API шлюза
+
+Все роуты кроме `/health` требуют `Authorization: Bearer <GATEWAY_TOKEN>`.
+
+| Метод | Путь | Назначение |
+|---|---|---|
+| `GET` | `/health` | Проверка живости (без токена) |
+| `GET` | `/sessions` | Список сессий |
+| `POST` | `/sessions` | Создать сессию `{companyId}` |
+| `GET` | `/sessions/:companyId` | Статус + QR (data URL) |
+| `GET` | `/sessions/:companyId/chats` | Список чатов с названиями |
+| `POST` | `/sessions/:companyId/logout` | Отвязать номер |
+| `GET` | `/media/:companyId/:file` | Скачать медиа |
+
+## Как это выглядит для клиента
+
+1. Настройки → «Подключение WhatsApp» → «Подключить WhatsApp».
+2. Сканирует QR телефоном (Настройки → Связанные устройства).
+3. Видит список своих чатов: `Бетонный завод / снабжение (группа)`,
+   `Мухтар +7 701 …`, `+7 777 …`.
+4. Ставит галочки на нужных.
+5. Всё. Сообщения из остальных чатов игнорируются.
+
+Новый чат появляется в списке, но **по умолчанию выключен** — иначе мусорные
+сообщения попадали бы в учёт материалов.
+
+## Диагностика
+
+| Симптом | Причина |
+|---|---|
+| `permission denied` на `/chats` | Сессия ещё не `open` — сначала QR |
+| `logged_out` после рестарта | Пропал volume `./data` |
+| `440` в логах | Второе подключение того же номера вытеснило первое |
+| Медиа не приходит | `MEDIA_ENABLED=false` или истёк срок хранения |
+| Вебхук не доходит | Проверить `APP_URL` и `APP_WEBHOOK_TOKEN`; шлюз ретраит 3 раза |

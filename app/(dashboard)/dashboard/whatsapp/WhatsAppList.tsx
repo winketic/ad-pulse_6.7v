@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
+import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { confirmWhatsAppTransaction, rejectWhatsAppMessage, type TxType } from "./actions";
 import AllowedChatsCard from "@/components/settings/AllowedChatsCard";
@@ -985,6 +986,14 @@ export default function WhatsAppList({
 
           {isAdmin && (
             <>
+              {/* Собственный шлюз: QR-подключение и выбор чатов по названию */}
+              <Link
+                href="/dashboard/whatsapp/connect"
+                onClick={() => setSettingsOpen(false)}
+                className="dp-btn-primary w-full block text-center"
+              >
+                Подключить номер и выбрать чаты
+              </Link>
               <ResubscribeButton />
             </>
           )}

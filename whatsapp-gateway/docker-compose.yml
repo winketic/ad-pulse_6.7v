@@ -1,0 +1,18 @@
+services:
+  gateway:
+    build: .
+    container_name: adpulse-whatsapp-gateway
+    restart: unless-stopped
+    env_file: .env
+    # Слушаем только localhost: наружу отдаём через Caddy/nginx с TLS.
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      # КРИТИЧНО: сессии WhatsApp живут здесь. Без volume каждый рестарт
+      # контейнера = клиенты сканируют QR заново.
+      - ./data:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"

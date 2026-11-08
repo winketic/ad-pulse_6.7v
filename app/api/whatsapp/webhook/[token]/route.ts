@@ -1,0 +1,157 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { parseAndSave } from "@/lib/wazzup/parseAndSave";
+import { GATEWAY_PROVIDER } from "@/lib/whatsapp/gateway";
+
+// Разбор медиа (фото накладной, голосовое) может занять время
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
+interface InboundMessage {
+  message_id: string;
+  company_id: string;
+  chat_id: string;
+  chat_name: string;
+  chat_type: string;
+  sender_name: string | null;
+  sender_phone: string | null;
+  text: string | null;
+  content_type: "text" | "voice" | "image" | "document" | "other";
+  media_url: string | null;
+  media_mimetype: string | null;
+  media_name: string | null;
+  timestamp: number;
+}
+
+const VALID_CONTENT_TYPES = new Set(["text", "voice", "image", "document", "other"]);
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ token: string }> }
+) {
+  // URL-секрет: шлюз шлёт его в пути, как и раньше делал Wazzup.
+  const { token } = await params;
+  const expected = (process.env.WHATSAPP_WEBHOOK_TOKEN ?? "").trim();
+  if (!expected || token !== expected) {
+    console.warn("[whatsapp/webhook] отклонено: неверный токен");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = (await request.json().catch(() => null)) as
+    | { event?: string; data?: InboundMessage[] }
+    | null;
+
+  if (!body || body.event !== "message.add" || !Array.isArray(body.data)) {
+    return NextResponse.json({ ok: true, skipped: "unsupported event" });
+  }
+
+  // Отвечаем 200 сразу: шлюз ретраит на 5xx и ждёт не больше 15 секунд.
+  void processMessages(body.data).catch((err) =>
+    console.error("[whatsapp/webhook] processing failed", err)
+  );
+
+  return NextResponse.json({ ok: true });
+}
+
+async function processMessages(messages: InboundMessage[]): Promise<void> {
+  const service = createServiceClient();
+
+  for (const msg of messages) {
+    try {
+      await processOne(service, msg);
+    } catch (err) {
+      console.error("[whatsapp/webhook] сообщение пропущено", msg?.message_id, err);
+    }
+  }
+}
+
+type ServiceClient = ReturnType<typeof createServiceClient>;
+
+async function processOne(service: ServiceClient, msg: InboundMessage): Promise<void> {
+  if (!msg?.message_id || !msg.company_id || !msg.chat_id) return;
+
+  // ── Компания должна иметь подключённую сессию ──────────────────────────
+  // company_id приходит от шлюза, но принимаем его только если для компании
+  // реально существует сессия WhatsApp. Чужой company_id не пройдёт.
+  const { data: sessionRow } = await service
+    .from("whatsapp_sessions")
+    .select("company_id, status")
+    .eq("company_id", msg.company_id)
+    .maybeSingle();
+
+  if (!sessionRow) {
+    console.warn(
+      `[whatsapp/webhook] нет сессии для компании ${msg.company_id} — сообщение отброшено`
+    );
+    return;
+  }
+
+  // ── Чат: запомнить в любом случае, обрабатывать — только отмеченные ────
+  const { data: chatRow } = await service
+    .from("whatsapp_chats")
+    .select("is_watched, chat_name")
+    .eq("company_id", msg.company_id)
+    .eq("chat_jid", msg.chat_id)
+    .maybeSingle();
+
+  const isWatched = Boolean(chatRow?.is_watched);
+
+  await service.from("whatsapp_chats").upsert(
+    {
+      company_id: msg.company_id,
+      chat_jid: msg.chat_id,
+      chat_name: msg.chat_name || chatRow?.chat_name || "",
+      chat_type: msg.chat_type === "whatsgroup" ? "whatsgroup" : "whatsapp",
+      // Для групп sender_phone — это телефон участника, а не самого чата.
+      phone: msg.chat_type === "whatsgroup" ? null : msg.sender_phone,
+      last_message_at: new Date(msg.timestamp).toISOString(),
+      is_watched: isWatched,
+    },
+    { onConflict: "company_id,chat_jid" }
+  );
+
+  // Новый чат появляется в списке выбора, но по умолчанию выключен:
+  // клиент сам решит, что чекать. Молча включённый чат = мусор в отчётах.
+  if (!isWatched) return;
+
+  // ── Идемпотентность ────────────────────────────────────────────────────
+  const { data: existing } = await service
+    .from("wazzup_messages")
+    .select("id")
+    .eq("message_id", msg.message_id)
+    .maybeSingle();
+
+  if (existing?.id) return;
+
+  const { data: saved, error } = await service
+    .from("wazzup_messages")
+    .insert({
+      company_id: msg.company_id,
+      message_id: msg.message_id,
+      channel_id: "whatsapp-gateway",
+      direction: "inbound",
+      sender_phone: msg.sender_phone,
+      raw_text: msg.text,
+      content_type: VALID_CONTENT_TYPES.has(msg.content_type)
+        ? msg.content_type
+        : "other",
+      media_url: msg.media_url,
+      chat_id: msg.chat_id,
+      chat_name: msg.chat_name,
+      chat_type: msg.chat_type,
+      provider: GATEWAY_PROVIDER,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("[whatsapp/webhook] insert failed:", error.message);
+    return;
+  }
+
+  if (saved?.id) {
+    await parseAndSave(saved.id).catch((err) =>
+      console.error("[whatsapp/webhook] parseAndSave failed", err)
+    );
+  }
+}

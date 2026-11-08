@@ -15,6 +15,9 @@ const PUBLIC_PATHS = [
   "/api/telegram/setup",
   "/api/wazzup/webhook",
   "/api/wazzup/callback",
+  // Собственный шлюз WhatsApp: сюда шлюз шлёт входящие сообщения без сессии.
+  // Защита — секрет в URL (/api/whatsapp/webhook/<token>) + заголовок X-Gateway-Token.
+  "/api/whatsapp/webhook",
   // Vercel Cron приходит без пользовательской сессии: без этого middleware
   // редиректил его на /login, и cron-маршруты ни разу не выполнялись.
   // Сами маршруты проверяют CRON_SECRET.

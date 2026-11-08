@@ -46,6 +46,26 @@ AD Pulse — мультитенантный B2B SaaS для учёта мате�
 - Два уровня уверенности: high (все поля) → авто-транзакция, low → ручное подтверждение
 - source поле в transactions: 'manual' | 'whatsapp'
 
+## Собственный WhatsApp-шлюз (Baileys) — замена Wazzup
+
+Отдельный сервис в `/whatsapp-gateway` (Node + Baileys, деплой на VPS, **не на Vercel**).
+Клиент подключает свой номер по QR, видит список своих чатов с названиями и отмечает нужные.
+
+- Сессии, чаты, медиа, вебхуки: `whatsapp-gateway/src/session.ts`
+- API шлюза (Bearer `GATEWAY_TOKEN`): `GET /health`, `POST /sessions`, `GET /sessions/:companyId`,
+  `GET /sessions/:companyId/chats`, `POST /sessions/:companyId/logout`, `GET /media/:companyId/:file`
+- Роуты приложения: `/api/whatsapp/session`, `/api/whatsapp/chats`, `/api/whatsapp/webhook/[token]`
+- UI: `/dashboard/whatsapp/connect`
+- Таблицы (миграция 054): `whatsapp_sessions`, `whatsapp_chats`;
+  в `wazzup_messages` добавлены `chat_name`, `chat_type`, `provider`
+- Фильтрация: обрабатываются только чаты с `whatsapp_chats.is_watched = true`.
+  Новый чат появляется в списке выключенным — иначе мусор попадал бы в учёт
+- Медиа: шлюз отдаёт `/media/...` по токену; `parseAndSave` берёт `gatewayMediaToken()`
+  вместо OAuth-токена Wazzup, когда `provider = 'adpulse-gateway'`
+- Env приложения: `WHATSAPP_GATEWAY_URL`, `WHATSAPP_GATEWAY_TOKEN`, `WHATSAPP_WEBHOOK_TOKEN`
+- Риск: Baileys — неофициальный доступ (ToS WhatsApp), возможен бан номера.
+  Подключать выделенный номер, не основной канал снабжения
+
 ## Структура папок
 /app
   /(dashboard)     — защищённые страницы (требуют авторизацию)
