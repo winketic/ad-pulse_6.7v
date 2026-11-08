@@ -18,11 +18,14 @@ type ParseResult = {
   note: string | null;
   confidence: "high" | "low";
   transaction_created: boolean;
+  /** Медиа не удалось распознать (нет OCR, кончились кредиты OpenAI, битый файл) */
+  media_unreadable?: boolean;
 };
 
 export type WazzupMessage = {
   id: string;
   chat_id: string | null;
+  chat_name?: string | null;
   sender_phone: string | null;
   raw_text: string | null;
   parsed: boolean;
@@ -337,6 +340,21 @@ function MessageDetailDrawer({
             )}
           </div>
 
+          {/* Чат: клиенту важно видеть, из какой группы пришло сообщение */}
+          {(message.chat_name || message.chat_id) && (
+            <div>
+              <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Чат</p>
+              <p className="text-sm text-[var(--text)] truncate">
+                {message.chat_name || "—"}
+              </p>
+              {message.chat_id && (
+                <p className="text-xs text-[var(--muted)] mt-0.5 font-mono truncate">
+                  {message.chat_id}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Raw message */}
           <div>
             <p className="text-xs font-medium text-[var(--muted)] mb-1.5">Исходное сообщение</p>
@@ -345,6 +363,12 @@ function MessageDetailDrawer({
                 {message.raw_text || "—"}
               </p>
             </div>
+            {pr?.media_unreadable && (
+              <p className="mt-2 text-xs" style={{ color: "#f0b400" }}>
+                Фото или голосовое не удалось распознать. Укажите операцию вручную —
+                иначе движение материала не создастся.
+              </p>
+            )}
           </div>
 
           {/* Image preview */}
