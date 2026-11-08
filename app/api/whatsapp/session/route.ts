@@ -39,6 +39,24 @@ function fail(err: unknown) {
   return NextResponse.json({ error: "Ошибка шлюза WhatsApp" }, { status: 502 });
 }
 
+/** Когда последний раз приходило сообщение через шлюз. */
+async function lastMessageAt(companyId: string): Promise<string | null> {
+  try {
+    const service = createServiceClient();
+    const { data } = await service
+      .from("wazzup_messages")
+      .select("created_at")
+      .eq("company_id", companyId)
+      .eq("provider", "adpulse-gateway")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data?.created_at ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // GET — текущий статус подключения
 export async function GET() {
   const companyId = await getAdminCompany();
@@ -50,12 +68,20 @@ export async function GET() {
 
   try {
     const session = await getSession(companyId);
-    if (!session) return NextResponse.json({ connected: false, configured: true, session: null });
+    if (!session) {
+      return NextResponse.json({
+        connected: false,
+        configured: true,
+        session: null,
+        lastMessageAt: await lastMessageAt(companyId),
+      });
+    }
     await persist(companyId, session);
     return NextResponse.json({
       connected: session.status === "open",
       configured: true,
       session,
+      lastMessageAt: await lastMessageAt(companyId),
     });
   } catch (err) {
     return fail(err);

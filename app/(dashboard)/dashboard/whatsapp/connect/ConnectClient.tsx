@@ -79,6 +79,7 @@ export default function ConnectClient() {
   const [hideEmpty, setHideEmpty] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [gatewayError, setGatewayError] = useState<string | null>(null);
+  const [lastMessageAt, setLastMessageAt] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingChats, setLoadingChats] = useState(false);
@@ -91,6 +92,7 @@ export default function ConnectClient() {
       if (!res.ok) throw new Error(data.error ?? "Ошибка загрузки статуса");
       setConfigured(data.configured !== false);
       setSession(data.session ?? null);
+      setLastMessageAt(data.lastMessageAt ?? null);
       return data.session as GatewaySession | null;
     } catch (err) {
       setError((err as Error).message);
@@ -296,6 +298,14 @@ export default function ConnectClient() {
           <p className="mt-4 text-sm" style={{ color: "var(--muted)" }}>
             {STATUS_LABEL[status] ?? status}
             {session?.lastError ? ` — ${session.lastError}` : ""}
+          </p>
+        )}
+
+        {isOpen && (
+          <p className="mt-4 text-sm" style={{ color: "var(--muted)" }}>
+            {lastMessageAt
+              ? `Последнее сообщение из WhatsApp: ${formatLastMessage(lastMessageAt)}`
+              : "Сообщений пока не было — напишите в отмеченный чат, чтобы проверить связь"}
           </p>
         )}
 
