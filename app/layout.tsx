@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import BrandSplash from "@/components/BrandSplash";
+import PublicThemeToggle from "@/components/PublicThemeToggle";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -49,6 +50,7 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-x-hidden`}>
         <BrandSplash />
+        <PublicThemeToggle />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
