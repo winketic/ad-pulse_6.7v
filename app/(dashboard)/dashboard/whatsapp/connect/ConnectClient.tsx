@@ -348,6 +348,8 @@ export default function ConnectClient() {
           </div>
           <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
             Сообщения из невыбранных чатов не попадут в учёт материалов.
+            Текст и фото накладных разбираются автоматически, голосовые — нет:
+            они попадут в очередь на ручной разбор.
           </p>
 
           {chats.length > 0 && (
