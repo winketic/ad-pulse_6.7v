@@ -4,6 +4,10 @@ next-env.d.ts
 out/
 build/
 
+# Отдельный Node-сервис на VPS: свой tsconfig и свои тесты.
+# Без этого ESLint считает функцию Baileys useMultiFileAuthState React-хуком.
+whatsapp-gateway/
+
 # Dependencies and tooling output
 node_modules/
 playwright-report/
