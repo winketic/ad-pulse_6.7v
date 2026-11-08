@@ -6,6 +6,8 @@ import { logger } from "./logger";
 import { ensureDirs, cleanupMedia, assertCompanyId } from "./store";
 import * as manager from "./manager";
 import { resolveMediaPath, mimetypeForFile } from "./media";
+import { retryPending } from "./webhook";
+import { pendingCount } from "./outbox";
 
 const log = logger("server");
 
@@ -86,7 +88,10 @@ async function route(req: http.IncomingMessage, res: http.ServerResponse): Promi
 
   // Health-check без токена: нужен балансировщику и docker healthcheck.
   if (url.pathname === "/health" && method === "GET") {
-    return json(res, 200, { ok: true, sessions: manager.list().length });
+    const pending = await pendingCount();
+    // pending > 0 значит приложение недавно было недоступно — возвращаем 200,
+    // но показываем цифру, чтобы это было видно в диагностике.
+    return json(res, 200, { ok: true, sessions: manager.list().length, pending });
   }
 
   if (!authorized(req)) {
@@ -164,6 +169,14 @@ export async function startServer(): Promise<http.Server> {
     });
   });
 
+  // Недоставленные вебхуки повторяем раз в минуту и сразу при старте:
+  // за время деплоя приложения могло накопиться несколько сообщений.
+  const flushTimer = setInterval(() => {
+    void retryPending().catch((err) => log.warn("повтор вебхуков не удался", err));
+  }, 60_000);
+  flushTimer.unref();
+  void retryPending().catch(() => undefined);
+
   // Медиа накапливается — чистим по расписанию, не на каждый запрос.
   const cleanupTimer = setInterval(() => {
     void cleanupMedia().catch((err) => log.warn("очистка медиа не удалась", err));
@@ -176,6 +189,7 @@ export async function startServer(): Promise<http.Server> {
   const shutdown = (signal: string) => {
     log.info(`получен ${signal}, останавливаемся`);
     clearInterval(cleanupTimer);
+    clearInterval(flushTimer);
     manager.stopAll();
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 8_000).unref();

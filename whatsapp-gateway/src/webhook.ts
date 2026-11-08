@@ -1,6 +1,7 @@
 import { config, webhookUrl } from "./config";
 import { logger } from "./logger";
 import type { SessionStatusMessage, WebhookEvent } from "./types";
+import { flushOutbox, persistFailed } from "./outbox";
 
 const log = logger("webhook");
 
@@ -63,12 +64,18 @@ export async function deliver(payload: WebhookEvent): Promise<boolean> {
     await sleep(delay);
   }
 
-  // Не теряем молча: пишем в лог в формате, который можно поднять руками.
+  // Не теряем молча: кладём на диск, фоновая задача повторит отправку.
   log.error(
-    `не удалось доставить вебхук, сообщений потеряно: ${payload.data.length}`,
+    `вебхук не доставлен, отложено на повтор: ${payload.data.length} сообщ.`,
     payload.data.map((m) => ("message_id" in m ? m.message_id : m.company_id))
   );
+  await persistFailed(payload);
   return false;
+}
+
+/** Повторить всё, что накопилось за время недоступности приложения. */
+export async function retryPending(): Promise<void> {
+  await flushOutbox((payload) => deliver(payload));
 }
 
 /** Отправить одно сообщение (удобная обёртка для обработчика Baileys). */
