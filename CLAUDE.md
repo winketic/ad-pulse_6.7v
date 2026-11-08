@@ -144,9 +144,12 @@ SUPABASE_ACCESS_TOKEN — только в окружении shell (для Supab
 - SMTP периодически не работает — fallback на встроенный Supabase email
 
 ### Окружения и деплой
-- production: ветка main → pulse.altaidynamics.kz (vercel deploy --prod или git push ad-pulse main)
-- staging: ветка staging → preview-алиас ad-pulse-git-staging-*.vercel.app (git push ad-pulse staging, БЕЗ --prod)
-- Прод-фиксы делаются на main → деплой --prod → черри-пик на staging; фичи наоборот: staging → проверка → черри-пик на main
+- production: ветка main → pulse.altaidynamics.kz. **Автодеплой Vercel из GitHub включён:`
+  достаточно `git push origin main`** — сборка запускается сама (проверено 2026-11-08).
+- `vercel --prod` нужен только если надо выложить без пуша. Не делайте оба действия
+  подряд: получится два одинаковых деплоя.
+- staging: ветка staging → preview-алиас ad-pulse-git-staging-*.vercel.app
+- Прод-фиксы делаются на main → деплой → черри-пик на staging; фичи наоборот: staging → проверка → черри-пик на main
 
 ## Важные решения
 - Supabase free tier пока для пилота, Pro когда появятся клиенты
