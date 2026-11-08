@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { gatewayConfigured, getSession } from "@/lib/whatsapp/gateway";
 import ConnectClient from "./ConnectClient";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +25,37 @@ export default async function WhatsAppConnectPage() {
     .single();
 
   const isAdmin = profile?.role === "admin";
+  const companyId = (profile?.company_id as string | undefined) ?? null;
+
+  // Статус подключения читаем на сервере, чтобы страница сразу рисовала
+  // правильное состояние. Иначе при загрузке на мгновение появлялась кнопка
+  // «Подключить WhatsApp», хотя номер уже привязан.
+  let initialSession = null;
+  if (isAdmin && companyId && gatewayConfigured()) {
+    try {
+      initialSession = await getSession(companyId);
+    } catch (err) {
+      console.warn("[whatsapp/connect] статус шлюза недоступен:", err);
+    }
+  }
+
+  let initialLastMessageAt: string | null = null;
+  if (companyId) {
+    try {
+      const service = createServiceClient();
+      const { data } = await service
+        .from("whatsapp_messages")
+        .select("created_at")
+        .eq("company_id", companyId)
+        .eq("provider", "adpulse-gateway")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      initialLastMessageAt = data?.created_at ?? null;
+    } catch {
+      // таблицы может не быть до миграции — не критично
+    }
+  }
 
   return (
     <div className="mx-auto max-w-3xl p-4 sm:p-6">
@@ -42,7 +75,10 @@ export default async function WhatsAppConnectPage() {
       </div>
 
       {isAdmin ? (
-        <ConnectClient />
+        <ConnectClient
+          initialSession={initialSession}
+          initialLastMessageAt={initialLastMessageAt}
+        />
       ) : (
         <div
           className="rounded-xl p-4 text-sm"

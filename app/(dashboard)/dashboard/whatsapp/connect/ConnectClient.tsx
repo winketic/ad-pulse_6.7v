@@ -69,9 +69,16 @@ async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
   return res;
 }
 
-export default function ConnectClient() {
+export default function ConnectClient({
+  initialSession = null,
+  initialLastMessageAt = null,
+}: {
+  initialSession?: GatewaySession | null;
+  initialLastMessageAt?: string | null;
+} = {}) {
   const [configured, setConfigured] = useState(true);
-  const [session, setSession] = useState<GatewaySession | null>(null);
+  const [checking, setChecking] = useState(initialSession === null);
+  const [session, setSession] = useState<GatewaySession | null>(initialSession);
   const [chats, setChats] = useState<ChatOption[]>([]);
   const [query, setQuery] = useState("");
   const [onlyGroups, setOnlyGroups] = useState(false);
@@ -79,7 +86,7 @@ export default function ConnectClient() {
   const [hideEmpty, setHideEmpty] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [gatewayError, setGatewayError] = useState<string | null>(null);
-  const [lastMessageAt, setLastMessageAt] = useState<string | null>(null);
+  const [lastMessageAt, setLastMessageAt] = useState<string | null>(initialLastMessageAt);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingChats, setLoadingChats] = useState(false);
@@ -97,6 +104,8 @@ export default function ConnectClient() {
     } catch (err) {
       setError((err as Error).message);
       return null;
+    } finally {
+      setChecking(false);
     }
   }, []);
 
@@ -198,6 +207,13 @@ export default function ConnectClient() {
 
   const status = session?.status ?? null;
   const isOpen = status === "open";
+  // Кнопка «Подключить» нужна только когда сессии нет или она мертва.
+  // В состояниях starting/connecting/closed шлюз восстанавливается сам —
+  // заставлять нажимать кнопку каждый раз бессмысленно.
+  const canStart =
+    !checking &&
+    !isOpen &&
+    (status === null || status === "logged_out" || status === "failed" || status === "qr");
   const watchedCount = chats.filter((c) => c.isWatched).length;
 
   // У реальной компании в WhatsApp сотни чатов: без поиска и фильтра
@@ -266,12 +282,14 @@ export default function ConnectClient() {
             <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
               {isOpen
                 ? `Подключён${session?.phoneNumber ? `: +${session.phoneNumber}` : ""}`
-                : "Привяжите номер, чтобы AD Pulse читал сообщения из выбранных чатов"}
+                : checking
+                  ? "Проверяем подключение…"
+                  : "Привяжите номер, чтобы AD Pulse читал сообщения из выбранных чатов"}
             </p>
           </div>
 
           <div className="flex gap-2">
-            {!isOpen && (
+            {canStart && (
               <button
                 onClick={connect}
                 disabled={busy}
