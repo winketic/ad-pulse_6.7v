@@ -44,6 +44,23 @@ function formatLastMessage(iso: string | null): string {
  * за редиректом и возвращает HTML страницы входа. Без этой проверки UI
  * показывал бы «Ошибка загрузки статуса» вместо понятного сообщения.
  */
+/**
+ * Технические ответы шлюза превращаем в действие, которое может сделать клиент.
+ * Без этого человек видит «Шлюз ответил 401: unauthorized» и не знает, что делать.
+ */
+function explainError(message: string): string | null {
+  if (/401|unauthori[sz]ed/i.test(message)) {
+    return "Токен шлюза на Vercel не совпадает с WHATSAPP_GATEWAY_TOKEN на сервере. Обновите переменную и передеплойте.";
+  }
+  if (/fetch failed|ENOTFOUND|ECONNREFUSED|недоступен|не ответил|abort/i.test(message)) {
+    return "Приложение не смогло связаться со шлюзом. Проверьте WHATSAPP_GATEWAY_URL — нужен полный адрес с портом, например https://162-35-31-85.sslip.io:8443";
+  }
+  if (/не настроен/i.test(message)) {
+    return "Добавьте WHATSAPP_GATEWAY_URL и WHATSAPP_GATEWAY_TOKEN в переменные окружения Vercel и сделайте редеплой.";
+  }
+  return null;
+}
+
 async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(url, init);
   if (res.redirected && res.url.includes("/login")) {
@@ -225,6 +242,9 @@ export default function ConnectClient() {
           }}
         >
           {error}
+          {explainError(error) && (
+            <p className="mt-1 text-xs opacity-80">{explainError(error)}</p>
+          )}
         </div>
       )}
 
