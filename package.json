@@ -17,7 +17,8 @@
     "test:smoke:desktop": "playwright test --config tests/playwright.config.ts smoke --project=desktop-chrome --project=desktop-safari",
     "test:smoke:mobile": "playwright test --config tests/playwright.config.ts smoke --project=ios-iphone --project=ios-ipad --project=android-phone --project=android-tablet",
     "test:report": "playwright show-report tests/playwright-report",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix"
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "check:whatsapp": "node scripts/check-whatsapp.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.57.0",
