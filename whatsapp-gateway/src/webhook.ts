@@ -28,12 +28,23 @@ export async function deliver(payload: WebhookEvent): Promise<boolean> {
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
+        // Без manual fetch идёт за редиректом: middleware вернул бы 307 на /login,
+        // fetch получил бы там 200 и шлюз счёл бы сообщение доставленным.
+        redirect: "manual",
       });
       clearTimeout(timer);
 
       if (res.ok) {
         log.debug(`доставлено ${payload.data.length} сообщ. (${res.status})`);
         return true;
+      }
+
+      if (res.status >= 300 && res.status < 400) {
+        log.error(
+          `вебхук перенаправлен ${res.status} → ${res.headers.get("location") ?? "?"}. ` +
+            `Скорее всего приложение не задеплоено или путь не в PUBLIC_PATHS.`
+        );
+        return false;
       }
 
       // 4xx кроме 429 бесполезно ретраить — приложение отвергло payload.
