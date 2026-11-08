@@ -4,8 +4,6 @@ import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { confirmWhatsAppTransaction, rejectWhatsAppMessage, type TxType } from "./actions";
-import AllowedChatsCard from "@/components/settings/AllowedChatsCard";
-import ResubscribeButton from "@/components/settings/ResubscribeButton";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -24,7 +22,7 @@ type ParseResult = {
   possible_duplicate?: boolean;
 };
 
-export type WazzupMessage = {
+export type WhatsAppMessage = {
   id: string;
   chat_id: string | null;
   chat_name?: string | null;
@@ -38,17 +36,16 @@ export type WazzupMessage = {
   media_url: string | null;
 };
 
-export type WazzupMaterial = {
+export type WhatsAppMaterial = {
   id: string;
   name: string;
   unit: string;
 };
 
-type QueueTab = "queue" | "chats";
+type QueueTab = "queue";
 
 const TABS: { id: QueueTab; label: string }[] = [
   { id: "queue", label: "Очередь" },
-  { id: "chats", label: "Разрешённые чаты" },
 ];
 
 const TX_TYPE_LABELS: Record<TxType, string> = {
@@ -67,7 +64,7 @@ const TX_TYPE_COLORS: Record<TxType, string> = {
 
 // ── Helpers ───────────────────────────────────────────────
 
-function messageStatus(msg: WazzupMessage): "green" | "yellow" | "gray" | "skip" {
+function messageStatus(msg: WhatsAppMessage): "green" | "yellow" | "gray" | "skip" {
   if (!msg.parsed) return "gray";
   if (msg.needs_review) return "yellow";
   // Сообщение разобрано, но движение не создано: это не операция
@@ -172,8 +169,8 @@ function ConfirmModal({
   onClose,
   onSuccess,
 }: {
-  message: WazzupMessage;
-  materials: WazzupMaterial[];
+  message: WhatsAppMessage;
+  materials: WhatsAppMaterial[];
   onClose: () => void;
   onSuccess: (messageId: string) => void;
 }) {
@@ -301,7 +298,7 @@ function MessageDetailDrawer({
   rejectPending,
   rejectingId,
 }: {
-  message: WazzupMessage;
+  message: WhatsAppMessage;
   senderMap: Record<string, { name: string; position: string | null }>;
   onClose: () => void;
   onOpenConfirm: (id: string) => void;
@@ -457,7 +454,7 @@ function MessageDetailDrawer({
           {/* Go to transaction */}
           {pr?.transaction_created && (
             <a
-              href={`/dashboard/transactions?wazzup_message_id=${message.id}`}
+              href={`/dashboard/transactions?whatsapp_message_id=${message.id}`}
               className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors"
               style={{ background: "var(--accent-15)", border: "1px solid var(--border)", color: "var(--accent)" }}
             >
@@ -508,13 +505,11 @@ function MessageCard({
   sender,
   onSelect,
   onConfirm,
-  onCopyChatId,
 }: {
-  message: WazzupMessage;
+  message: WhatsAppMessage;
   sender: { name: string; position: string | null } | null;
   onSelect: () => void;
   onConfirm: () => void;
-  onCopyChatId: (chatId: string) => void;
 }) {
   const pr = message.parse_result;
   const status = messageStatus(message);
@@ -560,19 +555,9 @@ function MessageCard({
         className="flex items-center gap-2 px-3 sm:px-4 py-2"
         style={{ borderTop: "1px solid var(--border)" }}
       >
-        {chatId ? (
-          <button
-            type="button"
-            onClick={() => onCopyChatId(chatId)}
-            title="Скопировать Chat ID"
-            className="flex items-center gap-1.5 min-w-0 text-[11px] sm:text-xs font-mono text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
-          >
-            <CopyIcon />
-            <span className="truncate">{chatId}</span>
-          </button>
-        ) : (
-          <span className="text-[11px] sm:text-xs text-[var(--muted)]">Без чата</span>
-        )}
+        <span className="min-w-0 truncate text-[11px] sm:text-xs text-[var(--muted)]">
+          {message.chat_name || chatId || "Без чата"}
+        </span>
 
         <div className="flex-1" />
 
@@ -596,7 +581,7 @@ function ProcessedRow({
   sender,
   onSelect,
 }: {
-  message: WazzupMessage;
+  message: WhatsAppMessage;
   sender: { name: string; position: string | null } | null;
   onSelect: () => void;
 }) {
@@ -627,11 +612,9 @@ function ProcessedRow({
 function QueueEmptyState({
   hasHistory,
   onOpenSettings,
-  onOpenChats,
 }: {
   hasHistory: boolean;
   onOpenSettings: () => void;
-  onOpenChats: () => void;
 }) {
   return (
     <div className="rounded-xl px-4 py-8 sm:px-8 sm:py-10 text-center" style={CARD_STYLE}>
@@ -667,9 +650,6 @@ function QueueEmptyState({
         <button type="button" onClick={onOpenSettings} className="dp-btn-primary">
           Настройки подключения
         </button>
-        <button type="button" onClick={onOpenChats} className="dp-btn-secondary">
-          Разрешённые чаты
-        </button>
       </div>
     </div>
   );
@@ -677,108 +657,32 @@ function QueueEmptyState({
 
 // ── Allowed chats panel ───────────────────────────────────
 
-function ReadonlyChatsCard({ allowedChatIds }: { allowedChatIds: string[] }) {
-  return (
-    <div className="rounded-xl p-4 sm:p-5" style={CARD_STYLE}>
-      <h3 className="text-sm font-semibold text-[var(--text)]">Разрешённые чаты</h3>
-      {allowedChatIds.length === 0 ? (
-        <p className="text-xs text-[var(--muted)] mt-2 leading-relaxed">
-          Список пуст — обрабатываются все входящие сообщения.
-        </p>
-      ) : (
-        <ul className="mt-3 space-y-2">
-          {allowedChatIds.map((id) => (
-            <li
-              key={id}
-              className="px-3 py-2 rounded-lg text-xs font-mono text-[var(--text)] truncate"
-              style={{ background: "var(--bg3)", border: "1px solid var(--border)" }}
-            >
-              {id}
-            </li>
-          ))}
-        </ul>
-      )}
-      <p className="text-[11px] text-[var(--muted)] mt-3">
-        Управлять списком может администратор компании.
-      </p>
-    </div>
-  );
-}
-
-function ChatsPanel({
-  allowedChatIds,
-  isAdmin,
-}: {
-  allowedChatIds: string[];
-  isAdmin: boolean;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="rounded-xl p-4 sm:p-5" style={CARD_STYLE}>
-        <h2 className="text-sm font-semibold text-[var(--text)]">Зачем нужен список</h2>
-        <p className="text-sm text-[var(--muted)] mt-1.5 leading-relaxed">
-          В очередь попадают сообщения только из разрешённых чатов. Остальные переписки игнорируются — так в учёт не попадают личные чаты и служебные рассылки.
-        </p>
-
-        {isAdmin && (
-          <div className="mt-4">
-            <p className="text-xs font-medium text-[var(--muted)] mb-2">Как добавить чат</p>
-            <InfoSteps
-              steps={[
-                { title: "Скопируйте Chat ID", text: "В «Очереди» нажмите на Chat ID под сообщением." },
-                { title: "Вставьте в список", text: "Введите ID в поле ниже и нажмите «Добавить»." },
-                { title: "Готово", text: "Новые сообщения из этого чата начнут попадать в очередь." },
-              ]}
-            />
-          </div>
-        )}
-      </div>
-
-      {isAdmin ? (
-        <AllowedChatsCard initialChatIds={allowedChatIds} />
-      ) : (
-        <ReadonlyChatsCard allowedChatIds={allowedChatIds} />
-      )}
-    </div>
-  );
-}
-
-// ── Main component ────────────────────────────────────────
-
 export default function WhatsAppList({
   messages: initialMessages,
   materials,
-  channelIds = [],
-  webhookId = null,
   companyId,
-  allowedChatIds = [],
   isAdmin = false,
   senderMap = {},
   gatewayStatus = null,
   gatewayPhone = null,
 }: {
-  messages: WazzupMessage[];
-  materials: WazzupMaterial[];
-  channelIds?: string[];
-  webhookId?: string | null;
+  messages: WhatsAppMessage[];
+  materials: WhatsAppMaterial[];
   companyId?: string;
-  allowedChatIds?: string[];
   isAdmin?: boolean;
   senderMap?: Record<string, { name: string; position: string | null }>;
   gatewayStatus?: string | null;
   gatewayPhone?: string | null;
 }) {
-  const [messages, setMessages] = useState<WazzupMessage[]>(initialMessages);
+  const [messages, setMessages] = useState<WhatsAppMessage[]>(initialMessages);
   const [activeTab, setActiveTab] = useState<QueueTab>("queue");
   const [selectedMsgId, setSelectedMsgId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectPending, startRejectTransition] = useTransition();
 
-  // Компания может быть подключена двумя путями: старый Wazzup (channelIds)
-  // или наш шлюз (gatewayStatus = 'open'). Второй раньше показывался как «не подключено».
   const gatewayConnected = gatewayStatus === "open";
-  const isConnected = channelIds.length > 0 || gatewayConnected;
+  const isConnected = gatewayConnected;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
@@ -788,14 +692,6 @@ export default function WhatsAppList({
     setTimeout(() => setToast(null), 3000);
   };
 
-  function copyChatId(chatId: string) {
-    const done = () => {
-      showToast("Chat ID скопирован");
-    };
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(chatId).then(done).catch(() => { legacyCopy(chatId); done(); });
-    } else { legacyCopy(chatId); done(); }
-  }
 
   function legacyCopy(text: string) {
     const el = document.createElement("textarea");
@@ -809,16 +705,16 @@ export default function WhatsAppList({
     if (!companyId) return;
     const supabase = createClient();
     const channel = supabase
-      .channel(`wazzup_messages:${companyId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "wazzup_messages", filter: `company_id=eq.${companyId}` },
+      .channel(`whatsapp_messages:${companyId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "whatsapp_messages", filter: `company_id=eq.${companyId}` },
         (payload) => {
-          const newMsg = payload.new as WazzupMessage;
+          const newMsg = payload.new as WhatsAppMessage;
           setMessages((prev) => prev.some((m) => m.id === newMsg.id) ? prev : [newMsg, ...prev]);
         }
       )
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "wazzup_messages", filter: `company_id=eq.${companyId}` },
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "whatsapp_messages", filter: `company_id=eq.${companyId}` },
         (payload) => {
-          const updated = payload.new as WazzupMessage;
+          const updated = payload.new as WhatsAppMessage;
           setMessages((prev) => prev.map((m) => m.id === updated.id ? { ...m, ...updated } : m));
         }
       )
@@ -851,7 +747,7 @@ export default function WhatsAppList({
 
   const queueMessages = messages.filter((m) => messageStatus(m) === "yellow");
   const processedMessages = messages.filter((m) => messageStatus(m) !== "yellow");
-  const senderFor = (msg: WazzupMessage) =>
+  const senderFor = (msg: WhatsAppMessage) =>
     msg.sender_phone ? senderMap[msg.sender_phone] ?? null : null;
 
   return (
@@ -891,7 +787,7 @@ export default function WhatsAppList({
       >
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
-          const count = tab.id === "queue" ? queueMessages.length : allowedChatIds.length;
+          const count = queueMessages.length;
           return (
             <button
               key={tab.id}
@@ -936,7 +832,6 @@ export default function WhatsAppList({
           <QueueEmptyState
             hasHistory={messages.length > 0}
             onOpenSettings={() => setSettingsOpen(true)}
-            onOpenChats={() => setActiveTab("chats")}
           />
         ) : (
           <div className="space-y-3">
@@ -947,7 +842,6 @@ export default function WhatsAppList({
                 sender={senderFor(msg)}
                 onSelect={() => setSelectedMsgId(msg.id)}
                 onConfirm={() => setConfirmingId(msg.id)}
-                onCopyChatId={copyChatId}
               />
             ))}
           </div>
@@ -973,16 +867,6 @@ export default function WhatsAppList({
             </div>
           </details>
         )}
-      </section>
-
-      {/* Allowed chats panel — also stays mounted to keep its input/list state */}
-      <section
-        role="tabpanel"
-        id="whatsapp-panel-chats"
-        aria-labelledby="whatsapp-tab-chats"
-        className={activeTab === "chats" ? "" : "hidden"}
-      >
-        <ChatsPanel allowedChatIds={allowedChatIds} isAdmin={isAdmin} />
       </section>
 
       {/* Settings drawer */}
@@ -1017,31 +901,7 @@ export default function WhatsAppList({
                 </span>
               )}
             </div>
-            {channelIds.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-[var(--muted)]">Channel ID</p>
-                {channelIds.map((id) => (
-                  <span key={id} className="block px-2 py-1 rounded-lg text-xs font-mono truncate"
-                    style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--muted)" }}>{id}</span>
-                ))}
-              </div>
-            )}
-            {webhookId && (
-              <div className="mt-3">
-                <p className="text-xs font-medium text-[var(--muted)] mb-1">Webhook ID</p>
-                <span className="block px-2 py-1 rounded-lg text-xs font-mono truncate"
-                  style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--muted)" }}>{webhookId}</span>
-              </div>
-            )}
           </div>
-
-          <button
-            type="button"
-            onClick={() => { setSettingsOpen(false); setActiveTab("chats"); }}
-            className="dp-btn-secondary w-full"
-          >
-            Разрешённые чаты
-          </button>
 
           {isAdmin && (
             <>
@@ -1053,7 +913,6 @@ export default function WhatsAppList({
               >
                 Подключить номер и выбрать чаты
               </Link>
-              <ResubscribeButton />
             </>
           )}
         </div>

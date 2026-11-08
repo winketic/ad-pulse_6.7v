@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { parseAndSave } from "@/lib/wazzup/parseAndSave";
+import { parseAndSave } from "@/lib/whatsapp/parseAndSave";
 import { sendTelegramAlert } from "@/lib/telegram/send";
 import { GATEWAY_PROVIDER } from "@/lib/whatsapp/gateway";
 
@@ -32,7 +32,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
-  // URL-секрет: шлюз шлёт его в пути, как и раньше делал Wazzup.
+  // URL-секрет: шлюз передаёт его в пути запроса.
   const { token } = await params;
   // Секрет приезжает из дашборда и может содержать BOM — сравниваем чистые ASCII.
   const expected = (process.env.WHATSAPP_WEBHOOK_TOKEN ?? "").replace(/[^\x21-\x7E]/g, "");
@@ -198,7 +198,7 @@ async function processOne(service: ServiceClient, msg: InboundMessage): Promise<
 
   // ── Идемпотентность ────────────────────────────────────────────────────
   const { data: existing } = await service
-    .from("wazzup_messages")
+    .from("whatsapp_messages")
     .select("id")
     .eq("message_id", msg.message_id)
     .maybeSingle();
@@ -206,7 +206,7 @@ async function processOne(service: ServiceClient, msg: InboundMessage): Promise<
   if (existing?.id) return null; // дубль
 
   const { data: saved, error } = await service
-    .from("wazzup_messages")
+    .from("whatsapp_messages")
     .insert({
       company_id: msg.company_id,
       message_id: msg.message_id,

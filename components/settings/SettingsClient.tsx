@@ -6,7 +6,7 @@ import SettingsTabs, { type TabId } from "./SettingsTabs";
 import ProfileCard from "./ProfileCard";
 import CompanySettings from "./CompanySettings";
 import UserManagement from "./UserManagement";
-import WazzupCard from "./WazzupCard";
+import WhatsAppCard from "./WhatsAppCard";
 import TelegramCard from "./TelegramCard";
 import { useToast } from "@/components/ui/Toast";
 import type { UserRow } from "@/app/(dashboard)/dashboard/settings/actions";
@@ -26,20 +26,15 @@ interface SettingsClientProps {
   // Company
   companyName: string;
   telegramConnected: boolean;
-  // Wazzup
+  // WhatsApp (свой шлюз)
   isConnected: boolean;
-  tokenExpiresAt: string | null;
-  hasChannels: boolean;
-  hasConfig: boolean;
-  configEmail: string | null;
-  configClientId: string | null;
+  phoneNumber: string | null;
   // Users
   users: UserRow[];
   // Meta
   isAdmin: boolean;
   canEditCompany: boolean;
   initialTab: TabId;
-  wazzupFlash?: string | null;
   // Threshold alerts section (server-rendered slot)
   thresholdSection?: React.ReactNode;
 }
@@ -48,22 +43,13 @@ export default function SettingsClient({
   fullName, email, roleLabel, roleBg, roleText,
   position, userId, companyId, avatarUrl, bannerColor,
   companyName, telegramConnected,
-  isConnected, tokenExpiresAt, hasChannels, hasConfig, configEmail, configClientId,
+  isConnected, phoneNumber,
   users, isAdmin, canEditCompany,
-  initialTab, wazzupFlash, thresholdSection,
+  initialTab, thresholdSection,
 }: SettingsClientProps) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const router = useRouter();
   const { toast } = useToast();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("wazzup") === "connected") {
-      toast("WhatsApp успешно подключён ✓", "success");
-      router.replace("/dashboard/settings", { scroll: false });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
@@ -100,14 +86,9 @@ export default function SettingsClient({
             canEdit={canEditCompany}
           />
 
-          <WazzupCard
+          <WhatsAppCard
             isConnected={isConnected}
-            expiresAt={tokenExpiresAt}
-            hasChannels={hasChannels}
-            flash={wazzupFlash ?? null}
-            hasConfig={hasConfig}
-            configEmail={configEmail}
-            configClientId={configClientId}
+            phoneNumber={phoneNumber}
             isAdmin={isAdmin}
           />
 

@@ -16,7 +16,7 @@
 - Экспорт отчётов в Excel
 
 **WhatsApp → транзакции автоматически**
-- Интеграция через Wazzup Partner API (Label, мультитенант OAuth)
+- Собственный WhatsApp-шлюз на Baileys (QR-подключение, свой номер у каждого клиента)
 - Парсер входящих сообщений извлекает материал, количество, тип операции
 - Два уровня уверенности: `high` → авто-транзакция, `low` → ручное подтверждение
 
@@ -32,7 +32,7 @@
 **Безопасность**
 - Изоляция данных по `company_id` на уровне RLS (Supabase Row Level Security)
 - URL-токен авторизация webhook endpoint
-- PKCE OAuth flow для Wazzup
+- QR-подключение номера к собственному шлюзу
 - Смена email только после подтверждения текущей почты 6-значным кодом
 
 ---
@@ -46,7 +46,7 @@
 | База данных | Supabase (PostgreSQL + Auth + RLS + Storage) |
 | Email | Resend |
 | Уведомления | Telegram Bot API |
-| WhatsApp | Wazzup Partner API v2 |
+| WhatsApp | Собственный шлюз на Baileys (свой VPS) |
 | Деплой | Vercel |
 
 ---
@@ -59,7 +59,7 @@
 auth.uid() → profiles.company_id → RLS на всех таблицах
 ```
 
-Webhook маршрутизирует входящие WhatsApp-сообщения к нужному тенанту через `channel_id → wazzup_tokens.channel_ids`.
+Webhook маршрутизирует входящие WhatsApp-сообщения к нужному тенанту: шлюз присылает `company_id`, приложение проверяет сессию и отмеченные чаты.
 
 ---
 
@@ -90,7 +90,9 @@ RESEND_API_KEY=
 EMAIL_FROM=onboarding@resend.dev
 TELEGRAM_BOT_TOKEN=
 ADMIN_TELEGRAM_CHAT_ID=
-WAZZUP_WEBHOOK_TOKEN=
+WHATSAPP_WEBHOOK_TOKEN=
+WHATSAPP_GATEWAY_URL=
+WHATSAPP_GATEWAY_TOKEN=
 ```
 
 ```bash
@@ -120,7 +122,7 @@ npm run dev
 ```
 /app
   /(dashboard)       — защищённые страницы (middleware auth)
-  /api/wazzup        — Wazzup OAuth + webhook /[token]
+  /api/whatsapp      — сессии шлюза, чаты, webhook /[token]
   /api/auth          — смена email, etc.
   /api/telegram      — Telegram webhook
 /components
@@ -128,7 +130,7 @@ npm run dev
   /ui                — общие UI компоненты
 /lib
   /supabase          — client, server, service clients
-  /wazzup            — auth, parser, parseAndSave, subscribe
+  /whatsapp          — gateway, parser, parseAndSave
 /supabase
   /migrations        — SQL миграции (нумерованные, применять по порядку)
 /types               — TypeScript типы
@@ -140,7 +142,7 @@ npm run dev
 
 Приложение задеплоено на Vercel. База данных — Supabase.
 
-После каждого деплоя с новым `WAZZUP_WEBHOOK_TOKEN` нужно переподписаться на webhook через Settings → «Обновить webhook».
+Секрет вебхука (`WHATSAPP_WEBHOOK_TOKEN`) задаётся один раз в Vercel и в `.env` шлюза — они должны совпадать.
 
 **Supabase Auth Redirect URLs** должен содержать:
 ```

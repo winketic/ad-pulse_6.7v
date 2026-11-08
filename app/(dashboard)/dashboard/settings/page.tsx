@@ -32,8 +32,7 @@ type UserRows = Awaited<ReturnType<typeof listCompanyUsers>>;
 const READ_ERROR_LABELS = {
   profile: "профиль",
   company: "компания",
-  wazzupToken: "подключение Wazzup",
-  wazzupConfig: "настройки Wazzup",
+  whatsapp: "подключение WhatsApp",
   users: "команда",
   materials: "материалы",
   thresholds: "пороги остатков",
@@ -42,7 +41,7 @@ const READ_ERROR_LABELS = {
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; wazzup?: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const sp = await searchParams;
   const rawTab = sp.tab ?? "profile";
@@ -69,36 +68,19 @@ export default async function SettingsPage({
   const roleStyle = ROLE_COLORS[role] ?? ROLE_COLORS.warehouse;
 
   // ── Load all data in parallel ───────────────────────────
-  const [companyResult, wazzupTokenResult, wazzupConfigResult, usersResult, materialsResult, thresholdsResult] = await Promise.all([
+  const [companyResult, whatsappSessionResult, usersResult, materialsResult, thresholdsResult] = await Promise.all([
     // Company info
     company_id
       ? supabase.from("companies").select("name, telegram_connected").eq("id", company_id).single()
       : Promise.resolve({ data: null, error: null }),
 
-    // Wazzup token — строки может не быть, если WhatsApp не подключён.
-    // .maybeSingle(): 0 строк = data:null без PGRST116, это валидное пустое состояние.
+    // Свой шлюз WhatsApp: одна строка на компанию.
     company_id
-      ? supabase.from("wazzup_tokens").select("id, expires_at, channel_ids").eq("company_id", company_id).maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-
-    // Wazzup config (service client)
-    company_id
-      ? (async () => {
-          try {
-            const svc = createServiceClient();
-            return await svc
-              .from("wazzup_config")
-              .select("partner_email, client_id")
-              .eq("company_id", company_id)
-              .maybeSingle();
-          } catch (e) {
-            console.error(
-              "[settings] service client для wazzup_config недоступен:",
-              e instanceof Error ? e.message : e
-            );
-            return { data: null, error: { message: "service client недоступен" } };
-          }
-        })()
+      ? supabase
+          .from("whatsapp_sessions")
+          .select("status, phone_number")
+          .eq("company_id", company_id)
+          .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
 
     // Users list — сбой чтения не должен выглядеть как «в команде никого нет»
@@ -128,23 +110,10 @@ export default async function SettingsPage({
     return error ? error.message ?? "unknown" : null;
   };
 
-  // Нет строки в wazzup_tokens ≠ сбой: это «WhatsApp не подключён».
-  // .maybeSingle() PGRST116 не возвращает, но на всякий случай не считаем его ошибкой.
-  type ReadError = { code?: string; message?: string; details?: string } | null | undefined;
-  const isMissingRowError = (error: ReadError): boolean =>
-    error?.code === "PGRST116" ||
-    /PGRST116/.test(`${error?.message ?? ""} ${error?.details ?? ""}`);
-
-  const wazzupTokenError =
-    wazzupTokenResult.error && !isMissingRowError(wazzupTokenResult.error)
-      ? wazzupTokenResult.error.message ?? "unknown"
-      : null;
-
   const readErrors = {
     profile: profileError?.message ?? null,
     company: readErrorOf(companyResult),
-    wazzupToken: wazzupTokenError,
-    wazzupConfig: readErrorOf(wazzupConfigResult),
+    whatsapp: readErrorOf(whatsappSessionResult),
     users: usersResult.error,
     materials: readErrorOf(materialsResult),
     thresholds: readErrorOf(thresholdsResult),
@@ -196,14 +165,11 @@ export default async function SettingsPage({
   const companyName = companyResult.data?.name ?? "—";
   const telegramConnected = companyResult.data?.telegram_connected ?? false;
 
-  const isConnected = !!wazzupTokenResult.data;
-  const tokenExpiresAt = wazzupTokenResult.data?.expires_at ?? null;
-  const hasChannels = ((wazzupTokenResult.data as { channel_ids?: string[] } | null)?.channel_ids ?? []).length > 0;
-
-  const clean = (s: string | null | undefined) => s?.replace(/﻿/g, "").trim() ?? null;
-  const configEmail = clean(wazzupConfigResult.data?.partner_email);
-  const configClientId = clean(wazzupConfigResult.data?.client_id);
-  const hasConfig = !!(configEmail && configClientId);
+  const whatsappSession = whatsappSessionResult.data as
+    | { status?: string; phone_number?: string | null }
+    | null;
+  const isConnected = whatsappSession?.status === "open";
+  const phoneNumber = whatsappSession?.phone_number ?? null;
 
   const users: UserRows = usersResult.users;
   const materials = (materialsResult as { data: { id: string; name: string; unit: string }[] | null }).data ?? [];
@@ -251,20 +217,15 @@ export default async function SettingsPage({
       // Company
       companyName={companyName}
       telegramConnected={telegramConnected}
-      // Wazzup
+      // WhatsApp
       isConnected={isConnected}
-      tokenExpiresAt={tokenExpiresAt}
-      hasChannels={hasChannels}
-      hasConfig={hasConfig}
-      configEmail={configEmail}
-      configClientId={configClientId}
+      phoneNumber={phoneNumber}
       // Users
       users={users}
       // Meta
       isAdmin={isAdmin}
       canEditCompany={canEditCompany}
       initialTab={initialTab}
-      wazzupFlash={sp.wazzup ?? null}
       thresholdSection={thresholdSection}
     />
   );

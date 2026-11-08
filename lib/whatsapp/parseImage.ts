@@ -4,7 +4,7 @@ export async function parseImageTransaction(
   mediaUrl: string,
   accessToken: string
 ): Promise<string> {
-  // Скачивание идёт через шлюз (или CDN Wazzup), токен передаёт вызывающий код.
+  // Скачивание идёт через шлюз, токен передаёт вызывающий код.
   const imgRes = await fetch(mediaUrl, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });

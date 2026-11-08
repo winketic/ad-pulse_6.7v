@@ -13,8 +13,6 @@ const PUBLIC_PATHS = [
   "/invite",
   "/api/telegram/webhook",
   "/api/telegram/setup",
-  "/api/wazzup/webhook",
-  "/api/wazzup/callback",
   // Собственный шлюз WhatsApp: сюда шлюз шлёт входящие сообщения без сессии.
   // Защита — секрет в URL (/api/whatsapp/webhook/<token>) + заголовок X-Gateway-Token.
   "/api/whatsapp/webhook",

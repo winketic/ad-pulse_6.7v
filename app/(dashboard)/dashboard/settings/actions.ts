@@ -35,56 +35,6 @@ async function getAdminContext() {
   };
 }
 
-// ─── Wazzup ───────────────────────────────────────────────
-
-export async function saveWazzupConfig(
-  partnerEmail: string,
-  partnerPassword: string,
-  clientId: string
-) {
-  const clean = (s: string) => s.replace(/\uFEFF/g, "").trim();
-  const trimEmail = clean(partnerEmail);
-  const trimPass = clean(partnerPassword);
-  const trimClientId = clean(clientId);
-
-  if (!trimEmail || !trimPass) throw new Error("Email и пароль обязательны");
-  if (!trimClientId) throw new Error("Client ID обязателен");
-
-  const { companyId, role } = await getAdminContext();
-  if (role !== "admin") throw new Error("Только администратор может настраивать интеграцию");
-
-  const service = createServiceClient();
-  const { error } = await service
-    .from("wazzup_config")
-    .upsert(
-      {
-        company_id: companyId,
-        partner_email: trimEmail,
-        partner_password: trimPass,
-        client_id: trimClientId,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "company_id" }
-    );
-
-  if (error) throw new Error(error.message);
-  revalidatePath("/dashboard/settings");
-}
-
-export async function disconnectWazzup() {
-  const { companyId, role } = await getAdminContext();
-  if (role !== "admin") throw new Error("Только администратор может отключать интеграцию");
-  const service = createServiceClient();
-
-  const { error } = await service
-    .from("wazzup_tokens")
-    .delete()
-    .eq("company_id", companyId);
-
-  if (error) throw new Error(error.message);
-  revalidatePath("/dashboard/settings");
-}
-
 // ─── Profile ──────────────────────────────────────────────
 
 export async function updateMyProfile(fullName: string, position: string) {

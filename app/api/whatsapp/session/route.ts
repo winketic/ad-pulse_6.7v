@@ -44,7 +44,7 @@ async function lastMessageAt(companyId: string): Promise<string | null> {
   try {
     const service = createServiceClient();
     const { data } = await service
-      .from("wazzup_messages")
+      .from("whatsapp_messages")
       .select("created_at")
       .eq("company_id", companyId)
       .eq("provider", "adpulse-gateway")

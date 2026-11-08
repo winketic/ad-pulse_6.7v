@@ -3,7 +3,7 @@
 ## Что это за проект
 AD Pulse — мультитенантный B2B SaaS для учёта материалов на производстве.
 Целевые клиенты: производственные компании (бетон, арматура, стройматериалы).
-Ключевая фича: автоматический парсинг WhatsApp сообщений через Wazzup API.
+Ключевая фича: автоматический парсинг WhatsApp сообщений через собственный шлюз на Baileys.
 
 ## Стек
 - Next.js 14 (App Router, TypeScript)
@@ -29,24 +29,18 @@ AD Pulse — мультитенантный B2B SaaS для учёта мате�
 ### Схема БД — актуальные поля (сверх базовой схемы 001)
 - materials: norm_concrete, norm_rebar (нормы списания на 1 шт продукции), rebar_material_name (какой металл списывать: 'Арматура'/'Проволока', NULL = 'Арматура'), kg_per_meter (кг→м конвертация: если задано — ввод в кг, хранение в метрах)
 - production_plans: assigned_to (uuid → profiles, исполнитель плана)
-- material_transactions: counterparty (text), source ('manual'|'whatsapp'), wazzup_message_id
+- material_transactions: counterparty (text), source ('manual'|'whatsapp'), whatsapp_message_id
 - companies: whatsapp_enabled, stock_alerts_enabled (гейт алертов критического остатка), telegram_chat_id, telegram_connected, setup_completed
 - audit_log: журнал изменений (company_id, table_name, record_id, action, changed_by, old_data/new_data jsonb) — пишется SECURITY DEFINER триггерами на production_plans, materials, material_transactions; changed_by = auth.uid(), NULL для service role. ВАЖНО: записи, созданные до миграции 031, аудита не имеют
 - material_thresholds: min_quantity per material (пороги алертов остатка)
 - telegram_rate_limits: анти-brute-force кодов подключения
 
-### API роуты Wazzup
-- /api/wazzup/webhook — публичный endpoint (без авторизации), отвечает 200 OK немедленно
-- /api/wazzup/connect — требует авторизацию Supabase
-- /api/wazzup/callback — публичный (редирект от Wazzup после OAuth)
-- Wazzup client_id: 4ed9ca8e-… (полный — в wazzup_config компании / Vercel env)
-
 ### Парсинг сообщений
-- Файл: /lib/wazzup/parser.ts
+- Файл: /lib/whatsapp/parser.ts
 - Два уровня уверенности: high (все поля) → авто-транзакция, low → ручное подтверждение
 - source поле в transactions: 'manual' | 'whatsapp'
 
-## Собственный WhatsApp-шлюз (Baileys) — замена Wazzup
+## Собственный WhatsApp-шлюз (Baileys)
 
 Отдельный сервис в `/whatsapp-gateway` (Node + Baileys, деплой на VPS, **не на Vercel**).
 Клиент подключает свой номер по QR, видит список своих чатов с названиями и отмечает нужные.
@@ -57,14 +51,11 @@ AD Pulse — мультитенантный B2B SaaS для учёта мате�
 - Роуты приложения: `/api/whatsapp/session`, `/api/whatsapp/chats`, `/api/whatsapp/webhook/[token]`
 - UI: `/dashboard/whatsapp/connect`
 - Таблицы (миграция 054): `whatsapp_sessions`, `whatsapp_chats`;
-  в `wazzup_messages` добавлены `chat_name`, `chat_type`, `provider`
+  журнал сообщений — таблица `whatsapp_messages` (`chat_name`, `chat_type`, `provider`)
 - Фильтрация: обрабатываются только чаты с `whatsapp_chats.is_watched = true`.
   Новый чат появляется в списке выключенным — иначе мусор попадал бы в учёт
 - Медиа: шлюз отдаёт `/media/...` по токену; `parseAndSave` берёт `gatewayMediaToken()`
-  вместо OAuth-токена Wazzup, когда `provider = 'adpulse-gateway'`
-- Пока компания подключена к шлюзу (`whatsapp_sessions.status = 'open'`), вебхук Wazzup
-  её сообщения не обрабатывает — иначе одно сообщение пришло бы из двух источников
-  с разными message_id и создало две транзакции
+  (OAuth-провайдера больше нет — все сообщения идут через шлюз)
 - Env приложения: `WHATSAPP_GATEWAY_URL`, `WHATSAPP_GATEWAY_TOKEN`, `WHATSAPP_WEBHOOK_TOKEN`;
   LLM-разбор — `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` (gemma4 на alem.ai)
 - Риск: Baileys — неофициальный доступ (ToS WhatsApp), возможен бан номера.
@@ -73,11 +64,11 @@ AD Pulse — мультитенантный B2B SaaS для учёта мате�
 ## Структура папок
 /app
   /(dashboard)     — защищённые страницы (требуют авторизацию)
-  /api/wazzup      — Wazzup интеграция
+  /api/whatsapp    — шлюз WhatsApp
 /components        — переиспользуемые компоненты
 /lib
   /supabase        — client.ts, server.ts, service.ts
-  /wazzup          — auth.ts, parser.ts, parseAndSave.ts
+  /whatsapp        — gateway.ts, parser.ts, parseAndSave.ts
 /supabase
   /migrations      — SQL миграции
 /types             — TypeScript типы
@@ -123,8 +114,7 @@ SUPABASE_ACCESS_TOKEN — только в окружении shell (для Supab
   - Алерты: брак, критический остаток, перерасход
   - Уведомления администратору о новых заявках
   - Admin chat_id: 1700146125
-- Wazzup OAuth подключён (client_id 4ed9ca8e-…)
-- Webhook /api/wazzup/webhook — готов к приёму сообщений
+- Собственный шлюз WhatsApp (Baileys) на VPS: QR-подключение, чаты, медиа
 - Парсер WhatsApp сообщений (текст + медиа)
 
 #### Регистрация и администрирование
@@ -157,4 +147,4 @@ SUPABASE_ACCESS_TOKEN — только в окружении shell (для Supab
 ## Важные решения
 - Supabase free tier пока для пилота, Pro когда появятся клиенты
 - PWA (адаптивный веб) вместо нативного мобильного приложения на первом этапе
-- Wazzup Label (мультитенант OAuth) — каждый клиент подключает свой WhatsApp
+- Собственный WhatsApp-шлюз на Baileys — каждый клиент привязывает свой номер по QR

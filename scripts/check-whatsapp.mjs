@@ -161,13 +161,13 @@ async function checkTables() {
 
   try {
     const res = await timedFetch(
-      `${SUPABASE_URL}/rest/v1/wazzup_messages?select=provider&limit=1`,
+      `${SUPABASE_URL}/rest/v1/whatsapp_messages?select=provider&limit=1`,
       { headers }
     );
-    if (res.ok) record("База: wazzup_messages.provider", "ok");
-    else record("База: wazzup_messages.provider", "fail", "колонка не создана — миграция 054");
+    if (res.ok) record("База: whatsapp_messages.provider", "ok");
+    else record("База: whatsapp_messages.provider", "fail", "колонка не создана — миграция 054");
   } catch (err) {
-    record("База: wazzup_messages.provider", "fail", err.message);
+    record("База: whatsapp_messages.provider", "fail", err.message);
   }
 }
 

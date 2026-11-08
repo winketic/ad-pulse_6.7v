@@ -33,7 +33,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   // The webhook origin is taken ONLY from NEXT_PUBLIC_APP_URL (same source of
-  // truth as the Wazzup subscription). It must never be derived from
+  // truth as the WhatsApp gateway session). It must never be derived from
   // request.url: in the Node runtime Next builds it from the Host header, so a
   // spoofed Host (or a Vercel preview/deployment-protection alias) would
   // register the bot's updates — secret_token included — on a foreign or

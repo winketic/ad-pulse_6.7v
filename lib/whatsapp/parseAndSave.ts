@@ -3,7 +3,6 @@ import { parseMessage } from "./parser";
 import { transcribeVoice } from "./transcribeVoice";
 import { parseImageTransaction } from "./parseImage";
 import { sendTelegramAlert } from "@/lib/telegram/send";
-import { ensureFreshToken } from "./refreshToken";
 import {
   GATEWAY_PROVIDER,
   absoluteMediaUrl,
@@ -39,7 +38,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
   const service = createServiceClient();
 
   const { data: msg, error: msgErr } = await service
-    .from("wazzup_messages")
+    .from("whatsapp_messages")
     // select("*") — переживаем окно до применения миграции 054 (колонки provider/chat_name).
     .select("*")
     .eq("id", messageId)
@@ -51,11 +50,10 @@ export async function parseAndSave(messageId: string): Promise<void> {
   let textToParse: string = msg.raw_text ?? "";
 
   // Сообщения из нашего шлюза несут относительный путь /media/... и требуют
-  // токен шлюза вместо OAuth-токена Wazzup.
+  // токен собственного шлюза.
+  // Все сообщения приходят из собственного шлюза: медиа отдаётся по его токену.
   const isGateway = msg.provider === GATEWAY_PROVIDER;
-  const mediaUrl = isGateway
-    ? absoluteMediaUrl(msg.media_url ?? null)
-    : (msg.media_url ?? null);
+  const mediaUrl = absoluteMediaUrl(msg.media_url ?? null);
 
   const needsMedia =
     (msg.content_type === "voice" || msg.content_type === "image") &&
@@ -64,9 +62,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
   if (needsMedia) {
     let accessToken = "";
     try {
-      accessToken = isGateway
-        ? gatewayMediaToken()
-        : await ensureFreshToken(msg.company_id);
+      accessToken = gatewayMediaToken();
     } catch (e) {
       console.error("[parseAndSave] token refresh error:", e);
     }
@@ -78,7 +74,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
           if (transcription) {
             textToParse = transcription;
             await service
-              .from("wazzup_messages")
+              .from("whatsapp_messages")
               .update({ raw_text: transcription })
               .eq("id", messageId);
           }
@@ -91,7 +87,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
           if (extracted && extracted !== "не удалось распознать") {
             textToParse = extracted;
             await service
-              .from("wazzup_messages")
+              .from("whatsapp_messages")
               .update({ raw_text: extracted })
               .eq("id", messageId);
           }
@@ -106,7 +102,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
   let context: string[] = [];
   if (msg.chat_id) {
     const { data: prevMsgs } = await service
-      .from("wazzup_messages")
+      .from("whatsapp_messages")
       .select("raw_text")
       .eq("company_id", msg.company_id)
       .eq("chat_id", msg.chat_id)
@@ -201,7 +197,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
     const { data: existingTx } = await service
       .from("material_transactions")
       .select("id")
-      .eq("wazzup_message_id", messageId)
+      .eq("whatsapp_message_id", messageId)
       .maybeSingle();
 
     if (existingTx) {
@@ -215,7 +211,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
         note: result.note ?? null,
         transaction_date: new Date().toISOString().split("T")[0],
         source: "whatsapp",
-        wazzup_message_id: messageId,
+        whatsapp_message_id: messageId,
       });
 
       if (!error) {
@@ -233,7 +229,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
   }
 
   await service
-    .from("wazzup_messages")
+    .from("whatsapp_messages")
     .update({
       parsed: true,
       needs_review: needsReview,

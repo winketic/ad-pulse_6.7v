@@ -41,7 +41,7 @@ export async function confirmWhatsAppTransaction(input: ConfirmInput) {
 
   // Verify ownership
   const { data: msg } = await service
-    .from("wazzup_messages")
+    .from("whatsapp_messages")
     .select("id, parse_result, parsed, needs_review")
     .eq("id", input.messageId)
     .eq("company_id", profile.company_id)
@@ -67,7 +67,7 @@ export async function confirmWhatsAppTransaction(input: ConfirmInput) {
   // Claim the review row atomically so concurrent/repeated confirmation calls
   // cannot create duplicate transactions through the service-role client.
   const { data: claimed, error: claimError } = await service
-    .from("wazzup_messages")
+    .from("whatsapp_messages")
     .update({ needs_review: false })
     .eq("id", input.messageId)
     .eq("company_id", profile.company_id)
@@ -86,11 +86,11 @@ export async function confirmWhatsAppTransaction(input: ConfirmInput) {
     transaction_date: new Date().toISOString().split("T")[0],
     created_by: user.id,
     source: "whatsapp",
-    wazzup_message_id: input.messageId,
+    whatsapp_message_id: input.messageId,
   });
 
   if (txError) {
-    await service.from("wazzup_messages")
+    await service.from("whatsapp_messages")
       .update({ needs_review: true })
       .eq("id", input.messageId)
       .eq("company_id", profile.company_id)
@@ -105,7 +105,7 @@ export async function confirmWhatsAppTransaction(input: ConfirmInput) {
   };
 
   const { error: messageError } = await service
-    .from("wazzup_messages")
+    .from("whatsapp_messages")
     .update({ parse_result: updatedParseResult })
     .eq("id", input.messageId)
     .eq("company_id", profile.company_id);
@@ -138,7 +138,7 @@ export async function rejectWhatsAppMessage(messageId: string) {
   const service = createServiceClient();
 
   const { data, error } = await service
-    .from("wazzup_messages")
+    .from("whatsapp_messages")
     .update({ parsed: true, needs_review: false })
     .eq("id", messageId)
     .eq("company_id", profile.company_id)

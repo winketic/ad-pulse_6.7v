@@ -52,7 +52,7 @@ export default async function DashboardLayout({
   if (profile?.company_id) {
     try {
       const { count } = await supabase
-        .from("wazzup_messages")
+        .from("whatsapp_messages")
         .select("*", { count: "exact", head: true })
         .eq("company_id", profile.company_id)
         .eq("parsed", true)

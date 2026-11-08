@@ -7,7 +7,7 @@ export async function transcribeVoice(
   const apiKey = readSecret("OPENAI_API_KEY");
   if (!apiKey) throw new Error("OPENAI_API_KEY not set");
 
-  // Download audio from Wazzup CDN (requires Bearer token)
+  // Скачиваем аудио со шлюза (Bearer-токен передаёт вызывающий код)
   const audioRes = await fetch(mediaUrl, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });

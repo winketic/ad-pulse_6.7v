@@ -195,9 +195,9 @@ export default function SetupPage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: "#f9fafb" }}>Wazzup интеграция</p>
+                      <p className="text-sm font-semibold" style={{ color: "#f9fafb" }}>Интеграция с WhatsApp</p>
                       <p className="text-xs mt-1" style={{ color: "#9ca3af" }}>
-                        Кладовщики пишут в WhatsApp — AD Pulse автоматически фиксирует приход/расход материалов без ручного ввода.
+                        Кладовщики пишут в WhatsApp — AD Pulse автоматически фиксирует приход/расход материалов. Свой номер привязывается по QR-коду.
                       </p>
                     </div>
                   </div>

@@ -3,242 +3,410 @@
   "info": {
     "title": "AD Pulse API",
     "version": "1.0.0",
-    "description": "Мультитенантный учёт материалов на производстве. Публичные webhook-эндпоинты принимают события от Wazzup и Telegram; остальные требуют сессию Supabase (cookie) или сервисный секрет."
+    "description": "Мультитенантный учёт материалов на производстве. Webhook-эндпоинты принимают события от собственного WhatsApp-шлюза."
   },
   "servers": [
-    { "url": "https://pulse.altaidynamics.kz", "description": "Production" },
-    { "url": "http://localhost:3000", "description": "Локально" }
+    {
+      "url": "https://pulse.altaidynamics.kz",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Локально"
+    }
   ],
   "tags": [
-    { "name": "Telegram", "description": "Бот и его webhook" },
-    { "name": "Wazzup", "description": "WhatsApp-интеграция" },
-    { "name": "Auth", "description": "Смена email" },
-    { "name": "Materials", "description": "Справочник и импорт" },
-    { "name": "Admin", "description": "Администрирование платформы" },
-    { "name": "Cron", "description": "Служебные задачи" }
+    {
+      "name": "Telegram",
+      "description": "Бот и его webhook"
+    },
+    {
+      "name": "Auth",
+      "description": "Смена email"
+    },
+    {
+      "name": "Materials",
+      "description": "Справочник и импорт"
+    },
+    {
+      "name": "Admin",
+      "description": "Администрирование платформы"
+    },
+    {
+      "name": "Cron",
+      "description": "Служебные задачи"
+    }
   ],
   "components": {
     "securitySchemes": {
-      "setupSecret": { "type": "apiKey", "in": "header", "name": "X-Setup-Secret" },
-      "telegramSecret": { "type": "apiKey", "in": "header", "name": "X-Telegram-Bot-Api-Secret-Token" },
-      "cronSecret": { "type": "apiKey", "in": "header", "name": "Authorization" },
-      "sessionCookie": { "type": "apiKey", "in": "cookie", "name": "sb-auth" }
+      "setupSecret": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Setup-Secret"
+      },
+      "telegramSecret": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Telegram-Bot-Api-Secret-Token"
+      },
+      "cronSecret": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization"
+      },
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sb-auth"
+      }
     },
     "responses": {
       "Unauthorized": {
         "description": "Не авторизован",
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
       },
       "BadRequest": {
         "description": "Некорректный запрос",
-        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
       }
     },
     "schemas": {
       "Error": {
         "type": "object",
         "properties": {
-          "error": { "type": "string" },
-          "code": { "type": "string" },
-          "ok": { "type": "boolean" }
+          "error": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
         }
       },
       "Ok": {
         "type": "object",
-        "properties": { "ok": { "type": "boolean" } }
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        }
       }
     }
   },
   "paths": {
     "/api/telegram/webhook": {
       "post": {
-        "tags": ["Telegram"],
-        "security": [{ "telegramSecret": [] }],
+        "tags": [
+          "Telegram"
+        ],
+        "security": [
+          {
+            "telegramSecret": []
+          }
+        ],
         "summary": "Входящие события Telegram",
         "description": "Принимает update от Telegram. Требует совпадения X-Telegram-Bot-Api-Secret-Token с TELEGRAM_WEBHOOK_SECRET; при расхождении — 401 без обработки.",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "type": "object", "properties": { "update_id": { "type": "integer" }, "message": { "type": "object" } } } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "update_id": {
+                    "type": "integer"
+                  },
+                  "message": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "Принято", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Ok" } } } },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
+          "200": {
+            "description": "Принято",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
         }
       }
     },
     "/api/telegram/setup": {
       "post": {
-        "tags": ["Telegram"],
-        "security": [{ "setupSecret": [] }],
+        "tags": [
+          "Telegram"
+        ],
+        "security": [
+          {
+            "setupSecret": []
+          }
+        ],
         "summary": "Регистрация webhook бота",
         "description": "Служебный вызов оператора: сообщает Telegram адрес и secret_token. Только POST, требуется заголовок X-Setup-Secret.",
         "responses": {
-          "200": { "description": "Webhook зарегистрирован" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "503": { "description": "TELEGRAM_SETUP_SECRET не задан" }
+          "200": {
+            "description": "Webhook зарегистрирован"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "description": "TELEGRAM_SETUP_SECRET не задан"
+          }
         }
-      }
-    },
-    "/api/wazzup/webhook/{token}": {
-      "post": {
-        "tags": ["Wazzup"],
-        "summary": "Входящие события Wazzup",
-        "description": "Публичный эндпоинт. Проверяет {token} против WAZZUP_WEBHOOK_TOKEN, отвечает 200 немедленно, обработка — в фоне.",
-        "parameters": [
-          { "name": "token", "in": "path", "required": true, "schema": { "type": "string" } }
-        ],
-        "requestBody": {
-          "content": { "application/json": { "schema": { "type": "object", "properties": { "event": { "type": "string" }, "data": { "type": "array", "items": { "type": "object" } } } } } }
-        },
-        "responses": {
-          "200": { "description": "Принято" },
-          "401": { "$ref": "#/components/responses/Unauthorized" }
-        }
-      }
-    },
-    "/api/wazzup/callback": {
-      "get": {
-        "tags": ["Wazzup"],
-        "summary": "Редирект OAuth",
-        "description": "Принимает code/state после авторизации Wazzup и редиректит в настройки.",
-        "parameters": [
-          { "name": "code", "in": "query", "schema": { "type": "string" } },
-          { "name": "state", "in": "query", "schema": { "type": "string" } }
-        ],
-        "responses": { "302": { "description": "Редирект" } }
-      }
-    },
-    "/api/wazzup/connect": {
-      "get": {
-        "tags": ["Wazzup"],
-        "security": [{ "sessionCookie": [] }],
-        "summary": "Начать подключение WhatsApp",
-        "description": "Только admin компании. Формирует PKCE-URL и редиректит на Wazzup.",
-        "responses": { "302": { "description": "Редирект на Wazzup или в настройки при ошибке" } }
-      }
-    },
-    "/api/wazzup/resubscribe": {
-      "post": {
-        "tags": ["Wazzup"],
-        "security": [{ "sessionCookie": [] }],
-        "summary": "Переподписка webhook",
-        "description": "Пересоздаёт подписку Wazzup для текущей компании.",
-        "responses": {
-          "200": { "description": "Результат", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Ok" } } } }
-        }
-      }
-    },
-    "/api/wazzup/allowed-chats": {
-      "get": {
-        "tags": ["Wazzup"],
-        "security": [{ "sessionCookie": [] }],
-        "summary": "Разрешённые чаты",
-        "description": "Список чатов компании, с которых принимаются сообщения.",
-        "responses": { "200": { "description": "Список" } }
       }
     },
     "/api/auth/email-change/request": {
       "post": {
-        "tags": ["Auth"],
-        "security": [{ "sessionCookie": [] }],
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "summary": "Запросить смену email",
         "description": "Шлёт 6-значный код. Лимит 3 запроса за 10 минут.",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "type": "object", "required": ["new_email"], "properties": { "new_email": { "type": "string", "format": "email" } } } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "new_email"
+                ],
+                "properties": {
+                  "new_email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "Код отправлен" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "429": { "description": "Слишком много запросов" }
+          "200": {
+            "description": "Код отправлен"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "description": "Слишком много запросов"
+          }
         }
       }
     },
     "/api/auth/email-change/verify": {
       "post": {
-        "tags": ["Auth"],
-        "security": [{ "sessionCookie": [] }],
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "summary": "Подтвердить смену email",
         "description": "Проверяет код; лимит попыток с блокировкой.",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "type": "object", "required": ["code"], "properties": { "code": { "type": "string", "pattern": "^\\d{6}$" } } } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                }
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "Смена запущена" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "429": { "description": "Слишком много попыток" }
+          "200": {
+            "description": "Смена запущена"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "description": "Слишком много попыток"
+          }
         }
       }
     },
     "/api/materials/import": {
       "post": {
-        "tags": ["Materials"],
-        "security": [{ "sessionCookie": [] }],
+        "tags": [
+          "Materials"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "summary": "Импорт материалов из Excel/CSV",
         "description": "admin/manager. До 2 МБ и 5000 строк.",
         "requestBody": {
           "required": true,
-          "content": { "multipart/form-data": { "schema": { "type": "object", "required": ["file"], "properties": { "file": { "type": "string", "format": "binary" } } } } }
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "Импортировано" },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "413": { "description": "Файл больше 2 МБ" }
+          "200": {
+            "description": "Импортировано"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "413": {
+            "description": "Файл больше 2 МБ"
+          }
         }
       }
     },
     "/api/admin/approve": {
       "post": {
-        "tags": ["Admin"],
-        "security": [{ "sessionCookie": [] }],
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "summary": "Одобрить заявку",
         "description": "Только владелец платформы. Создаёт компанию и шлёт приглашение.",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "type": "object", "required": ["registrationId"], "properties": { "registrationId": { "type": "string" } } } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "registrationId"
+                ],
+                "properties": {
+                  "registrationId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "Одобрено" },
-          "403": { "description": "Нет прав" },
-          "409": { "description": "Уже обработана" }
+          "200": {
+            "description": "Одобрено"
+          },
+          "403": {
+            "description": "Нет прав"
+          },
+          "409": {
+            "description": "Уже обработана"
+          }
         }
       }
     },
     "/api/admin/reject": {
       "post": {
-        "tags": ["Admin"],
-        "security": [{ "sessionCookie": [] }],
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
         "summary": "Отклонить заявку",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "type": "object", "required": ["registrationId"], "properties": { "registrationId": { "type": "string" } } } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "registrationId"
+                ],
+                "properties": {
+                  "registrationId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
         },
-        "responses": { "200": { "description": "Отклонено" } }
+        "responses": {
+          "200": {
+            "description": "Отклонено"
+          }
+        }
       }
     },
     "/api/cron/keepalive": {
       "get": {
-        "tags": ["Cron"],
-        "security": [{ "cronSecret": [] }],
+        "tags": [
+          "Cron"
+        ],
+        "security": [
+          {
+            "cronSecret": []
+          }
+        ],
         "summary": "Поддержка прогрева",
-        "responses": { "200": { "description": "ok" } }
-      }
-    },
-    "/api/cron/refresh-tokens": {
-      "get": {
-        "tags": ["Cron"],
-        "security": [{ "cronSecret": [] }],
-        "summary": "Обновление токенов",
-        "responses": { "200": { "description": "ok" } }
-      }
-    },
-    "/api/cron/refresh-wazzup-token": {
-      "get": {
-        "tags": ["Cron"],
-        "security": [{ "cronSecret": [] }],
-        "summary": "Обновление токена Wazzup",
-        "responses": { "200": { "description": "ok" } }
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
       }
     }
   }

@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import WhatsAppList, { type WazzupMessage, type WazzupMaterial } from "./WhatsAppList";
+import WhatsAppList, { type WhatsAppMessage, type WhatsAppMaterial } from "./WhatsAppList";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -34,9 +34,9 @@ export default async function WhatsAppPage() {
   const companyId = profile.company_id as string;
   const service = createServiceClient();
 
-  const [messagesResult, materialsResult, tokenResult, profilesResult] = await Promise.all([
+  const [messagesResult, materialsResult, profilesResult] = await Promise.all([
     service
-      .from("wazzup_messages")
+      .from("whatsapp_messages")
       .select(
         "id, chat_id, chat_name, sender_phone, raw_text, parsed, needs_review, parse_result, created_at, content_type, media_url"
       )
@@ -48,11 +48,6 @@ export default async function WhatsAppPage() {
       .select("id, name, unit")
       .eq("company_id", companyId)
       .order("name"),
-    service
-      .from("wazzup_tokens")
-      .select("channel_ids, webhook_id, allowed_chat_ids")
-      .eq("company_id", companyId)
-      .maybeSingle(),
     // Profiles with phone for sender name lookup
     service
       .from("profiles")
@@ -74,10 +69,6 @@ export default async function WhatsAppPage() {
     console.warn("[whatsapp/page] whatsapp_sessions недоступна:", err);
   }
 
-  const channelIds: string[] = tokenResult.data?.channel_ids ?? [];
-  const webhookId: string | null = tokenResult.data?.webhook_id ?? null;
-  const allowedChatIds: string[] = tokenResult.data?.allowed_chat_ids ?? [];
-
   // phone → {name, position} for sender display
   const senderMap: Record<string, { name: string; position: string | null }> = {};
   for (const p of profilesResult.data ?? []) {
@@ -88,12 +79,9 @@ export default async function WhatsAppPage() {
 
   return (
     <WhatsAppList
-      messages={(messagesResult.data ?? []) as WazzupMessage[]}
-      materials={(materialsResult.data ?? []) as WazzupMaterial[]}
-      channelIds={channelIds}
-      webhookId={webhookId}
+      messages={(messagesResult.data ?? []) as WhatsAppMessage[]}
+      materials={(materialsResult.data ?? []) as WhatsAppMaterial[]}
       companyId={companyId}
-      allowedChatIds={allowedChatIds}
       isAdmin={isAdmin}
       senderMap={senderMap}
       gatewayStatus={(gatewaySession?.status as string | undefined) ?? null}

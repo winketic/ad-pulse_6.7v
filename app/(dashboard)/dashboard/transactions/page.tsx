@@ -169,28 +169,28 @@ export default async function TransactionsPage({
       .map((p) => [p.phone as string, p.full_name])
   );
 
-  // Batch fetch wazzup_messages for WhatsApp-sourced transactions
+  // Подтягиваем сообщения WhatsApp для транзакций из мессенджера
   const whatsappTxIds = (txResult.data ?? [])
-    .filter((tx) => tx.source === "whatsapp" && tx.wazzup_message_id)
-    .map((tx) => tx.wazzup_message_id as string);
+    .filter((tx) => tx.source === "whatsapp" && tx.whatsapp_message_id)
+    .map((tx) => tx.whatsapp_message_id as string);
 
-  const wazzupMsgMap = new Map<string, string>();
+  const whatsappMsgMap = new Map<string, string>();
   if (whatsappTxIds.length > 0) {
-    const { data: wazzupMsgs } = await supabase
-      .from("wazzup_messages")
+    const { data: whatsappMsgs } = await supabase
+      .from("whatsapp_messages")
       .select("id, sender_phone")
       .in("id", whatsappTxIds);
-    for (const m of wazzupMsgs ?? []) {
+    for (const m of whatsappMsgs ?? []) {
       if (m.sender_phone) {
-        wazzupMsgMap.set(m.id, phoneMap.get(m.sender_phone) ?? m.sender_phone);
+        whatsappMsgMap.set(m.id, phoneMap.get(m.sender_phone) ?? m.sender_phone);
       }
     }
   }
 
   const transactions: Transaction[] = (txResult.data ?? []).map((tx) => {
     let creatorName = "—";
-    if (tx.source === "whatsapp" && tx.wazzup_message_id) {
-      creatorName = wazzupMsgMap.get(tx.wazzup_message_id) ?? "WhatsApp";
+    if (tx.source === "whatsapp" && tx.whatsapp_message_id) {
+      creatorName = whatsappMsgMap.get(tx.whatsapp_message_id) ?? "WhatsApp";
     } else if (tx.created_by) {
       creatorName = profileMap.get(tx.created_by)?.full_name ?? "—";
     }
