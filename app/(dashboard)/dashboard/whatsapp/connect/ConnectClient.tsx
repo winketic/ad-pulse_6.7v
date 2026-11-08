@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface GatewaySession {
   status: string;
@@ -56,6 +56,9 @@ export default function ConnectClient() {
   const [configured, setConfigured] = useState(true);
   const [session, setSession] = useState<GatewaySession | null>(null);
   const [chats, setChats] = useState<ChatOption[]>([]);
+  const [query, setQuery] = useState("");
+  const [onlyGroups, setOnlyGroups] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [gatewayError, setGatewayError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -176,6 +179,28 @@ export default function ConnectClient() {
   const isOpen = status === "open";
   const watchedCount = chats.filter((c) => c.isWatched).length;
 
+  // У реальной компании в WhatsApp сотни чатов: без поиска и фильтра
+  // список превращается в нелистаемое полотно.
+  const visibleChats = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const matched = chats.filter((chat) => {
+      if (onlyGroups && !chat.isGroup) return false;
+      if (!q) return true;
+      return (
+        chat.name.toLowerCase().includes(q) || (chat.phone ?? "").includes(q)
+      );
+    });
+    return matched.sort((a, b) => {
+      const at = a.lastMessageAt ? Date.parse(a.lastMessageAt) : 0;
+      const bt = b.lastMessageAt ? Date.parse(b.lastMessageAt) : 0;
+      if (bt !== at) return bt - at;
+      return a.name.localeCompare(b.name, "ru");
+    });
+  }, [chats, query, onlyGroups]);
+
+  const RENDER_LIMIT = 100;
+  const shownChats = showAll ? visibleChats : visibleChats.slice(0, RENDER_LIMIT);
+
   if (!configured) {
     return (
       <div
@@ -290,6 +315,43 @@ export default function ConnectClient() {
             Сообщения из невыбранных чатов не попадут в учёт материалов.
           </p>
 
+          {chats.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Поиск по названию или номеру"
+                aria-label="Поиск чата"
+                className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm outline-none"
+                style={{
+                  background: "var(--bg3)",
+                  border: "1px solid var(--border)",
+                  color: "var(--text)",
+                }}
+              />
+              <label
+                className="flex shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm"
+                style={{ border: "1px solid var(--border)", color: "var(--muted)" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={onlyGroups}
+                  onChange={(e) => setOnlyGroups(e.target.checked)}
+                  className="h-4 w-4 accent-[#00f5c4]"
+                />
+                только группы
+              </label>
+            </div>
+          )}
+
+          {chats.length > 0 && (
+            <p className="mt-2 text-xs" style={{ color: "var(--faint)" }}>
+              Найдено {visibleChats.length}
+              {visibleChats.length !== chats.length ? ` из ${chats.length}` : ""}
+            </p>
+          )}
+
           {loadingChats && (
             <p className="mt-4 text-sm" style={{ color: "var(--muted)" }}>
               Загружаем список чатов…
@@ -308,8 +370,14 @@ export default function ConnectClient() {
             </p>
           )}
 
+          {query && visibleChats.length === 0 && (
+            <p className="mt-4 text-sm" style={{ color: "var(--muted)" }}>
+              Ничего не найдено. Попробуйте другое название.
+            </p>
+          )}
+
           <ul className="mt-4 divide-y" style={{ borderColor: "var(--border)" }}>
-            {chats.map((chat) => (
+            {shownChats.map((chat) => (
               <li
                 key={chat.jid}
                 className="flex items-center gap-3 py-3"
@@ -346,10 +414,20 @@ export default function ConnectClient() {
             ))}
           </ul>
 
+          {!showAll && visibleChats.length > RENDER_LIMIT && (
+            <button
+              onClick={() => setShowAll(true)}
+              className="mt-4 w-full rounded-lg px-3 py-2 text-sm"
+              style={{ border: "1px solid var(--border)", color: "var(--muted)" }}
+            >
+              Показать ещё {visibleChats.length - RENDER_LIMIT} из {visibleChats.length}
+            </button>
+          )}
+
           <button
             onClick={() => void loadChats()}
             disabled={loadingChats}
-            className="mt-4 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
+            className="mt-3 rounded-lg px-3 py-2 text-sm disabled:opacity-50"
             style={{ border: "1px solid var(--border)", color: "var(--muted)" }}
           >
             Обновить список
