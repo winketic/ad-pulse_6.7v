@@ -252,7 +252,7 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
               ? "bg-red-500"
               : row.pct >= 75
               ? "bg-[#2563eb]"
-              : "bg-[#2d6a4f]"
+              : "bg-[#22c55e]"
           }`}
           style={{ width: `${Math.min(row.pct, 100)}%` }}
         />

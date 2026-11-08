@@ -82,10 +82,7 @@ function LoginForm() {
         <div className="text-center mb-8 fade-in-up">
           <div className="flex justify-center mb-5">
             <div className="relative">
-              <div className="absolute inset-0 rounded-2xl bg-[var(--accent)]/20 blur-xl" />
-              <div className="relative">
-                <Logo size={52} />
-              </div>
+              <Logo size={52} />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-[var(--text)] tracking-tighter">AD Pulse</h1>

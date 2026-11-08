@@ -29,7 +29,7 @@ export default function NoCompanyState() {
 
       <Link
         href="/dashboard/settings"
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#2563eb] text-white text-sm font-semibold hover:bg-[#1a472a]/90 transition-colors"
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#2563eb] text-white text-sm font-semibold hover:bg-[#1d4ed8] transition-colors"
       >
         Перейти в настройки
       </Link>
