@@ -32,7 +32,8 @@ export async function POST(
 ) {
   // URL-секрет: шлюз шлёт его в пути, как и раньше делал Wazzup.
   const { token } = await params;
-  const expected = (process.env.WHATSAPP_WEBHOOK_TOKEN ?? "").trim();
+  // Секрет приезжает из дашборда и может содержать BOM — сравниваем чистые ASCII.
+  const expected = (process.env.WHATSAPP_WEBHOOK_TOKEN ?? "").replace(/[^\x21-\x7E]/g, "");
   if (!expected || token !== expected) {
     console.warn("[whatsapp/webhook] отклонено: неверный токен");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
