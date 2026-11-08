@@ -18,6 +18,13 @@ const log = logger("outbox");
 const OUTBOX_DIR = path.join(config.dataDir, "outbox");
 const MAX_PENDING = 500;
 
+/**
+ * Счётчик внутри процесса. Имя файла = время + счётчик + случайный хвост:
+ * без счётчика два сообщения, пришедшие в одну миллисекунду, сортировались
+ * случайно и уходили в приложение не по порядку.
+ */
+let sequence = 0;
+
 async function ensureDir(): Promise<void> {
   await fs.mkdir(OUTBOX_DIR, { recursive: true });
 }
@@ -25,7 +32,10 @@ async function ensureDir(): Promise<void> {
 export async function persistFailed(payload: unknown): Promise<void> {
   try {
     await ensureDir();
-    const name = `${Date.now()}-${Math.random().toString(16).slice(2, 10)}.json`;
+    const name =
+      `${String(Date.now()).padStart(14, "0")}-` +
+      `${String(sequence++).padStart(6, "0")}-` +
+      `${Math.random().toString(16).slice(2, 8)}.json`;
     await fs.writeFile(
       path.join(OUTBOX_DIR, name),
       JSON.stringify({ savedAt: new Date().toISOString(), payload }),
