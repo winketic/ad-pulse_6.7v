@@ -17,7 +17,18 @@ export function get(companyId: string): WhatsAppSession | undefined {
  */
 export async function getOrCreate(companyId: string): Promise<WhatsAppSession> {
   const existing = sessions.get(companyId);
-  if (existing) return existing;
+  if (existing) {
+    const status = existing.getMeta().status;
+    if (status !== "logged_out" && status !== "failed") return existing;
+
+    // Мёртвую сессию нельзя показывать клиенту: он нажмёт «Подключить»,
+    // получит тот же logged_out и не увидит QR. Пересоздаём с нуля.
+    log.info(`сессия ${companyId} в состоянии ${status} — пересоздаём`);
+    existing.stop();
+    sessions.delete(companyId);
+    const { clearSession } = await import("./store");
+    await clearSession(companyId);
+  }
 
   const session = new WhatsAppSession(companyId, await loadMeta(companyId));
   sessions.set(companyId, session);
