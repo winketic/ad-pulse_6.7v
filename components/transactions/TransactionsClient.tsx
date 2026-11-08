@@ -156,6 +156,25 @@ function fmtDate(s: string) {
   return `${d}.${m}.${y}`;
 }
 
+/**
+ * Время сообщения печатаем на клиенте: сервер (Vercel) считает в UTC,
+ * браузер — в поясе пользователя. Раньше SSR-текст и клиентский не
+ * совпадали, из-за чего React перерисовывал список с ошибкой гидратации.
+ */
+function TimeText({ iso }: { iso: string }) {
+  const [text, setText] = useState("");
+  useEffect(() => {
+    setText(
+      new Date(iso).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+    );
+  }, [iso]);
+  return (
+    <span suppressHydrationWarning>
+      {text || "\u00a0\u00a0:\u00a0\u00a0"}
+    </span>
+  );
+}
+
 const isoDay = (offset = 0) =>
   new Date(Date.now() + offset * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
@@ -1420,7 +1439,7 @@ export default function TransactionsClient({
                   return (
                     <tr key={tx.id} className={`group h-12 hover:bg-[var(--surface-2)] transition-colors duration-150 ${isTemp ? "opacity-60 animate-pulse" : ""} ${isDeleted ? "opacity-45" : ""}`}>
                       <td className="num pl-5 px-4 text-xs text-[var(--muted)]">
-                        {new Date(tx.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                        <TimeText iso={tx.created_at} />
                       </td>
                       <td className="px-4">
                         <span className={`flex items-center gap-1.5 text-xs ${cfg.text}`}>
@@ -1532,7 +1551,7 @@ export default function TransactionsClient({
                           <span className="text-[var(--muted-2)] text-xs"> · {tx.creator_name}</span>
                         </span>
                         <span className="num text-[10px] text-[var(--muted-2)] shrink-0">
-                          {new Date(tx.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+                          <TimeText iso={tx.created_at} />
                         </span>
                         <DeltaBars deltas={deltasByMaterial.get(tx.material_id) ?? []} />
                       </button>
