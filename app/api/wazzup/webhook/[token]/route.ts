@@ -284,6 +284,27 @@ async function processItem(item: unknown) {
     return;
   }
 
+  // ── ЗАЩИТА ОТ ДВОЙНОГО УЧЁТА ───────────────────────
+  // Компания может быть подключена и к Wazzup, и к нашему шлюзу. Тогда одно и
+  // то же сообщение приходит из двух источников с разными message_id и создаёт
+  // две транзакции. Если у компании активна сессия шлюза — Wazzup не читаем.
+  try {
+    const { data: gatewaySession } = await service
+      .from("whatsapp_sessions")
+      .select("status")
+      .eq("company_id", token.company_id)
+      .maybeSingle();
+
+    if (gatewaySession?.status === "open") {
+      console.log(
+        `[wazzup/webhook] компания ${token.company_id} работает через свой шлюз — сообщение Wazzup пропущено`
+      );
+      return;
+    }
+  } catch {
+    // Таблицы ещё нет (миграция не применена) — работаем как раньше.
+  }
+
   // ── ALLOWED CHATS FILTER ───────────────────────────
   const allowedChats: string[] = token.allowed_chat_ids ?? [];
   if (allowedChats.length > 0) {

@@ -62,7 +62,11 @@ AD Pulse — мультитенантный B2B SaaS для учёта мате�
   Новый чат появляется в списке выключенным — иначе мусор попадал бы в учёт
 - Медиа: шлюз отдаёт `/media/...` по токену; `parseAndSave` берёт `gatewayMediaToken()`
   вместо OAuth-токена Wazzup, когда `provider = 'adpulse-gateway'`
-- Env приложения: `WHATSAPP_GATEWAY_URL`, `WHATSAPP_GATEWAY_TOKEN`, `WHATSAPP_WEBHOOK_TOKEN`
+- Пока компания подключена к шлюзу (`whatsapp_sessions.status = 'open'`), вебхук Wazzup
+  её сообщения не обрабатывает — иначе одно сообщение пришло бы из двух источников
+  с разными message_id и создало две транзакции
+- Env приложения: `WHATSAPP_GATEWAY_URL`, `WHATSAPP_GATEWAY_TOKEN`, `WHATSAPP_WEBHOOK_TOKEN`;
+  LLM-разбор — `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` (gemma4 на alem.ai)
 - Риск: Baileys — неофициальный доступ (ToS WhatsApp), возможен бан номера.
   Подключать выделенный номер, не основной канал снабжения
 
