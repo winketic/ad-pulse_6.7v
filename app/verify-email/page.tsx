@@ -43,8 +43,8 @@ export default function VerifyEmailPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4"><Logo size={48} /></div>
-          <h1 className="text-2xl font-bold text-[#ededed]">AD Pulse</h1>
-          <p className="text-sm text-[#888888] mt-1">Система учёта материалов</p>
+          <h1 className="text-2xl font-bold text-[var(--text)]">AD Pulse</h1>
+          <p className="text-sm text-[var(--muted)] mt-1">Система учёта материалов</p>
         </div>
         <div className="dp-auth-card text-center">
           <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4">
@@ -52,19 +52,19 @@ export default function VerifyEmailPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-[#ededed] mb-2">Подтвердите почту</h2>
-          {email && <p className="text-sm text-[#888888] mb-1">Письмо отправлено на</p>}
-          {email && <p className="text-sm font-medium text-[#ededed] mb-4">{email}</p>}
-          <p className="text-sm text-[#888888] mb-6 leading-relaxed">
+          <h2 className="text-lg font-semibold text-[var(--text)] mb-2">Подтвердите почту</h2>
+          {email && <p className="text-sm text-[var(--muted)] mb-1">Письмо отправлено на</p>}
+          {email && <p className="text-sm font-medium text-[var(--text)] mb-4">{email}</p>}
+          <p className="text-sm text-[var(--muted)] mb-6 leading-relaxed">
             Перейдите по ссылке в письме для доступа к системе.
             <span className="block text-xs mt-1">Проверьте папку «Спам».</span>
           </p>
           {resent && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-[#00f5c4]/10 border border-[#00f5c4]/30 mb-4 text-left">
-              <svg className="w-4 h-4 text-[#00f5c4] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-[#2563eb]/10 border border-[#2563eb]/30 mb-4 text-left">
+              <svg className="w-4 h-4 text-[#2563eb] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
-              <span className="text-sm text-[#00f5c4]">Письмо отправлено повторно</span>
+              <span className="text-sm text-[#2563eb]">Письмо отправлено повторно</span>
             </div>
           )}
           {error && (
@@ -76,7 +76,7 @@ export default function VerifyEmailPage() {
               {loading ? "Отправка..." : resent ? "Письмо отправлено" : "Отправить повторно"}
             </button>
             <button onClick={() => supabase.auth.signOut().then(() => router.push("/login"))}
-              className="w-full py-2 text-sm text-[#888888] hover:text-[#ededed] transition-colors">
+              className="w-full py-2 text-sm text-[var(--muted)] hover:text-[var(--text)] transition-colors">
               Выйти из аккаунта
             </button>
           </div>

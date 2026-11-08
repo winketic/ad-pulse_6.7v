@@ -14,52 +14,51 @@
    ════════════════════════════════════════════════════ */
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  /* Surfaces — 4 depth levels, cool-tinted near-black */
-  --bg: #050507;          /* page */
-  --surface-1: #0c0c10;   /* cards */
-  --surface-2: #131318;   /* nested / hover */
-  --surface-3: #1a1a21;   /* highest (menus, chips on cards) */
+  /* Surfaces — светлые, глубина через границы, а не свечение */
+  --bg: #f7f7f8;          /* page */
+  --surface-1: #ffffff;   /* cards */
+  --surface-2: #f4f4f5;   /* nested / hover */
+  --surface-3: #ececee;   /* highest (menus, chips on cards) */
 
-  /* Brand — neon stays, used ONLY for data & actions */
-  --accent: #00f5c4;
-  --accent-hover: #00dcb0;
-  --accent-active: #00c39c;
-  --accent-15: color-mix(in srgb, #00f5c4 12%, transparent);
-  --accent-text: #04120e;
-  --purple: #7b5ea7;
+  /* Accent — один спокойный синий, никакого неона */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-active: #1e40af;
+  --accent-15: rgba(37, 99, 235, 0.12);
+  --accent-text: #ffffff;
 
-  /* Text — 3 levels */
-  --text: #f2f2f5;
-  --muted: #8b8b96;
-  --muted-2: #82828c;
+  /* Text */
+  --text: #18181b;
+  --muted: #71717a;
+  --muted-2: #a1a1aa;
 
-  /* Hairlines — barely there; depth comes from surfaces */
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.13);
+  /* Границы */
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
 
-  /* Status — muted so the neon accent stays dominant */
-  --success: #4ade80;
-  --success-bg: rgba(74, 222, 128, 0.1);
-  --danger: #f87171;
-  --danger-bg: rgba(248, 113, 113, 0.1);
-  --warning: #fbbf24;
-  --warning-bg: rgba(251, 191, 36, 0.1);
-  --info: #60a5fa;
-  --info-bg: rgba(96, 165, 250, 0.1);
+  /* Status */
+  --success: #16a34a;
+  --success-bg: rgba(22, 163, 74, 0.1);
+  --danger: #dc2626;
+  --danger-bg: rgba(220, 38, 38, 0.08);
+  --warning: #d97706;
+  --warning-bg: rgba(217, 119, 6, 0.1);
+  --info: #2563eb;
+  --info-bg: rgba(37, 99, 235, 0.1);
 
-  /* Elevation */
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.45);
-  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.7);
-  --glow-accent: 0 2px 14px color-mix(in srgb, var(--accent) 16%, transparent);
+  /* Тени — лёгкие, серые */
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-raised: 0 4px 12px rgba(16, 24, 40, 0.08);
+  --shadow-modal: 0 20px 50px rgba(16, 24, 40, 0.16);
+  --glow-accent: none;
 
-  /* Geometry (4px base grid) */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  /* Geometry */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
 
   /* Z-layers */
   --z-nav: 50;
@@ -67,13 +66,13 @@
   --z-modal: 60;
   --z-toast: 100;
 
-  /* Motion — terminal-crisp */
+  /* Motion */
   --dur-fast: 120ms;
-  --dur-base: 180ms;
+  --dur-base: 160ms;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* backward-compat aliases (legacy var names used across components) */
+  /* backward-compat aliases */
   --bg2: var(--surface-1);
   --bg3: var(--surface-2);
   --card: var(--surface-1);
@@ -217,7 +216,7 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   align-items: center;
   justify-content: center;
   gap: 18px;
-  background: #05050a;
+  background: var(--bg);
   animation: fadeIn 160ms var(--ease) both;
   transition: opacity 240ms var(--ease);
 }
@@ -228,7 +227,7 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   width: 280px;
   height: 280px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 245, 196, 0.18), transparent 62%);
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.14), transparent 62%);
   animation: splashHalo 1200ms ease-out both;
 }
 @keyframes splashHalo {
@@ -257,7 +256,7 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   animation: fadeIn 320ms ease-out 720ms forwards;
 }
 .adps-splash-title {
-  color: #e8ecf1;
+  color: var(--text);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.18em;
@@ -356,7 +355,7 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   /* appearance:none above strips the native dropdown chevron too — without
      this a <select> becomes visually indistinguishable from a text input. */
   select.field-input {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 16px center;
     background-size: 16px 16px;
@@ -366,7 +365,7 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   input[type="date"].field-input {
     padding: 0 16px;
     line-height: 52px;
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   /* Native calendar icon — invert so it's visible on a dark field */
@@ -458,27 +457,6 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
     overflow: hidden;
     background: var(--bg);
   }
-  .dp-auth-page::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background-image:
-      linear-gradient(var(--border) 1px, transparent 1px),
-      linear-gradient(90deg, var(--border) 1px, transparent 1px);
-    background-size: 40px 40px;
-    -webkit-mask-image: radial-gradient(ellipse 90% 55% at 50% 0%, black, transparent 75%);
-    mask-image: radial-gradient(ellipse 90% 55% at 50% 0%, black, transparent 75%);
-  }
-  .dp-auth-page::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: radial-gradient(ellipse 70% 40% at 50% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent);
-    animation: authGlow 5s ease-in-out infinite;
-  }
-
   .dp-auth-card {
     @apply rounded-2xl p-6 sm:p-8;
     position: relative;
@@ -518,27 +496,27 @@ select:-webkit-autofill:active {
 }
 
 .driver-popover.adpulse-tour {
-  background-color: #00f5c4 !important;
-  color: #05050a !important;
-  border: none !important;
-  border-radius: 12px !important;
+  background-color: #ffffff !important;
+  color: #18181b !important;
+  border: 1px solid #e4e4e7 !important;
+  border-radius: 10px !important;
   padding: 20px !important;
   max-width: 300px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: 0 8px 32px rgba(16, 24, 40, 0.18) !important;
 }
 
 .driver-popover.adpulse-tour .driver-popover-title {
-  color: #05050a !important;
+  color: #18181b !important;
   font-size: 15px !important;
   font-weight: 700 !important;
   margin-bottom: 6px !important;
 }
 
 .driver-popover.adpulse-tour .driver-popover-description {
-  color: #05050a !important;
+  color: #52525b !important;
   font-size: 13px !important;
   line-height: 1.5 !important;
-  opacity: 0.85 !important;
+  opacity: 1 !important;
 }
 
 .driver-popover.adpulse-tour .driver-popover-footer {
@@ -552,8 +530,8 @@ select:-webkit-autofill:active {
 
 .driver-popover.adpulse-tour .driver-popover-next-btn,
 .driver-popover.adpulse-tour .driver-popover-done-btn {
-  background: #05050a !important;
-  color: #00f5c4 !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
   border: none !important;
   border-radius: 8px !important;
   font-size: 13px !important;
@@ -563,8 +541,8 @@ select:-webkit-autofill:active {
 
 .driver-popover.adpulse-tour .driver-popover-prev-btn {
   background: transparent !important;
-  color: #05050a !important;
-  border: 1px solid rgba(5,5,10,0.3) !important;
+  color: #18181b !important;
+  border: 1px solid #d4d4d8 !important;
   border-radius: 8px !important;
   font-size: 13px !important;
   font-weight: 600 !important;
@@ -572,7 +550,7 @@ select:-webkit-autofill:active {
 }
 
 .driver-popover.adpulse-tour .driver-popover-close-btn {
-  color: #05050a !important;
+  color: #18181b !important;
   opacity: 0.6 !important;
   font-size: 18px !important;
 }
@@ -582,21 +560,21 @@ select:-webkit-autofill:active {
 }
 
 .driver-popover.adpulse-tour .driver-popover-arrow-side-left.driver-popover-arrow {
-  border-right-color: #00f5c4 !important;
+  border-right-color: #ffffff !important;
 }
 .driver-popover.adpulse-tour .driver-popover-arrow-side-right.driver-popover-arrow {
-  border-left-color: #00f5c4 !important;
+  border-left-color: #ffffff !important;
 }
 .driver-popover.adpulse-tour .driver-popover-arrow-side-top.driver-popover-arrow {
-  border-bottom-color: #00f5c4 !important;
+  border-bottom-color: #ffffff !important;
 }
 .driver-popover.adpulse-tour .driver-popover-arrow-side-bottom.driver-popover-arrow {
-  border-top-color: #00f5c4 !important;
+  border-top-color: #ffffff !important;
 }
 
 /* driver.css paints this #727272 — unreadable on the mint background */
 .driver-popover.adpulse-tour .driver-popover-progress-text {
-  color: rgba(5, 10, 8, 0.7) !important;
+  color: #71717a !important;
   font-size: 12px !important;
 }
 
@@ -608,15 +586,15 @@ select:-webkit-autofill:active {
   .text-title   { font-size: 1.125rem; line-height: 1.5rem;  font-weight: 600; letter-spacing: -0.01em; }
   .text-body    { font-size: 0.875rem; line-height: 1.375rem; font-weight: 400; }
   .text-caption { font-size: 0.75rem;  line-height: 1rem;    font-weight: 500; color: var(--muted); }
-  /* Section label — the terminal look: small caps, wide tracking */
-  .text-label   { font-size: 0.6875rem; line-height: 1rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  /* Section label — обычный регистр, сдержанный */
+  .text-label   { font-size: 0.75rem; line-height: 1rem; font-weight: 600; letter-spacing: 0.01em; color: var(--muted); }
 
-  /* ── Numbers — ALWAYS Geist Mono, ticker-style ──── */
-  .num     { font-family: var(--font-geist-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; }
-  .num-lg  { font-family: var(--font-geist-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 1.75rem;  line-height: 2.125rem; font-weight: 700; letter-spacing: -0.03em; }
-  .num-xl  { font-family: var(--font-geist-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 2.25rem;  line-height: 2.5rem;  font-weight: 700; letter-spacing: -0.04em; }
+  /* ── Numbers — обычный шрифт, выровненные колонки ── */
+  .num     { font-variant-numeric: tabular-nums; }
+  .num-lg  { font-variant-numeric: tabular-nums; font-size: 1.75rem;  line-height: 2.125rem; font-weight: 700; letter-spacing: -0.02em; }
+  .num-xl  { font-variant-numeric: tabular-nums; font-size: 2.25rem;  line-height: 2.5rem;  font-weight: 700; letter-spacing: -0.03em; }
   /* legacy alias */
-  .text-num-lg { font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 1.75rem; line-height: 2.125rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .text-num-lg { font-size: 1.75rem; line-height: 2.125rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 
   /* ── Interaction feedback ───────────────────────── */
   /* Haptic-like tap compression for any tappable element */
@@ -638,8 +616,8 @@ select:-webkit-autofill:active {
   }
 
   /* Role badges */
-  .badge-admin    { @apply bg-purple-500/15 text-purple-300 border border-purple-500/20; }
-  .badge-manager  { @apply bg-blue-500/15   text-blue-300   border border-blue-500/20; }
-  .badge-warehouse{ @apply bg-amber-500/15  text-amber-300  border border-amber-500/20; }
-  .badge-workshop { @apply bg-emerald-500/15 text-emerald-300 border border-emerald-500/20; }
+  .badge-admin    { @apply bg-purple-50  text-purple-700  border border-purple-200; }
+  .badge-manager  { @apply bg-blue-50    text-blue-700    border border-blue-200; }
+  .badge-warehouse{ @apply bg-amber-50   text-amber-700   border border-amber-200; }
+  .badge-workshop { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
 }

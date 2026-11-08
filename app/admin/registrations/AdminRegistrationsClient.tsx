@@ -112,7 +112,7 @@ export default function AdminRegistrationsClient({ registrations }: { registrati
                       <button
                         onClick={() => handleApprove(reg.id)}
                         disabled={isLoading}
-                        className="min-h-11 px-3 rounded-lg bg-[#05050a] text-[#00f5c4] text-xs font-semibold hover:bg-[#1a1a2e] disabled:opacity-50 transition-colors"
+                        className="min-h-11 px-3 rounded-lg bg-[#f7f7f8] text-[#2563eb] text-xs font-semibold hover:bg-[#ffffff] disabled:opacity-50 transition-colors"
                       >
                         {isLoading ? "…" : "Одобрить"}
                       </button>

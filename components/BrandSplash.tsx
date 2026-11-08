@@ -59,17 +59,17 @@ export default function BrandSplash() {
       aria-hidden="true"
     >
       <svg className="adps-splash-mark" viewBox="0 0 64 64" width="88" height="88" fill="none">
-        <rect width="64" height="64" rx="16" fill="#05050a" />
+        <rect width="64" height="64" rx="16" fill="#f7f7f8" />
         <polyline
           className="adps-splash-line"
           points="6,32 14,32 18,20 22,44 26,28 30,36 34,32 58,32"
-          stroke="#00f5c4"
+          stroke="#2563eb"
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
           pathLength={100}
         />
-        <circle className="adps-splash-dot" cx="18" cy="20" r="3" fill="#00f5c4" />
+        <circle className="adps-splash-dot" cx="18" cy="20" r="3" fill="#2563eb" />
       </svg>
       <p className="adps-splash-title">AD Pulse</p>
     </div>

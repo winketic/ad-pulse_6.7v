@@ -99,9 +99,9 @@ function StatCard({
 }) {
   const valueColor =
     accent === "green"
-      ? "text-[#00f5c4]"
+      ? "text-[#2563eb]"
       : accent === "red"
-      ? "text-red-400"
+      ? "text-red-600"
       : "text-[var(--text)]";
 
   return (
@@ -128,7 +128,7 @@ function MaterialTableRow({ row }: { row: PlanMaterialRow }) {
         {row.material_name}
       </td>
       <td className="px-5 py-3.5">
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#00f5c4]/10 text-[#00f5c4]">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#2563eb]/10 text-[#2563eb]">
           {row.material_unit}
         </span>
       </td>
@@ -136,7 +136,7 @@ function MaterialTableRow({ row }: { row: PlanMaterialRow }) {
         {row.planned_quantity.toFixed(4)}
       </td>
       <td className="px-5 py-3.5 text-right tabular-nums text-sm font-mono font-semibold">
-        <span className={isOver ? "text-red-400" : "text-[var(--muted)]"}>
+        <span className={isOver ? "text-red-600" : "text-[var(--muted)]"}>
           {row.actual_quantity.toFixed(4)}
         </span>
       </td>
@@ -146,7 +146,7 @@ function MaterialTableRow({ row }: { row: PlanMaterialRow }) {
             isZero
               ? "bg-[var(--bg3)] text-[var(--muted)]"
               : isOver
-              ? "bg-red-100 text-red-400"
+              ? "bg-red-100 text-red-600"
               : "bg-green-500/15 border border-green-500/20 text-green-400"
           }`}
         >
@@ -162,9 +162,9 @@ function MaterialTableRow({ row }: { row: PlanMaterialRow }) {
                 row.pct > 100
                   ? "bg-red-500"
                   : row.pct >= 75
-                  ? "bg-[#00f5c4]"
+                  ? "bg-[#2563eb]"
                   : row.pct > 0
-                  ? "bg-[#2d6a4f]"
+                  ? "bg-[#22c55e]"
                   : "bg-gray-200"
               }`}
               style={{ width: `${pctClamped}%` }}
@@ -172,7 +172,7 @@ function MaterialTableRow({ row }: { row: PlanMaterialRow }) {
           </div>
           <span
             className={`text-xs tabular-nums font-medium w-10 text-right shrink-0 ${
-              row.pct > 100 ? "text-red-400" : "text-[var(--muted)]"
+              row.pct > 100 ? "text-red-600" : "text-[var(--muted)]"
             }`}
           >
             {row.pct.toFixed(0)}%
@@ -194,7 +194,7 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
         <p className="font-semibold text-[var(--text)] text-sm leading-tight">
           {row.material_name}
         </p>
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#00f5c4]/10 text-[#00f5c4] shrink-0">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#2563eb]/10 text-[#2563eb] shrink-0">
           {row.material_unit}
         </span>
       </div>
@@ -210,7 +210,7 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
           <p className="text-xs text-[var(--muted)] mb-0.5">Факт</p>
           <p
             className={`text-sm font-semibold tabular-nums font-mono ${
-              isOver ? "text-red-400" : "text-[var(--muted)]"
+              isOver ? "text-red-600" : "text-[var(--muted)]"
             }`}
           >
             {row.actual_quantity.toFixed(4)}
@@ -226,7 +226,7 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
               row.deviation === 0
                 ? "bg-[var(--bg3)] text-[var(--muted)]"
                 : isOver
-                ? "bg-red-100 text-red-400"
+                ? "bg-red-100 text-red-600"
                 : "bg-green-500/15 border border-green-500/20 text-green-400"
             }`}
           >
@@ -237,7 +237,7 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
         </div>
         <span
           className={`text-sm font-bold tabular-nums ${
-            row.pct > 100 ? "text-red-400" : "text-[#00f5c4]"
+            row.pct > 100 ? "text-red-600" : "text-[#2563eb]"
           }`}
         >
           {row.pct.toFixed(0)}%
@@ -251,7 +251,7 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
             row.pct > 100
               ? "bg-red-500"
               : row.pct >= 75
-              ? "bg-[#00f5c4]"
+              ? "bg-[#2563eb]"
               : "bg-[#2d6a4f]"
           }`}
           style={{ width: `${Math.min(row.pct, 100)}%` }}
@@ -325,7 +325,7 @@ function StatusChangePanel({ plan }: { plan: PlanDetail }) {
           <p className="text-sm font-medium text-red-900">
             Отменить план «{plan.name}»?
           </p>
-          <p className="text-xs text-red-400 mt-0.5">
+          <p className="text-xs text-red-600 mt-0.5">
             Это действие нельзя отменить. Статус изменится на «Отменён».
           </p>
         </div>
@@ -333,7 +333,7 @@ function StatusChangePanel({ plan }: { plan: PlanDetail }) {
           <button
             onClick={() => setConfirm(null)}
             disabled={isPending}
-            className="px-4 py-2 rounded-lg text-sm border border-red-300 text-red-400 hover:bg-red-100 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm border border-red-300 text-red-600 hover:bg-red-100 transition-colors"
           >
             Назад
           </button>
@@ -363,14 +363,14 @@ function StatusChangePanel({ plan }: { plan: PlanDetail }) {
       </button>
       <button
         onClick={() => setConfirm("cancel")}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-500/30 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-500/30 text-sm font-medium text-red-600 hover:bg-red-500/10 transition-colors"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>
         Отменить план
       </button>
-      {error && <p className="text-sm text-red-400 w-full mt-1">{error}</p>}
+      {error && <p className="text-sm text-red-600 w-full mt-1">{error}</p>}
     </div>
   );
 }
@@ -406,7 +406,7 @@ export default function PlanDetailClient({
       {/* ── Back ────────────────────────────────────────── */}
       <Link
         href="/dashboard/plans"
-        className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[#00f5c4] transition-colors mb-5"
+        className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[#2563eb] transition-colors mb-5"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -548,7 +548,7 @@ export default function PlanDetailClient({
                         <span
                           className={
                             totalActual > totalPlanned
-                              ? "text-red-400"
+                              ? "text-red-600"
                               : "text-[var(--text)]"
                           }
                         >
@@ -561,7 +561,7 @@ export default function PlanDetailClient({
                             totalDeviation === 0
                               ? "bg-[var(--bg3)] text-[var(--muted)]"
                               : totalDeviation > 0
-                              ? "bg-red-100 text-red-400"
+                              ? "bg-red-100 text-red-600"
                               : "bg-green-500/15 border border-green-500/20 text-green-400"
                           }`}
                         >
@@ -573,7 +573,7 @@ export default function PlanDetailClient({
                       <td className="px-5 py-3">
                         <span
                           className={`text-sm font-bold tabular-nums ${
-                            overallPct > 100 ? "text-red-400" : "text-[#00f5c4]"
+                            overallPct > 100 ? "text-red-600" : "text-[#2563eb]"
                           }`}
                         >
                           {overallPct.toFixed(0)}%

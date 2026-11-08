@@ -76,8 +76,8 @@ function sendAdminEmail(
 <tr><td align="center">
 <table width="100%" style="max-width:560px;">
   <tr><td align="center" style="padding-bottom:24px;">
-    <div style="background:#05050a;border-radius:16px;padding:14px 20px;display:inline-block;">
-      <span style="color:#00f5c4;font-size:20px;font-weight:700;">AD Pulse</span>
+    <div style="background:#f7f7f8;border-radius:16px;padding:14px 20px;display:inline-block;">
+      <span style="color:#2563eb;font-size:20px;font-weight:700;">AD Pulse</span>
     </div>
   </td></tr>
   <tr><td style="background:#fff;border-radius:16px;padding:40px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
@@ -102,7 +102,7 @@ function sendAdminEmail(
     </table>
     <div style="margin-top:32px;text-align:center;">
       <a href="${appUrl}/admin/approve/${registrationId}"
-         style="display:inline-block;background:#05050a;color:#00f5c4;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:10px;">
+         style="display:inline-block;background:#2563eb;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:10px;">
         ✓ Одобрить
       </a>
     </div>

@@ -54,28 +54,28 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4"><Logo size={48} /></div>
-          <h1 className="text-2xl font-bold text-[#ededed]">AD Pulse</h1>
-          <p className="text-sm text-[#888888] mt-1">Система учёта материалов</p>
+          <h1 className="text-2xl font-bold text-[var(--text)]">AD Pulse</h1>
+          <p className="text-sm text-[var(--muted)] mt-1">Система учёта материалов</p>
         </div>
 
         <div className="dp-auth-card">
           {ready === null ? (
-            <div className="text-center py-6 text-[#888888] text-sm">Проверяем сессию...</div>
+            <div className="text-center py-6 text-[var(--muted)] text-sm">Проверяем сессию...</div>
           ) : !ready ? (
             <div className="text-center py-6">
-              <p className="text-[#888888] text-sm mb-4">Ссылка недействительна или истекла.</p>
-              <a href="/forgot-password" className="text-sm text-[#00f5c4] hover:underline">Запросить новую ссылку</a>
+              <p className="text-[var(--muted)] text-sm mb-4">Ссылка недействительна или истекла.</p>
+              <a href="/forgot-password" className="text-sm text-[#2563eb] hover:underline">Запросить новую ссылку</a>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <h2 className="text-lg font-semibold text-[#ededed] mb-4">Новый пароль</h2>
+              <h2 className="text-lg font-semibold text-[var(--text)] mb-4">Новый пароль</h2>
               <div>
-                <label className="block text-xs font-medium text-[#888888] mb-1.5">Новый пароль</label>
+                <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Новый пароль</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                   placeholder="Минимум 8 символов" className="dp-input" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-[#888888] mb-1.5">Подтвердите пароль</label>
+                <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Подтвердите пароль</label>
                 <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
                   placeholder="Повторите пароль" className="dp-input" />
               </div>

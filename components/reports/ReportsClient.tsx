@@ -443,7 +443,7 @@ function SummaryTable({
                 {row.material_name}
               </td>
               <td className="px-4 py-3">
-                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[#00f5c4]/10 text-[#00f5c4]">
+                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[#2563eb]/10 text-[#2563eb]">
                   {row.unit}
                 </span>
               </td>
@@ -463,7 +463,7 @@ function SummaryTable({
                 <span
                   className={`tabular-nums font-mono font-bold ${
                     row.balance > 0
-                      ? "text-[#00f5c4]"
+                      ? "text-[#2563eb]"
                       : row.balance < 0
                       ? "text-[var(--danger)]"
                       : "text-[var(--muted)]"
@@ -502,7 +502,7 @@ function SummaryTable({
                 <span
                   className={`tabular-nums font-mono font-bold ${
                     totalBalance > 0
-                      ? "text-[#00f5c4]"
+                      ? "text-[#2563eb]"
                       : totalBalance < 0
                       ? "text-[var(--danger)]"
                       : "text-[var(--muted)]"
@@ -604,7 +604,7 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
                 {row.material_name}
               </td>
               <td className="px-4 py-3">
-                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[#00f5c4]/10 text-[#00f5c4]">
+                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[#2563eb]/10 text-[#2563eb]">
                   {row.material_unit}
                 </span>
               </td>

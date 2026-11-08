@@ -31,24 +31,24 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4"><Logo size={48} /></div>
-          <h1 className="text-2xl font-bold text-[#ededed] tracking-tight">AD Pulse</h1>
-          <p className="text-sm text-[#888888] mt-1">Система учёта материалов</p>
+          <h1 className="text-2xl font-bold text-[var(--text)] tracking-tight">AD Pulse</h1>
+          <p className="text-sm text-[var(--muted)] mt-1">Система учёта материалов</p>
         </div>
 
         <div className="dp-auth-card">
           {sent ? (
             <div className="text-center py-4">
-              <div className="w-12 h-12 rounded-full bg-[#00f5c4]/10 border border-[#00f5c4]/30 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-[#00f5c4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <div className="w-12 h-12 rounded-full bg-[#2563eb]/10 border border-[#2563eb]/30 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-[#2563eb]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h2 className="text-lg font-semibold text-[#ededed] mb-2">Проверьте почту</h2>
-              <p className="text-sm text-[#888888] mb-6">
-                Мы отправили ссылку на <span className="text-[#ededed]">{email}</span>.
+              <h2 className="text-lg font-semibold text-[var(--text)] mb-2">Проверьте почту</h2>
+              <p className="text-sm text-[var(--muted)] mb-6">
+                Мы отправили ссылку на <span className="text-[var(--text)]">{email}</span>.
                 Проверьте папку «Спам».
               </p>
-              <Link href="/login" className="text-sm text-[#888888] hover:text-[#00f5c4] transition-colors flex items-center justify-center gap-1.5">
+              <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[#2563eb] transition-colors flex items-center justify-center gap-1.5">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
@@ -57,11 +57,11 @@ export default function ForgotPasswordPage() {
             </div>
           ) : (
             <>
-              <h2 className="text-lg font-semibold text-[#ededed] mb-2">Сброс пароля</h2>
-              <p className="text-sm text-[#888888] mb-6">Введите email — мы пришлём ссылку для создания нового пароля.</p>
+              <h2 className="text-lg font-semibold text-[var(--text)] mb-2">Сброс пароля</h2>
+              <p className="text-sm text-[var(--muted)] mb-6">Введите email — мы пришлём ссылку для создания нового пароля.</p>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-[#888888] mb-1.5">Email</label>
+                  <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Email</label>
                   <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@company.com" required autoComplete="email" className="dp-input" />
                 </div>
@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
                 </button>
               </form>
               <div className="mt-5 text-center">
-                <Link href="/login" className="text-sm text-[#888888] hover:text-[#00f5c4] transition-colors inline-flex items-center gap-1.5">
+                <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[#2563eb] transition-colors inline-flex items-center gap-1.5">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>

@@ -11,20 +11,20 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        // Dark theme palette
+        // Light theme palette — Stripe-like, calm and readable
         dp: {
-          bg:     "#0a0a0a",
-          card:   "#111111",
-          hover:  "#161616",
-          border: "#1f1f1f",
-          text:   "#ededed",
-          muted:  "#888888",
-          faint:  "#444444",
+          bg:     "#f7f7f8",
+          card:   "#ffffff",
+          hover:  "#f4f4f5",
+          border: "#e4e4e7",
+          text:   "#18181b",
+          muted:  "#71717a",
+          faint:  "#a1a1aa",
         },
         accent: {
-          DEFAULT: "#00f5c4",
-          hover:   "#00ddb3",
-          dim:     "rgba(0,245,196,0.15)",
+          DEFAULT: "#2563eb",
+          hover:   "#1d4ed8",
+          dim:     "rgba(37, 99, 235, 0.12)",
         },
       },
     },

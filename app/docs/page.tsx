@@ -10,7 +10,7 @@ import "swagger-ui-react/swagger-ui.css";
  */
 export default function DocsPage() {
   return (
-    <div className="min-h-screen" style={{ background: "#05050a" }}>
+    <div className="min-h-screen" style={{ background: "#f7f7f8" }}>
       <SwaggerUI url="/api-docs/openapi.json" />
     </div>
   );

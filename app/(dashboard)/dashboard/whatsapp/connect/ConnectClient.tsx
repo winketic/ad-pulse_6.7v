@@ -294,7 +294,7 @@ export default function ConnectClient({
                 onClick={connect}
                 disabled={busy}
                 className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-                style={{ background: "var(--accent)", color: "#04231e" }}
+                style={{ background: "var(--accent)", color: "#ffffff" }}
               >
                 {busy ? "…" : status === "qr" ? "Обновить QR" : "Подключить WhatsApp"}
               </button>
@@ -393,7 +393,7 @@ export default function ConnectClient({
                   type="checkbox"
                   checked={onlyGroups}
                   onChange={(e) => setOnlyGroups(e.target.checked)}
-                  className="h-4 w-4 accent-[#00f5c4]"
+                  className="h-4 w-4 accent-[#2563eb]"
                 />
                 только группы
               </label>
@@ -405,7 +405,7 @@ export default function ConnectClient({
                   type="checkbox"
                   checked={hideEmpty}
                   onChange={(e) => setHideEmpty(e.target.checked)}
-                  className="h-4 w-4 accent-[#00f5c4]"
+                  className="h-4 w-4 accent-[#2563eb]"
                 />
                 с сообщениями
               </label>
@@ -455,7 +455,7 @@ export default function ConnectClient({
                   type="checkbox"
                   checked={chat.isWatched}
                   onChange={() => void toggleChat(chat)}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-[#00f5c4]"
+                  className="h-4 w-4 shrink-0 cursor-pointer accent-[#2563eb]"
                 />
                 <label
                   htmlFor={`chat-${chat.jid}`}
