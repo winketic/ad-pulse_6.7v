@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { readSecret } from "@/lib/env";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -170,7 +171,7 @@ async function callGptParser(
   materials: { id: string; name: string; unit: string }[],
   context: string[] = []
 ): Promise<GptParsed | null> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = readSecret("OPENAI_API_KEY");
   if (!apiKey) return null;
 
   const materialsList = materials

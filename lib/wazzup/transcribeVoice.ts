@@ -1,8 +1,10 @@
+import { readSecret } from "@/lib/env";
+
 export async function transcribeVoice(
   mediaUrl: string,
   accessToken: string
 ): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = readSecret("OPENAI_API_KEY");
   if (!apiKey) throw new Error("OPENAI_API_KEY not set");
 
   // Download audio from Wazzup CDN (requires Bearer token)

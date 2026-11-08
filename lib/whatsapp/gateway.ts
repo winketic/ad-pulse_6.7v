@@ -6,18 +6,10 @@
  * в клиентские компоненты — токен должен оставаться на сервере.
  */
 
-/**
- * Переменные окружения часто копируют из мессенджеров и дашбордов — вместе
- * с ними приезжает невидимый BOM (U+FEFF). В заголовке Authorization это
- * валит fetch: «Cannot convert argument to a ByteString». Поэтому любую
- * переменную шлюза прогоняем через белый список печатных ASCII.
- */
-function cleanEnv(value: string | undefined): string {
-  return (value ?? "").replace(/[^\x21-\x7E]/g, "");
-}
+import { readSecret } from "@/lib/env";
 
-const BASE_URL = cleanEnv(process.env.WHATSAPP_GATEWAY_URL).replace(/\/+$/, "");
-const TOKEN = cleanEnv(process.env.WHATSAPP_GATEWAY_TOKEN);
+const BASE_URL = readSecret("WHATSAPP_GATEWAY_URL").replace(/\/+$/, "");
+const TOKEN = readSecret("WHATSAPP_GATEWAY_TOKEN");
 
 export const GATEWAY_PROVIDER = "adpulse-gateway";
 
