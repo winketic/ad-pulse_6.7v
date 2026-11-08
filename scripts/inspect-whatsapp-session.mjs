@@ -117,9 +117,12 @@ for (const item of list) {
 
   const all = chats.body?.chats ?? [];
   const groups = all.filter((c) => c.isGroup);
-  const named = all.filter((c) => c.name && !/^\+\d+$/.test(c.name));
+  // «Группа 120363…» и «+7708…» — это заглушки, а не настоящие названия.
+  const isRealName = (c) => Boolean(c.name) && !/^(\+\d+|Группа\s.*)$/.test(c.name);
+  const named = all.filter(isRealName);
+  const namedGroups = groups.filter(isRealName);
   console.log(`  чатов:    ${all.length} (групп ${groups.length}, личных ${all.length - groups.length})`);
-  console.log(`  с именем: ${named.length}`);
+  console.log(`  с именем: ${named.length} (групп ${namedGroups.length} из ${groups.length})`);
 
   const watched = (await db(
     "whatsapp_chats",
