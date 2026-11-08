@@ -896,7 +896,9 @@ export default function WhatsAppList({
                 onClick={() => setSettingsOpen(false)}
                 className="dp-btn-primary w-full block text-center"
               >
-                Подключить номер и выбрать чаты
+                {isConnected
+                  ? "Управление подключением и чатами"
+                  : "Подключить номер и выбрать чаты"}
               </Link>
             </>
           )}
