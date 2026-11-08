@@ -1,6 +1,6 @@
 import { config, webhookUrl } from "./config";
 import { logger } from "./logger";
-import type { WebhookPayload } from "./types";
+import type { SessionStatusMessage, WebhookEvent } from "./types";
 
 const log = logger("webhook");
 
@@ -13,7 +13,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * на редеплое, а потерянное сообщение о расходе материала клиент заметит
  * только по остаткам на складе.
  */
-export async function deliver(payload: WebhookPayload): Promise<boolean> {
+export async function deliver(payload: WebhookEvent): Promise<boolean> {
   const url = webhookUrl();
 
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
@@ -55,20 +55,35 @@ export async function deliver(payload: WebhookPayload): Promise<boolean> {
   // Не теряем молча: пишем в лог в формате, который можно поднять руками.
   log.error(
     `не удалось доставить вебхук, сообщений потеряно: ${payload.data.length}`,
-    payload.data.map((m) => m.message_id)
+    payload.data.map((m) => ("message_id" in m ? m.message_id : m.company_id))
   );
   return false;
 }
 
 /** Отправить одно сообщение (удобная обёртка для обработчика Baileys). */
 export async function deliverMessages(
-  messages: WebhookPayload["data"]
+  messages: Extract<WebhookEvent, { event: "message.add" }>["data"]
 ): Promise<void> {
   if (messages.length === 0) return;
   await deliver({
     event: "message.add",
     provider: "adpulse-gateway",
     data: messages,
+    meta: {
+      idempotency_key: crypto.randomUUID(),
+      timestamp: Math.floor(Date.now() / 1000),
+    },
+  });
+}
+
+/** Сообщить приложению о смене состояния сессии (подключено / отвязано / ошибка). */
+export async function deliverSessionStatus(
+  message: SessionStatusMessage
+): Promise<void> {
+  await deliver({
+    event: "session.status",
+    provider: "adpulse-gateway",
+    data: [message],
     meta: {
       idempotency_key: crypto.randomUUID(),
       timestamp: Math.floor(Date.now() / 1000),

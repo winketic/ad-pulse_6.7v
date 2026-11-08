@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { parseAndSave } from "@/lib/wazzup/parseAndSave";
+import { sendTelegramAlert } from "@/lib/telegram/send";
 import { GATEWAY_PROVIDER } from "@/lib/whatsapp/gateway";
 
 // Разбор медиа (фото накладной, голосовое) может занять время
@@ -38,19 +39,78 @@ export async function POST(
   }
 
   const body = (await request.json().catch(() => null)) as
-    | { event?: string; data?: InboundMessage[] }
+    | { event?: string; data?: unknown[] }
     | null;
 
-  if (!body || body.event !== "message.add" || !Array.isArray(body.data)) {
-    return NextResponse.json({ ok: true, skipped: "unsupported event" });
+  if (!body || !Array.isArray(body.data)) {
+    return NextResponse.json({ ok: true, skipped: "no data" });
   }
 
-  // Отвечаем 200 сразу: шлюз ретраит на 5xx и ждёт не больше 15 секунд.
-  void processMessages(body.data).catch((err) =>
-    console.error("[whatsapp/webhook] processing failed", err)
-  );
+  // Смена состояния сессии: приложение узнаёт, что WhatsApp отвалился,
+  // не дожидаясь, пока админ откроет настройки.
+  if (body.event === "session.status") {
+    void processSessionStatuses(body.data as SessionStatusItem[]).catch((err) =>
+      console.error("[whatsapp/webhook] status processing failed", err)
+    );
+    return NextResponse.json({ ok: true });
+  }
 
-  return NextResponse.json({ ok: true });
+  if (body.event === "message.add") {
+    // Отвечаем 200 сразу: шлюз ретраит на 5xx и ждёт не больше 15 секунд.
+    void processMessages(body.data as InboundMessage[]).catch((err) =>
+      console.error("[whatsapp/webhook] processing failed", err)
+    );
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ ok: true, skipped: "unsupported event" });
+}
+
+interface SessionStatusItem {
+  company_id: string;
+  status: string;
+  phone_number: string | null;
+  last_error: string | null;
+  updated_at: string;
+}
+
+async function processSessionStatuses(items: SessionStatusItem[]): Promise<void> {
+  const service = createServiceClient();
+
+  for (const item of items) {
+    if (!item?.company_id) continue;
+
+    try {
+      const { error } = await service.from("whatsapp_sessions").upsert(
+        {
+          company_id: item.company_id,
+          status: item.status,
+          phone_number: item.phone_number,
+          last_error: item.last_error,
+          last_seen_at: item.updated_at ?? new Date().toISOString(),
+        },
+        { onConflict: "company_id" }
+      );
+      if (error) {
+        console.warn("[whatsapp/webhook] статус не сохранён:", error.message);
+      }
+    } catch (err) {
+      console.error("[whatsapp/webhook] статус не сохранён", err);
+    }
+
+    // Тихий отказ — самый опасный сценарий: клиент думает, что учёт работает,
+    // а сообщения не поступают. Поэтому пишем в Telegram, а не только в UI.
+    if (item.status === "logged_out" || item.status === "failed") {
+      const reason =
+        item.status === "logged_out"
+          ? "WhatsApp отвязал устройство"
+          : "не удалось подключиться к WhatsApp";
+      await sendTelegramAlert(
+        item.company_id,
+        `⚠️ <b>WhatsApp отключён</b>\n\n${reason}.\nСообщения в учёт материалов не поступают.\n\nОткройте AD Pulse → WhatsApp → Настройки → «Подключить номер и выбрать чаты», чтобы привязать номер заново.`
+      ).catch((err) => console.error("[whatsapp/webhook] telegram alert failed", err));
+    }
+  }
 }
 
 async function processMessages(messages: InboundMessage[]): Promise<void> {

@@ -58,3 +58,21 @@ export interface WebhookPayload {
   data: InboundMessage[];
   meta: { idempotency_key: string; timestamp: number };
 }
+
+/** Событие смены состояния сессии — чтобы приложение узнавало об отвязке номера. */
+export interface SessionStatusMessage {
+  company_id: string;
+  status: SessionStatus;
+  phone_number: string | null;
+  last_error: string | null;
+  updated_at: string;
+}
+
+export interface SessionStatusPayload {
+  event: "session.status";
+  provider: "adpulse-gateway";
+  data: SessionStatusMessage[];
+  meta: { idempotency_key: string; timestamp: number };
+}
+
+export type WebhookEvent = WebhookPayload | SessionStatusPayload;

@@ -14,7 +14,7 @@ import { config } from "./config";
 import { logger } from "./logger";
 import { authDir, loadChats, mergeChats, saveChats, saveMeta, clearSession } from "./store";
 import { saveMediaBuffer } from "./media";
-import { deliverMessages } from "./webhook";
+import { deliverMessages, deliverSessionStatus } from "./webhook";
 import type { ChatInfo, InboundMessage, SessionMeta, SessionStatus } from "./types";
 
 const log = logger("session");
@@ -180,6 +180,7 @@ export class WhatsAppSession {
   }
 
   private async setStatus(status: SessionStatus, patch: Partial<SessionMeta> = {}): Promise<void> {
+    const previous = this.meta.status;
     this.meta = {
       ...this.meta,
       ...patch,
@@ -190,6 +191,20 @@ export class WhatsAppSession {
       await saveMeta(this.meta);
     } catch (err) {
       log.warn(`не удалось сохранить статус сессии ${this.companyId}`, err);
+    }
+
+    // Сообщаем приложению только о значимых переходах. «closed» не шлём:
+    // это транзитное состояние, мы сразу переподключаемся сами.
+    const isSignificant =
+      status === "open" || status === "logged_out" || status === "failed";
+    if (isSignificant && previous !== status) {
+      void deliverSessionStatus({
+        company_id: this.companyId,
+        status,
+        phone_number: this.meta.phoneNumber,
+        last_error: this.meta.lastError,
+        updated_at: this.meta.updatedAt,
+      }).catch((err) => log.warn(`статус сессии не доставлен ${this.companyId}`, err));
     }
   }
 
