@@ -22,11 +22,21 @@ export async function sendTelegramMessage(chatId: string, text: string): Promise
 
 export async function sendTelegramAlert(companyId: string, message: string): Promise<void> {
   const service = createServiceClient();
-  const { data } = await service
+  const { data, error } = await service
     .from("companies")
     .select("telegram_chat_id, telegram_connected")
     .eq("id", companyId)
     .single();
+
+  // Раньше ошибка запроса игнорировалась: если в базе нет колонок
+  // telegram_chat_id/telegram_connected, алерт молча не отправлялся
+  // и никто об этом не узнавал. Теперь это видно в логах.
+  if (error) {
+    console.error(
+      `[telegram] настройки компании ${companyId} недоступны: ${error.message}`
+    );
+    return;
+  }
 
   if (data?.telegram_connected && data?.telegram_chat_id) {
     await sendTelegramMessage(data.telegram_chat_id, message);
