@@ -174,7 +174,7 @@ npx vercel --prod --yes
 
 ```bash
 # в базе: дошли ли сообщения от шлюза
-select provider, count(*) from wazzup_messages group by 1;
+select provider, count(*) from whatsapp_messages group by 1;
 
 # какие чаты отмечены
 select chat_name, chat_jid, is_watched from whatsapp_chats where is_watched;
