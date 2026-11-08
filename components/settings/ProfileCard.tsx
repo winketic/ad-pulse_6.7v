@@ -82,7 +82,7 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
 
   if (step === "done") {
     return (
-      <div className="mt-2 p-3 rounded-lg bg-green-50 border border-green-200">
+      <div className="mt-2 p-3 rounded-lg bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30">
         <p className="text-xs text-green-800">
           Письмо с подтверждением отправлено на <strong>{confirmedEmail}</strong>. Перейдите по ссылке в письме, чтобы завершить смену.
         </p>
@@ -394,7 +394,7 @@ export default function ProfileCard({
 
       {/* Error */}
       {error && (
-        <div className="mx-5 mb-2 px-3 py-2 rounded-lg bg-red-50 text-xs text-red-600">
+        <div className="mx-5 mb-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-xs text-red-600">
           {error}
         </div>
       )}

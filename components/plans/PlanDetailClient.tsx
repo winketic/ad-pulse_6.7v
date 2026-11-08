@@ -289,7 +289,7 @@ function StatusChangePanel({ plan }: { plan: PlanDetail }) {
 
   if (confirm === "complete") {
     return (
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1">
           <p className="text-sm font-medium text-blue-900">
             Завершить план «{plan.name}»?
@@ -333,7 +333,7 @@ function StatusChangePanel({ plan }: { plan: PlanDetail }) {
           <button
             onClick={() => setConfirm(null)}
             disabled={isPending}
-            className="px-4 py-2 rounded-lg text-sm border border-red-300 text-red-600 hover:bg-red-100 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm border border-red-300 dark:border-red-500/30 text-red-600 hover:bg-red-100 transition-colors"
           >
             Назад
           </button>
@@ -354,7 +354,7 @@ function StatusChangePanel({ plan }: { plan: PlanDetail }) {
       <span className="text-sm text-[var(--muted)] mr-1">Изменить статус:</span>
       <button
         onClick={() => setConfirm("complete")}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-200 text-sm font-medium text-blue-400 hover:bg-blue-50 transition-colors"
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-500/30 text-sm font-medium text-blue-400 hover:bg-blue-50 dark:bg-blue-500/10 transition-colors"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -598,7 +598,7 @@ export default function PlanDetailClient({
       {/* ── Legend ─────────────────────────────────────── */}
       <div className="flex flex-wrap gap-4 mt-4 text-xs text-[var(--muted)]">
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-green-500/15 border border-green-500/20 border border-green-200 inline-block" />
+          <span className="w-3 h-3 rounded-full bg-green-500/15 border border-green-500/20 border border-green-200 dark:border-green-500/30 inline-block" />
           Отклонение ≤ 0 — экономия / в норме
         </span>
         <span className="flex items-center gap-1.5">

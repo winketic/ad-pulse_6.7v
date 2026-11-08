@@ -16,10 +16,10 @@ type Registration = {
 };
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  pending:  { bg: "bg-amber-100",  text: "text-amber-700",  label: "Ожидает" },
-  processing: { bg: "bg-blue-100", text: "text-blue-700", label: "Обрабатывается" },
-  approved: { bg: "bg-green-100",  text: "text-green-700",  label: "Одобрено" },
-  rejected: { bg: "bg-red-100",    text: "text-red-700",    label: "Отклонено" },
+  pending:  { bg: "bg-amber-100",  text: "text-amber-700 dark:text-amber-300",  label: "Ожидает" },
+  processing: { bg: "bg-blue-100", text: "text-blue-700 dark:text-blue-300", label: "Обрабатывается" },
+  approved: { bg: "bg-green-100",  text: "text-green-700 dark:text-green-300",  label: "Одобрено" },
+  rejected: { bg: "bg-red-100",    text: "text-red-700 dark:text-red-300",    label: "Отклонено" },
 };
 
 export default function AdminRegistrationsClient({ registrations }: { registrations: Registration[] }) {
@@ -71,7 +71,7 @@ export default function AdminRegistrationsClient({ registrations }: { registrati
       </div>
 
       {actionError && (
-        <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+        <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-sm text-red-700 dark:text-red-300">
           {actionError}
         </div>
       )}
@@ -119,7 +119,7 @@ export default function AdminRegistrationsClient({ registrations }: { registrati
                       <button
                         onClick={() => handleReject(reg.id)}
                         disabled={isLoading}
-                        className="min-h-11 px-3 rounded-lg border border-gray-300 text-xs text-gray-700 hover:bg-red-50 hover:text-red-700 hover:border-red-300 disabled:opacity-50 transition-colors"
+                        className="min-h-11 px-3 rounded-lg border border-gray-300 text-xs text-gray-700 hover:bg-red-50 dark:bg-red-500/10 hover:text-red-700 dark:text-red-300 hover:border-red-300 dark:border-red-500/30 disabled:opacity-50 transition-colors"
                       >
                         Отклонить
                       </button>

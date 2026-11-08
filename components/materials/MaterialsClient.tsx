@@ -185,7 +185,7 @@ function MaterialForm({
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-red-50 border border-red-200">
+        <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30">
           <svg
             className="w-4 h-4 text-red-500 shrink-0 mt-0.5"
             fill="currentColor"
@@ -197,7 +197,7 @@ function MaterialForm({
               clipRule="evenodd"
             />
           </svg>
-          <span className="text-sm text-red-700">{error}</span>
+          <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
         </div>
       )}
 
@@ -355,7 +355,7 @@ function RowActions({
       </button>
       <button
         onClick={() => setConfirming(true)}
-        className="p-1.5 rounded-lg text-[var(--muted)] hover:bg-red-50 hover:text-red-600 transition-colors"
+        className="p-1.5 rounded-lg text-[var(--muted)] hover:bg-red-50 dark:bg-red-500/10 hover:text-red-600 transition-colors"
         title="Удалить"
       >
         <svg
@@ -423,7 +423,7 @@ function MobileCard({
           </button>
           <button
             onClick={() => setConfirming(true)}
-            className="p-2 rounded-lg text-[var(--muted)] hover:bg-red-50 hover:text-red-600 transition-colors"
+            className="p-2 rounded-lg text-[var(--muted)] hover:bg-red-50 dark:bg-red-500/10 hover:text-red-600 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

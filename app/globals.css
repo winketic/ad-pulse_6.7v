@@ -32,19 +32,19 @@
   /* Text */
   --text: #18181b;
   --muted: #71717a;
-  --muted-2: #a1a1aa;
+  --muted-2: #6b6b74;   /* AA: контраст ≥4.5 на #f7f7f8 */
 
   /* Границы */
   --border: #e4e4e7;
   --border-strong: #d4d4d8;
 
   /* Status */
-  --success: #16a34a;
-  --success-bg: rgba(22, 163, 74, 0.1);
+  --success: #15803d;
+  --success-bg: rgba(21, 128, 61, 0.1);
   --danger: #dc2626;
   --danger-bg: rgba(220, 38, 38, 0.08);
-  --warning: #d97706;
-  --warning-bg: rgba(217, 119, 6, 0.1);
+  --warning: #b45309;
+  --warning-bg: rgba(180, 83, 9, 0.1);
   --info: #2563eb;
   --info-bg: rgba(37, 99, 235, 0.1);
 
@@ -79,6 +79,45 @@
   --card-hover: var(--surface-2);
   --background: var(--bg);
   --foreground: var(--text);
+}
+
+/* ── Тёмная тема ─────────────────────────────────────
+   Включается атрибутом data-theme="dark" на <html>.
+   Тот же синий акцент, но чуть светлее — на тёмном фоне
+   он должен читаться. Никакого неона: спокойный графит. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0f1115;
+  --surface-1: #161922;
+  --surface-2: #1c2029;
+  --surface-3: #242934;
+
+  --accent: #3b82f6;
+  --accent-hover: #2f6fe0;
+  --accent-active: #245cc4;
+  --accent-15: rgba(59, 130, 246, 0.16);
+  --accent-text: #ffffff;
+
+  --text: #e6e8ec;
+  --muted: #9aa0aa;
+  --muted-2: #8b909b;   /* AA на тёмном фоне */
+
+  --border: #262b35;
+  --border-strong: #333a47;
+
+  --success: #34d399;
+  --success-bg: rgba(52, 211, 153, 0.12);
+  --danger: #f87171;
+  --danger-bg: rgba(248, 113, 113, 0.12);
+  --warning: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.12);
+  --info: #60a5fa;
+  --info-bg: rgba(96, 165, 250, 0.12);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
 }
 
 html, body {

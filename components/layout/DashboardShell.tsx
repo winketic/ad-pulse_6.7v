@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Logo } from "@/components/Logo";
+import ThemeToggle from "@/components/ThemeToggle";
 import OnboardingTour from "@/components/OnboardingTour";
 import { canAccessCompanyPage } from "@/lib/auth/role-permissions";
 
@@ -251,6 +252,8 @@ export default function DashboardShell({
           {isCompanyAdmin ? "Выпуск" : "Движение"}
         </Link>
 
+        <ThemeToggle className="mr-1" />
+
         {/* User menu */}
         <div className="relative" ref={menuRef}>
           <button
@@ -348,6 +351,7 @@ export default function DashboardShell({
           <Logo size={28} />
           <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>AD Pulse</span>
           <div className="flex-1" />
+          <ThemeToggle />
           <button
             onClick={() => setMoreOpen(true)}
             className="p-2 rounded-lg transition-colors"

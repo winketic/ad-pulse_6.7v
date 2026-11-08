@@ -560,7 +560,7 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
   if (rows.length === 0) {
     return (
       <div className="py-10 text-center">
-        <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center mx-auto mb-2">
+        <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-500/10 flex items-center justify-center mx-auto mb-2">
           <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
@@ -1234,10 +1234,10 @@ export default function ReportsClient({
       {/* ── Legend ─────────────────────────────────────── */}
       <div className="flex flex-wrap gap-4 mt-4 text-xs text-[var(--muted)]">
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-green-500/15 border border-green-500/20 border border-green-200" /> Приход
+          <span className="w-2.5 h-2.5 rounded-sm bg-green-500/15 border border-green-500/20 border border-green-200 dark:border-green-500/30" /> Приход
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-blue-100 border border-blue-200" /> Возврат
+          <span className="w-2.5 h-2.5 rounded-sm bg-blue-100 border border-blue-200 dark:border-blue-500/30" /> Возврат
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-sm bg-red-100 border border-red-500/30" /> Расход

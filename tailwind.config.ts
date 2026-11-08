@@ -1,6 +1,10 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  // Тёмная тема включается атрибутом data-theme="dark" на <html>.
+  // Без этого dark: классы не работают и точечные светлые чипы
+  // (бейджи ролей, плашки ошибок) не адаптируются под тёмный фон.
+  darkMode: ["selector", '[data-theme="dark"]'],
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",

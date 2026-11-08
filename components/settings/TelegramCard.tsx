@@ -25,7 +25,7 @@ export default function TelegramCard({ companyId, telegramConnected, isAdmin }: 
         </div>
         <div className="ml-auto">
           {telegramConnected ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:text-green-300">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
               Подключён
             </span>

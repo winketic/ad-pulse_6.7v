@@ -178,12 +178,18 @@ export default async function TransactionsPage({
   if (whatsappTxIds.length > 0) {
     const { data: whatsappMsgs } = await supabase
       .from("whatsapp_messages")
-      .select("id, sender_phone")
+      .select("id, sender_phone, chat_name")
       .in("id", whatsappTxIds);
     for (const m of whatsappMsgs ?? []) {
-      if (m.sender_phone) {
-        whatsappMsgMap.set(m.id, phoneMap.get(m.sender_phone) ?? m.sender_phone);
-      }
+      // Показываем человеческое имя: сотрудник из профиля → название чата
+      // из WhatsApp → в крайнем случае «WhatsApp». Сырой номер/JID в колонке
+      // «кто» выглядел как поломка данных.
+      const chatName = typeof m.chat_name === "string" ? m.chat_name.trim() : "";
+      const name =
+        (m.sender_phone ? phoneMap.get(m.sender_phone) : undefined) ??
+        (chatName || undefined) ??
+        "WhatsApp";
+      whatsappMsgMap.set(m.id, name);
     }
   }
 

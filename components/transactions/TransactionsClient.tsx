@@ -550,7 +550,7 @@ function AddTransactionForm({
           Материал <span className="text-red-500">*</span>
         </label>
         {visibleMaterials.length === 0 ? (
-          <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200">
+          <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
             <svg
               className="w-4 h-4 text-amber-500 shrink-0"
               fill="currentColor"
@@ -562,7 +562,7 @@ function AddTransactionForm({
                 clipRule="evenodd"
               />
             </svg>
-            <p className="text-sm text-amber-700">
+            <p className="text-sm text-amber-700 dark:text-amber-300">
               {isProduction
                 ? "Нет материалов с заданными нормами расхода. Укажите норму бетона и арматуры в карточке материала."
                 : "Сначала добавьте материалы в справочник"}
@@ -811,7 +811,7 @@ function AddTransactionForm({
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-red-50 border border-red-200">
+        <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30">
           <svg
             className="w-4 h-4 text-red-500 shrink-0 mt-0.5"
             fill="currentColor"
@@ -823,7 +823,7 @@ function AddTransactionForm({
               clipRule="evenodd"
             />
           </svg>
-          <span className="text-sm text-red-700">{error}</span>
+          <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
         </div>
       )}
       </ModalBody>
@@ -1441,7 +1441,7 @@ export default function TransactionsClient({
                       </td>
                       <td className="px-4 text-[var(--text)]">{tx.material_name}</td>
                       <td className="px-4 text-xs text-[var(--muted)]">
-                        {tx.source === "whatsapp" && <span className="text-[#25D366] mr-1">WA</span>}
+                        {tx.source === "whatsapp" && <span className="text-[#0F7B42] mr-1">WA</span>}
                         {tx.creator_name}
                       </td>
                       <td className="px-4 text-xs text-[var(--muted)]">{tx.counterparty ?? "—"}</td>
@@ -1547,7 +1547,7 @@ export default function TransactionsClient({
                               внесено {new Date(tx.created_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                             </span>
                             <span className="ml-2">{tx.material_unit}</span>
-                            {tx.source === "whatsapp" && <span className="ml-2 text-[#25D366]">WhatsApp</span>}
+                            {tx.source === "whatsapp" && <span className="ml-2 text-[#0F7B42]">WhatsApp</span>}
                           </p>
                           <p className="text-xs text-[var(--muted)]">
                             Добавил: <span className="text-[var(--text)]">{tx.creator_name}</span>

@@ -17,10 +17,10 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
-  admin:     { bg: "bg-purple-50 border border-purple-200",  text: "text-purple-700"  },
-  manager:   { bg: "bg-blue-50 border border-blue-200",      text: "text-blue-700"    },
-  warehouse: { bg: "bg-amber-50 border border-amber-200",    text: "text-amber-700"   },
-  workshop:  { bg: "bg-emerald-50 border border-emerald-200",text: "text-emerald-700" },
+  admin:     { bg: "bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/30",  text: "text-purple-700 dark:text-purple-300"  },
+  manager:   { bg: "bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30",      text: "text-blue-700 dark:text-blue-300"    },
+  warehouse: { bg: "bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30",    text: "text-amber-700 dark:text-amber-300"   },
+  workshop:  { bg: "bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30",text: "text-emerald-700 dark:text-emerald-300" },
 };
 
 const VALID_TABS: TabId[] = ["profile", "company", "team"];

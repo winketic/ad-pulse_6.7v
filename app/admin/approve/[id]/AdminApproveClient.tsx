@@ -69,7 +69,7 @@ export default function AdminApproveClient({ registration: reg }: { registration
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           {!isPending && (
-            <div className="mb-5 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-700">
+            <div className="mb-5 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-sm text-amber-700 dark:text-amber-300">
               Эта заявка уже {reg.status === "approved" ? "одобрена" : "отклонена"}.
             </div>
           )}
@@ -97,7 +97,7 @@ export default function AdminApproveClient({ registration: reg }: { registration
           </div>
 
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+            <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-sm text-red-700 dark:text-red-300">
               {error}
             </div>
           )}
@@ -107,7 +107,7 @@ export default function AdminApproveClient({ registration: reg }: { registration
               <button
                 onClick={handleReject}
                 disabled={loading}
-                className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 disabled:opacity-50 transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:bg-red-50 dark:bg-red-500/10 hover:text-red-600 hover:border-red-200 dark:border-red-500/30 disabled:opacity-50 transition-colors"
               >
                 Отклонить
               </button>
