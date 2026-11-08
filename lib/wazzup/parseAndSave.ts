@@ -126,6 +126,9 @@ export async function parseAndSave(messageId: string): Promise<void> {
 
   // Unit conversion: GPT may return "тонна" while material.unit is "кг"
   let finalQuantity = result.quantity ?? 0;
+  // Единица, в которой движение реально запишется: карточка проверки должна
+  // показывать её, а не формулировку из сообщения («80 тонн» → 80 000 кг).
+  let finalUnit = result.unit ?? null;
   let unitMismatch = false;
   if (allFound) {
     const { data: matInfo } = await service
@@ -139,6 +142,7 @@ export async function parseAndSave(messageId: string): Promise<void> {
       const converted = convertUnits(finalQuantity, gptUnit, matUnit);
       if (converted !== null) {
         finalQuantity = converted;
+        finalUnit = matUnit;
       } else {
         console.warn(`[parseAndSave] unknown unit conversion: ${gptUnit} → ${matUnit}, setting needs_review`);
         unitMismatch = true;
@@ -235,6 +239,8 @@ export async function parseAndSave(messageId: string): Promise<void> {
       needs_review: needsReview,
       parse_result: {
         ...result,
+        quantity: finalQuantity,
+        unit: finalUnit,
         transaction_created: transactionCreated,
         media_unreadable: mediaUnreadable,
         possible_duplicate: possibleDuplicate,
