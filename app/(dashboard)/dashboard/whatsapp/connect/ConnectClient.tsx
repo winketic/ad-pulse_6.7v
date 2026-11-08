@@ -75,6 +75,8 @@ export default function ConnectClient() {
   const [chats, setChats] = useState<ChatOption[]>([]);
   const [query, setQuery] = useState("");
   const [onlyGroups, setOnlyGroups] = useState(false);
+  // По умолчанию скрываем чаты без переписки: у реальных аккаунтов их сотни.
+  const [hideEmpty, setHideEmpty] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [gatewayError, setGatewayError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -202,6 +204,9 @@ export default function ConnectClient() {
     const q = query.trim().toLowerCase();
     const matched = chats.filter((chat) => {
       if (onlyGroups && !chat.isGroup) return false;
+      // Отмеченный чат показываем всегда, даже без сообщений — иначе
+      // клиент не найдёт то, что уже выбрал.
+      if (hideEmpty && !chat.isWatched && !chat.lastMessageAt) return false;
       if (!q) return true;
       return (
         chat.name.toLowerCase().includes(q) || (chat.phone ?? "").includes(q)
@@ -213,7 +218,7 @@ export default function ConnectClient() {
       if (bt !== at) return bt - at;
       return a.name.localeCompare(b.name, "ru");
     });
-  }, [chats, query, onlyGroups]);
+  }, [chats, query, onlyGroups, hideEmpty]);
 
   const RENDER_LIMIT = 100;
   const shownChats = showAll ? visibleChats : visibleChats.slice(0, RENDER_LIMIT);
@@ -361,6 +366,18 @@ export default function ConnectClient() {
                   className="h-4 w-4 accent-[#00f5c4]"
                 />
                 только группы
+              </label>
+              <label
+                className="flex shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm"
+                style={{ border: "1px solid var(--border)", color: "var(--muted)" }}
+              >
+                <input
+                  type="checkbox"
+                  checked={hideEmpty}
+                  onChange={(e) => setHideEmpty(e.target.checked)}
+                  className="h-4 w-4 accent-[#00f5c4]"
+                />
+                с сообщениями
               </label>
             </div>
           )}
