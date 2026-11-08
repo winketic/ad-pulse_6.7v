@@ -77,8 +77,15 @@ export async function GET() {
     }
   }
 
-  if (gatewayChats.length > 0) {
-    const rows = gatewayChats.map((chat) => ({
+  // Пишем в базу только то, что имеет смысл хранить: отмеченные чаты и чаты
+  // с перепиской. Иначе каждое открытие страницы делало 295 upsert-ов —
+  // у реального аккаунта это лишние секунды и нагрузка на базу.
+  const toPersist = gatewayChats.filter(
+    (chat) => chat.lastMessageAt !== null || saved.get(chat.jid)?.isWatched
+  );
+
+  if (toPersist.length > 0) {
+    const rows = toPersist.map((chat) => ({
       company_id: companyId,
       chat_jid: chat.jid,
       chat_name: chat.name || "",
