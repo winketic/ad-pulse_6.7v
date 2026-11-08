@@ -14,6 +14,8 @@ interface InboundMessage {
   chat_id: string;
   chat_name: string;
   chat_type: string;
+  /** Направление: снабженец пишет со своего номера — это outbound, но учитывать нужно. */
+  direction?: "inbound" | "outbound";
   sender_name: string | null;
   sender_phone: string | null;
   text: string | null;
@@ -209,7 +211,7 @@ async function processOne(service: ServiceClient, msg: InboundMessage): Promise<
       company_id: msg.company_id,
       message_id: msg.message_id,
       channel_id: "whatsapp-gateway",
-      direction: "inbound",
+      direction: msg.direction === "outbound" ? "outbound" : "inbound",
       sender_phone: msg.sender_phone,
       raw_text: msg.text,
       content_type: VALID_CONTENT_TYPES.has(msg.content_type)

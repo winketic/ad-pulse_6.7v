@@ -8,6 +8,7 @@ import makeWASocket, {
   type proto,
   type Chat,
   type Contact,
+  type GroupMetadata,
 } from "baileys";
 import QRCode from "qrcode";
 import { config } from "./config";
@@ -223,6 +224,10 @@ export class WhatsAppSession {
         printQRInTerminal: false,
         browser: Browsers.ubuntu("Chrome"),
         syncFullHistory: config.syncHistory,
+        // Инициализация запросов иногда не укладывается в дефолтные 60 с на
+        // аккаунтах с большой историей — из-за таймаута не доезжали контакты.
+        defaultQueryTimeoutMs: 120_000,
+        connectTimeoutMs: 60_000,
         markOnlineOnConnect: false,
         getMessage: async () => undefined,
       });
@@ -246,6 +251,8 @@ export class WhatsAppSession {
       });
       sock.ev.on("chats.upsert", (chats) => this.onChatsUpsert(chats, false));
       sock.ev.on("chats.update", (chats) => this.onChatsUpsert(chats, true));
+      sock.ev.on("groups.upsert", (groups) => this.onGroups(groups));
+      sock.ev.on("groups.update", (groups) => this.onGroups(groups));
       sock.ev.on("contacts.upsert", (contacts) => this.onContacts(contacts));
       sock.ev.on("contacts.update", (contacts) => this.onContacts(contacts));
 
@@ -287,6 +294,10 @@ export class WhatsAppSession {
         lastError: null,
       });
       log.info(`сессия ${this.companyId}: подключено как ${phone ?? "?"}`);
+      // История чатов не содержит названий групп — запрашиваем метаданные явно.
+      void this.syncGroupNames().catch((err) =>
+        log.warn(`названия групп не получены ${this.companyId}`, err)
+      );
       return;
     }
 
@@ -377,12 +388,88 @@ export class WhatsAppSession {
   private async onHistorySync(event: {
     chats?: Array<Partial<Chat>>;
     contacts?: Array<Partial<Contact>>;
+    messages?: proto.IWebMessageInfo[];
   }): Promise<void> {
-    this.onContacts(event.contacts ?? []);
+    const contacts = event.contacts ?? [];
+    this.onContacts(contacts);
+    this.onContactsFromHistoryMessages(event.messages ?? []);
     this.onChatsUpsert(event.chats ?? [], false);
     log.info(
-      `сессия ${this.companyId}: история синхронизирована, чатов всего ${this.chats.size}`
+      `сессия ${this.companyId}: история — контактов ${contacts.length}, ` +
+        `сообщений ${event.messages?.length ?? 0}, чатов всего ${this.chats.size}`
     );
+  }
+
+  /** Имя личного чата можно взять из pushName любого сообщения этого чата. */
+  private onContactsFromHistoryMessages(messages: proto.IWebMessageInfo[]): void {
+    const incoming: ChatInfo[] = [];
+    for (const message of messages) {
+      const jid = message.key?.remoteJid;
+      if (!jid || isIgnoredJid(jid) || isGroupJid(jid)) continue;
+      const name = (message.pushName ?? "").trim();
+      if (!name) continue;
+
+      const prev = this.chats.get(jid);
+      // Не перетираем уже известное человеческое имя номером телефона.
+      if (prev && prev.name !== this.fallbackName(jid)) continue;
+
+      incoming.push({
+        jid,
+        name,
+        isGroup: false,
+        phone: jidToPhone(jid),
+        lastMessageAt: prev?.lastMessageAt ?? null,
+        unreadCount: prev?.unreadCount ?? 0,
+      });
+    }
+    if (incoming.length > 0) this.applyChats(incoming);
+  }
+
+  private onGroups(groups: Array<Partial<GroupMetadata>>): void {
+    const incoming: ChatInfo[] = [];
+    for (const group of groups) {
+      const jid = group.id ?? "";
+      const name = (group.subject ?? "").trim();
+      if (!jid || !name) continue;
+      const prev = this.chats.get(jid);
+      incoming.push({
+        jid,
+        name,
+        isGroup: true,
+        phone: null,
+        lastMessageAt: prev?.lastMessageAt ?? null,
+        unreadCount: prev?.unreadCount ?? 0,
+      });
+    }
+    if (incoming.length > 0) this.applyChats(incoming);
+  }
+
+  /**
+   * Названия групп не приходят с историей чатов — их нужно запросить отдельно.
+   * Без этого в списке висели бы «Группа 120363335974151403».
+   */
+  private async syncGroupNames(): Promise<void> {
+    if (!this.sock) return;
+    const all = await this.sock.groupFetchAllParticipating();
+    const incoming: ChatInfo[] = [];
+    for (const meta of Object.values(all)) {
+      const jid = meta.id ?? "";
+      const name = (meta.subject ?? "").trim();
+      if (!jid || !name) continue;
+      const prev = this.chats.get(jid);
+      incoming.push({
+        jid,
+        name,
+        isGroup: true,
+        phone: null,
+        lastMessageAt: prev?.lastMessageAt ?? null,
+        unreadCount: prev?.unreadCount ?? 0,
+      });
+    }
+    if (incoming.length > 0) {
+      this.applyChats(incoming);
+      log.info(`сессия ${this.companyId}: получены названия групп — ${incoming.length}`);
+    }
   }
 
   private applyChats(incoming: ChatInfo[]): void {
@@ -439,9 +526,18 @@ export class WhatsAppSession {
     const outbound: InboundMessage[] = [];
 
     for (const raw of event.messages) {
+      const jid = raw.key?.remoteJid ?? "?";
+      const fromMe = Boolean(raw.key?.fromMe);
       try {
         const message = await this.normalize(raw);
-        if (message) outbound.push(message);
+        if (!message) {
+          log.info(`сообщение пропущено chat=${jid} fromMe=${fromMe}`);
+          continue;
+        }
+        log.info(
+          `сообщение chat="${message.chat_name}" fromMe=${fromMe} тип=${message.content_type}`
+        );
+        outbound.push(message);
       } catch (err) {
         log.error(`не удалось разобрать сообщение ${this.companyId}`, err);
       }
@@ -453,8 +549,9 @@ export class WhatsAppSession {
   private async normalize(raw: proto.IWebMessageInfo): Promise<InboundMessage | null> {
     const key = raw.key;
     if (!key?.remoteJid || isIgnoredJid(key.remoteJid)) return null;
-    // Нас интересует только входящий поток: исходящие клиент пишет сам.
-    if (key.fromMe) return null;
+    // Раньше исходящие отбрасывались. Но в этом продукте снабженец пишет
+    // в группы именно со «своего» привязанного номера — если его сообщения
+    // не учитывать, половина операций теряется. Направление сохраняем. 
     // Групповые сообщения вне watched-чатов отсекает приложение — здесь не фильтруем,
     // иначе клиент не увидит новый чат в списке выбора.
 
@@ -524,6 +621,7 @@ export class WhatsAppSession {
       chat_id: jid,
       chat_name: chatName,
       chat_type: isGroup ? "whatsgroup" : "whatsapp",
+      direction: key.fromMe ? "outbound" : "inbound",
       sender_name: pushName,
       sender_phone: jidToPhone(senderJid),
       text: content.text,

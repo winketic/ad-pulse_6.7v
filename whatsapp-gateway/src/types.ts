@@ -42,6 +42,7 @@ export interface InboundMessage {
   chat_id: string;
   chat_name: string;
   chat_type: "whatsapp" | "whatsgroup";
+  direction: "inbound" | "outbound";
   sender_name: string | null;
   sender_phone: string | null;
   text: string | null;
