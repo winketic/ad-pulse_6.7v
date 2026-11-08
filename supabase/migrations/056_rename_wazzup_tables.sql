@@ -20,28 +20,51 @@ begin
   end if;
 end $$;
 
--- Совместимость для старого деплоя: пока новая версия не выкачена, приложение
--- читает и пишет в прежнее имя. Простой view в Postgres обновляемый.
-create or replace view public.wazzup_messages as
-  select * from public.whatsapp_messages;
-
--- ВАЖНО: без security_invoker view выполняется от владельца и обходит RLS —
--- тогда любая компания увидела бы чужие сообщения. Включаем права вызывающего.
-alter view public.wazzup_messages set (security_invoker = on);
-
--- Права на view такие же, как были у таблицы (RLS всё равно применяется).
-grant select, insert, update on public.wazzup_messages to authenticated;
-grant select, insert, update on public.wazzup_messages to service_role;
+-- Совместимость для старого деплоя (нужна только в окне до деплоя нового кода).
+-- После деплоя view удаляется миграцией 058. Здесь он создаётся только если
+-- таблица уже переименована и view ещё нет.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.tables
+    where table_schema = 'public' and table_name = 'whatsapp_messages'
+      and table_type = 'BASE TABLE'
+  ) and not exists (
+    select 1 from information_schema.views
+    where table_schema = 'public' and table_name = 'wazzup_messages'
+  ) then
+    execute 'create view public.wazzup_messages as select * from public.whatsapp_messages';
+    -- Без security_invoker view обходит RLS: анонимный запрос читал бы
+    -- сообщения всех компаний. Проверено на практике — не повторять.
+    execute 'alter view public.wazzup_messages set (security_invoker = on)';
+    execute 'grant select, insert, update on public.wazzup_messages to authenticated';
+    execute 'grant select, insert, update on public.wazzup_messages to service_role';
+    raise notice 'совместимый view wazzup_messages создан';
+  else
+    raise notice 'view не нужен или уже существует — шаг пропущен';
+  end if;
+end $$;
 
 -- ─── 2. Ссылка из транзакций на сообщение ────────────────────────────────────
 alter table public.material_transactions
   add column if not exists whatsapp_message_id uuid
   references public.whatsapp_messages(id) on delete set null;
 
-update public.material_transactions
-   set whatsapp_message_id = wazzup_message_id
- where whatsapp_message_id is null
-   and wazzup_message_id is not null;
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'material_transactions'
+      and column_name = 'wazzup_message_id'
+  ) then
+    execute 'update public.material_transactions
+                set whatsapp_message_id = wazzup_message_id
+              where whatsapp_message_id is null and wazzup_message_id is not null';
+    raise notice 'значения whatsapp_message_id перенесены';
+  else
+    raise notice 'старой колонки нет — перенос не нужен';
+  end if;
+end $$;
 
 create index if not exists idx_mat_tx_whatsapp_msg
   on public.material_transactions(whatsapp_message_id)
@@ -49,21 +72,32 @@ create index if not exists idx_mat_tx_whatsapp_msg
 
 -- Пока старый деплой пишет в wazzup_message_id, а новый — в whatsapp_message_id,
 -- держим обе колонки одинаковыми.
-create or replace function public.sync_tx_whatsapp_message_id()
-returns trigger
-language plpgsql
-as $$
+do $$
 begin
-  new.whatsapp_message_id := coalesce(new.whatsapp_message_id, new.wazzup_message_id);
-  new.wazzup_message_id  := coalesce(new.wazzup_message_id, new.whatsapp_message_id);
-  return new;
-end;
-$$;
-
-drop trigger if exists material_transactions_sync_message_id on public.material_transactions;
-create trigger material_transactions_sync_message_id
-  before insert or update on public.material_transactions
-  for each row execute function public.sync_tx_whatsapp_message_id();
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'material_transactions'
+      and column_name = 'wazzup_message_id'
+  ) then
+    execute $fn$
+      create or replace function public.sync_tx_whatsapp_message_id()
+      returns trigger language plpgsql as $body$
+      begin
+        new.whatsapp_message_id := coalesce(new.whatsapp_message_id, new.wazzup_message_id);
+        new.wazzup_message_id  := coalesce(new.wazzup_message_id, new.whatsapp_message_id);
+        return new;
+      end;
+      $body$;
+    $fn$;
+    execute 'drop trigger if exists material_transactions_sync_message_id on public.material_transactions';
+    execute 'create trigger material_transactions_sync_message_id
+               before insert or update on public.material_transactions
+               for each row execute function public.sync_tx_whatsapp_message_id()';
+    raise notice 'триггер синхронизации колонок создан';
+  else
+    raise notice 'старой колонки нет — триггер не нужен';
+  end if;
+end $$;
 
 -- ─── 3. Проверка ─────────────────────────────────────────────────────────────
 -- select table_name, table_type from information_schema.tables
