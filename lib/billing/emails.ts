@@ -80,6 +80,7 @@ export async function sendInvoiceEmail(params: {
         Действует до ${invoice.due_at ? new Date(invoice.due_at).toLocaleDateString("ru-RU") : "—"}.
         После оплаты подписка активируется автоматически.
       </p>
+      ${features.length ? `<p style="margin:16px 0 0;font-size:13px;font-weight:600;color:#111827;">Что входит в тариф</p>` : ""}
       ${featuresHtml}
       ${payLink}
       ${requisites()}

@@ -48,7 +48,7 @@ create table if not exists public.plan_offers (
 insert into public.plan_offers (code, name, monthly_price, wa_numbers, wa_addon_price, summary, sort_order)
 values
   ('trial',   'Пилот', 0,     0, 0,     '30 дней бесплатно, все функции', 0),
-  ('start',   'Старт', 14900, 0, 14900, '1 склад, учёт, планы, отчёты, Telegram-алерты', 1),
+  ('start',   'Старт', 14900, 0, 14900, '1 склад, учёт, планы, отчёты', 1),
   ('plant',   'Завод', 29900, 1, 0,     'До 3 цехов, WhatsApp включён, все отчёты', 2),
   ('network', 'Сеть',  54900, 2, 0,     'Без лимита цехов, 2 WhatsApp-номера, приоритетная поддержка', 3)
 on conflict (code) do update set

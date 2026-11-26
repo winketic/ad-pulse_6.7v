@@ -102,7 +102,7 @@ export const PLAN_FEATURES: Record<string, string[]> = {
     "Импорт из Excel",
     "Отчёты и выгрузка в Excel",
     "4 роли и аудит изменений",
-    "Telegram-алерты по остаткам",
+    "Мобильная версия и поддержка",
   ],
   plant: [
     "Всё из «Старт»",
