@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Документация — AD Pulse</title>
+<meta name="description" content="Как работает AD Pulse: регистрация, материалы, движение, планы, отчёты, роли, WhatsApp и настройки.">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="stylesheet" href="assets/styles.css">
+<script>try{var t=localStorage.getItem('adpulse-theme');document.documentElement.dataset.theme=t==='dark'?'dark':'light';}catch(e){document.documentElement.dataset.theme='light';}</script>
+</head>
+<body>
+<header class="header">
+  <div class="container header-inner">
+    <a class="brand" href="index.html"><img src="logo.svg" alt="AD Pulse"><span>AD Pulse</span></a>
+    <nav class="nav">
+      <a href="index.html#features">Возможности</a>
+      <a href="index.html#pricing">Тарифы</a>
+      <a href="docs.html" class="active">Документация</a>
+      <a href="security.html">Безопасность</a>
+      <a href="support.html">Поддержка</a>
+    </nav>
+    <div class="header-actions">
+      <button class="icon-btn" data-theme-toggle aria-label="Тёмная тема">◐</button>
+      <a class="btn btn-ghost btn-sm login-link" href="https://pulse.altaidynamics.kz/login">Войти</a>
+      <a class="btn btn-primary btn-sm" href="https://pulse.altaidynamics.kz/register">Попробовать</a>
+      <button class="icon-btn menu-btn" data-menu-toggle aria-label="Меню">☰</button>
+    </div>
+  </div>
+</header>
+
+<div class="container docs-layout">
+  <aside class="docs-side">
+    <div class="group">Начало</div>
+    <a href="#start">Регистрация</a>
+    <a href="#onboarding">Первая настройка</a>
+    <div class="group">Учёт</div>
+    <a href="#materials">Материалы</a>
+    <a href="#transactions">Движение</a>
+    <a href="#plans">Производственные планы</a>
+    <a href="#warehouse">Склад и остатки</a>
+    <a href="#reports">Отчёты</a>
+    <div class="group">Компания</div>
+    <a href="#roles">Роли</a>
+    <a href="#whatsapp">WhatsApp</a>
+    <a href="#settings">Настройки</a>
+    <a href="#billing">Оплата</a>
+    <a href="#security">Безопасность</a>
+  </aside>
+
+  <main class="docs-content">
+    <h1 style="font-size:34px;margin:0 0 6px">Документация</h1>
+    <p style="margin:0;color:var(--muted)">Всё, что нужно, чтобы вести учёт материалов в AD Pulse.</p>
+    <div class="translate">
+      <span>Перевести страницу:</span>
+      <div id="google_translate_element"></div>
+    </div>
+
+    <h2 id="start">Регистрация</h2>
+    <p>Откройте <a href="https://pulse.altaidynamics.kz/register">pulse.altaidynamics.kz/register</a> и заполните:</p>
+    <ul>
+      <li>название компании;</li>
+      <li>ваше имя;</li>
+      <li>email и пароль от 8 символов;</li>
+      <li>телефон, если хотите получать звонки.</li>
+    </ul>
+    <p>На почту придёт код из 6 цифр. Введите его на той же странице: почта подтвердится, компания и пилот на 30 дней создадутся автоматически. Пароль меняется на странице <a href="https://pulse.altaidynamics.kz/forgot-password">сброса пароля</a>.</p>
+    <div class="note">Если код не пришёл, проверьте «Спам» и нажмите «Отправить код ещё раз». Новый код можно запросить не чаще раза в минуту.</div>
+
+    <h2 id="onboarding">Первая настройка</h2>
+    <p>После подтверждения почты система предложит три шага: добавить материалы, подключить WhatsApp и пригласить команду. Каждый шаг можно пропустить и вернуться позже в настройки.</p>
+
+    <h2 id="materials">Материалы</h2>
+    <p>Раздел «Материалы» — справочник того, что вы учитываете: цемент, арматура, проволока, готовая продукция. Для каждого материала задаются:</p>
+    <ul>
+      <li>название и единица измерения (кг, тонна, шт, м³);</li>
+      <li>норма расхода на единицу продукции, если считаете перерасход;</li>
+      <li>какой металл списывать при выпуске: арматура или проволока;</li>
+      <li>коэффициент кг → метры, если закупаете в килограммах, а храните в метрах;</li>
+      <li>минимальный остаток для предупреждения.</li>
+    </ul>
+
+    <h2 id="transactions">Движение</h2>
+    <p>Четыре типа операций:</p>
+    <ul>
+      <li><b>Приход</b> — материал привезли.</li>
+      <li><b>Расход</b> — материал ушёл в цех или на объект.</li>
+      <li><b>Брак</b> — с обязательной причиной.</li>
+      <li><b>Возврат</b> — материал вернули на склад.</li>
+    </ul>
+    <p>В операции можно указать контрагента и цену за единицу. Если материал пришёл из WhatsApp, операция помечается источником «WhatsApp», а не «вручную».</p>
+
+    <h2 id="plans">Производственные планы</h2>
+    <p>План задаёт, сколько продукции нужно выпустить и какие материалы на это пойдут. Система сравнивает план и факт, показывает отклонения и перерасход против нормы. План можно назначить исполнителю.</p>
+
+    <h2 id="warehouse">Склад и остатки</h2>
+    <p>Остаток считается по операциям: приход минус расход, брак и возвраты. Склад показывает текущие остатки и материалы ниже порога. Исправления оформляются отдельной операцией, поэтому история не теряется.</p>
+
+    <h2 id="reports">Отчёты</h2>
+    <p>Отчёт собирается за период: движение по материалам, остатки, план и факт. Кнопка экспорта выгружает таблицу в Excel. Отчёт подходит для директора и бухгалтерии.</p>
+
+    <h2 id="roles">Роли</h2>
+    <ul>
+      <li><b>Администратор</b> — всё: материалы, операции, планы, отчёты, команда, настройки, оплата.</li>
+      <li><b>Менеджер</b> — планы, отчёты, материалы и операции.</li>
+      <li><b>Кладовщик</b> — склад, приход, расход, брак, возврат.</li>
+      <li><b>Мастер цеха</b> — расход и планы своего цеха.</li>
+    </ul>
+    <p>Пользователей можно приглашать по email. Приглашённый задаёт имя и пароль и попадает в компанию с выбранной ролью.</p>
+
+    <h2 id="whatsapp">WhatsApp</h2>
+    <p>AD Pulse подключает отдельный номер через собственный шлюз. В настройках откройте «WhatsApp», отсканируйте QR и дождитесь статуса «Подключено».</p>
+    <p>Затем отметьте чаты, из которых нужно вести учёт. Новый чат появляется выключенным: случайные переписки не попадут в базу.</p>
+    <p>Текст, фото накладной и голосовые сообщения разбираются автоматически. Если данных не хватает, сообщение ждёт подтверждения на странице WhatsApp. Всё, что прошло проверку, становится операцией.</p>
+    <div class="note">Шлюз неофициальный. WhatsApp может ограничить такой номер, поэтому подключайте выделенный номер, а не основной канал снабжения.</div>
+
+    <h2 id="settings">Настройки</h2>
+    <p>В «Настройках» меняются название компании, профиль, команда и роли, пороги остатков, подключение WhatsApp. Вкладка «Безопасность» показывает устройства и IP входов; устройство можно забыть, и следующий вход с него снова станет новым.</p>
+
+    <h2 id="billing">Оплата</h2>
+    <p>Тарифы: Пилот 30 дней бесплатно, Старт 14 900 ₸, Завод 29 900 ₸, Сеть 54 900 ₸ в месяц. WhatsApp для «Старта» — +14 900 ₸. Годовая оплата дешевле на 20%.</p>
+    <p>В разделе «Оплата» выбирается тариф и выставляется счёт. Счёт приходит на email компании. После оплаты период продлевается автоматически. Если период закончился, данные остаются доступны для чтения, ввод блокируется через 7 дней.</p>
+
+    <h2 id="security">Безопасность</h2>
+    <p>Вход с нового устройства или IP сопровождается письмом со ссылкой на страницу <a href="security.html">Безопасность</a>. Там описано, как сменить пароль, проверить устройства и написать в поддержку.</p>
+    <p>Пароль можно сбросить кодом из письма на странице <a href="https://pulse.altaidynamics.kz/forgot-password">восстановления</a>. Код действует 15 минут.</p>
+
+    <p style="margin-top:36px"><a class="btn btn-primary" href="https://pulse.altaidynamics.kz/register">Создать аккаунт</a></p>
+  </main>
+</div>
+
+<footer class="footer">
+  <div class="container footer-grid">
+    <div>© 2026 Altai Dynamics</div>
+    <div class="links">
+      <a href="index.html">Главная</a>
+      <a href="security.html">Безопасность</a>
+      <a href="support.html">Поддержка</a>
+      <a href="mailto:info@altaidynamics.kz">info@altaidynamics.kz</a>
+    </div>
+  </div>
+</footer>
+<script src="assets/app.js"></script>
+</body>
+</html>

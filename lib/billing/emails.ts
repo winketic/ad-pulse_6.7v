@@ -164,6 +164,7 @@ export async function sendNewDeviceEmail(params: {
   at: Date;
 }): Promise<void> {
   const { to, ip, userAgent, at } = params;
+  const landingUrl = (process.env.NEXT_PUBLIC_LANDING_URL ?? "https://altaidynamics.kz").replace(/\/$/, "");
   await sendEmail({
     to,
     subject: "Новый вход в AD Pulse",
@@ -176,8 +177,13 @@ export async function sendNewDeviceEmail(params: {
         IP: ${escapeHtml(ip ?? "не определён")}<br>
         Устройство: ${escapeHtml((userAgent ?? "не определено").slice(0, 180))}
       </p>
-      <p style="margin:16px 0 0;font-size:13px;color:#374151;">
-        Если это были не вы, смените пароль и напишите в поддержку из кабинета.
+      <p style="margin:18px 0 0;">
+        <a href="${landingUrl}/security" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:600;">
+          Проверить безопасность аккаунта
+        </a>
+      </p>
+      <p style="margin:14px 0 0;font-size:13px;color:#374151;">
+        На странице можно сменить пароль, посмотреть устройства и написать в поддержку.
       </p>`,
     }),
   });
