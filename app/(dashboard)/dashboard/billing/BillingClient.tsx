@@ -271,10 +271,20 @@ export default function BillingClient({
                 }}
               >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="font-semibold text-[var(--text)]">{item.name}</span>
+                  <span className="flex items-center gap-2 font-semibold text-[var(--text)]">
+                    {item.name}
+                    {item.code === "plant" && (
+                      <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ background: "var(--accent-15)", color: "var(--accent)" }}>
+                        Популярный
+                      </span>
+                    )}
+                  </span>
                   <span className="text-sm font-semibold text-[var(--text)]">{formatTenge(monthly)}/мес</span>
                 </div>
                 <p className="text-xs text-[var(--muted)] mt-1">{item.summary}</p>
+                <p className="text-xs text-[var(--muted)] mt-1">
+                  {item.code === "start" ? "1 склад, пользователи без лимита" : item.code === "plant" ? "до 3 цехов, 1 WhatsApp-номер" : "цеха без лимита, 2 WhatsApp-номера"}
+                </p>
                 <ul className="mt-2 space-y-0.5">
                   {planFeatures(item.code).map((feature) => (
                     <li key={feature} className="text-xs text-[var(--muted)]">· {feature}</li>
@@ -319,6 +329,82 @@ export default function BillingClient({
             {created.emailSent ? " Копия отправлена на email." : " Письмо не ушло — сохраните номер счёта."}
           </div>
         )}
+      </section>
+
+
+      <section className="rounded-2xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <h2 className="text-base font-semibold text-[var(--text)] mb-1">Что входит в тарифы</h2>
+        <p className="text-xs text-[var(--muted)] mb-3">Разница в цене — это модули и масштаб. Базовый учёт есть везде.</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs" style={{ borderCollapse: "collapse", minWidth: 560 }}>
+            <thead>
+              <tr>
+                <th className="text-left p-2" style={{ color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>Возможность</th>
+                {purchasable.map((item) => (
+                  <th key={item.code} className="text-center p-2" style={{ color: "var(--text)", borderBottom: "1px solid var(--border)" }}>{item.name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { label: "Учёт, движение, остатки", codes: ["start", "plant", "network"] },
+                { label: "Отчёты и Excel", codes: ["start", "plant", "network"] },
+                { label: "Роли и аудит", codes: ["start", "plant", "network"] },
+                { label: "Нормы ГОСТ и перерасход", codes: ["plant", "network"] },
+                { label: "Брак с причиной и возвраты", codes: ["start", "plant", "network"] },
+                { label: "WhatsApp-канал", codes: ["plant", "network"] },
+                { label: "Несколько цехов", codes: ["plant", "network"] },
+                { label: "Сезонное планирование", codes: ["network"] },
+              ].map((row) => (
+                <tr key={row.label}>
+                  <td className="p-2" style={{ color: "var(--muted)", borderBottom: "1px solid var(--border)" }}>{row.label}</td>
+                  {purchasable.map((item) => (
+                    <td key={item.code} className="p-2 text-center" style={{ color: "var(--text)", borderBottom: "1px solid var(--border)" }}>
+                      {row.codes.includes(item.code) ? "✓" : "—"}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <div className="rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+            <p className="text-xs font-semibold text-[var(--text)]">За что платите в «Завод»</p>
+            <p className="text-xs text-[var(--muted)] mt-1">Нормы ГОСТ, перерасход, WhatsApp и до 3 цехов. Видно, где теряются материалы.</p>
+          </div>
+          <div className="rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+            <p className="text-xs font-semibold text-[var(--text)]">За что платите в «Сеть»</p>
+            <p className="text-xs text-[var(--muted)] mt-1">Цеха без лимита и 2 WhatsApp-номера. Площадки в одной системе.</p>
+          </div>
+          <div className="rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+            <p className="text-xs font-semibold text-[var(--text)]">Годовая оплата</p>
+            <p className="text-xs text-[var(--muted)] mt-1">12 месяцев по цене 10: экономия 20% на каждом тарифе.</p>
+          </div>
+        </div>
+        <div className="mt-4 text-xs text-[var(--muted)] space-y-1">
+          <p>Дополнительно: WhatsApp для «Старта» +14 900 ₸/мес, внедрение и перенос справочников 49 900 ₸ разово (бесплатно при годовой оплате).</p>
+          <p>Пользователи не ограничены. Счёт фиксирует состав и сумму до оплаты.</p>
+        </div>
+      </section>
+
+      <section className="rounded-2xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <h2 className="text-base font-semibold text-[var(--text)] mb-3">Вопросы по оплате</h2>
+        <div className="space-y-2 text-sm">
+          {[
+            ["Как выставляется счёт?", "Выберите тариф и период, нажмите «Выставить счёт». Счёт придёт на email компании, копия останется в разделе «Счета»."],
+            ["Как оплатить?", "По реквизитам из письма. Когда подключён эквайринг, появляется кнопка оплаты картой на странице Freedom Pay."],
+            ["Что будет после пилота?", "Данные остаются доступны для чтения. Ввод блокируется через 7 дней после окончания периода, пока тариф не оплачен."],
+            ["Можно ли перейти на другой тариф?", "Да, новый тариф начнётся после оплаты счёта. Остаток оплаченного периода не сгорает при продлении того же тарифа."],
+            ["Где посмотреть состав тарифа?", "В карточках выше, в таблице сравнения и в письме со счётом перечислено, что входит."],
+            ["Кому писать по счёту?", `Ответом на письмо со счётом или на ${email ?? "email компании"}.`],
+          ].map(([q, a]) => (
+            <details key={q} className="rounded-xl px-3 py-2" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              <summary className="cursor-pointer text-[var(--text)]">{q}</summary>
+              <p className="text-xs text-[var(--muted)] mt-2">{a}</p>
+            </details>
+          ))}
+        </div>
       </section>
 
       <section className="rounded-2xl p-5" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
