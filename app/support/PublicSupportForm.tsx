@@ -8,6 +8,7 @@ export default function PublicSupportForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -17,7 +18,8 @@ export default function PublicSupportForm() {
     setError("");
     setBusy(true);
     try {
-      await sendPublicSupportMessage(form);
+      const result = await sendPublicSupportMessage(form);
+      setEmailSent(result.emailSent);
       setSent(true);
       setForm({ name: "", email: "", subject: "", message: "", website: "" });
     } catch (err) {
@@ -30,9 +32,13 @@ export default function PublicSupportForm() {
   if (sent) {
     return (
       <div className="dp-auth-card text-center">
-        <h2 className="text-lg font-semibold text-[var(--text)] mb-2">Обращение отправлено</h2>
+        <h2 className="text-lg font-semibold text-[var(--text)] mb-2">
+          {emailSent ? "Обращение отправлено" : "Обращение сохранено"}
+        </h2>
         <p className="text-sm text-[var(--muted)]">
-          Ответ придёт на указанную почту. Если письмо не пришло, проверьте папку «Спам».
+          {emailSent
+            ? "Ответ придёт на указанную почту. Если письмо не пришло, проверьте папку «Спам»."
+            : "Письмо не ушло: почтовый сервис отклонил ключ. Обращение видно в системе."}
         </p>
       </div>
     );
