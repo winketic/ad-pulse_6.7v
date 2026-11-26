@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { provisionSignedUpUser } from "@/lib/billing/provision";
 
 export type RegisterResult = {
@@ -9,6 +10,8 @@ export type RegisterResult = {
   needsConfirmation: boolean;
   /** true — такой email уже зарегистрирован (Supabase не раскрывает это ошибкой). */
   existingAccount?: boolean;
+  /** true — аккаунт создан, но сессию выдать не удалось: нужен ручной вход. */
+  needsLogin?: boolean;
 };
 
 function fail(message: string): never {
@@ -42,34 +45,39 @@ export async function registerCompany(data: {
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://pulse.altaidynamics.kz").replace(/\/$/, "");
 
-  const { data: signUp, error } = await supabase.auth.signUp({
+  // Создаём пользователя через service role с email_confirm: true.
+  // Причина: в проекте включено подтверждение почты, а SMTP Supabase падает
+  // («Error sending confirmation email»), из-за чего обычный signUp возвращал
+  // 500 и регистрация не работала вообще. Владелец продукта выбрал вход без
+  // подтверждения, с журналом устройств и письмом о новом IP.
+  const service = createServiceClient();
+  const { data: created, error } = await service.auth.admin.createUser({
     email,
     password,
-    options: {
-      data: { company_name: companyName, contact_name: contactName, phone },
-      emailRedirectTo: `${appUrl}/auth/confirm?next=/welcome`,
-    },
+    email_confirm: true,
+    user_metadata: { company_name: companyName, contact_name: contactName, phone },
   });
 
   if (error) {
-    if (/already registered/i.test(error.message)) fail("Аккаунт с этим email уже есть. Войдите или восстановите пароль.");
-    if (/rate limit|too many/i.test(error.message)) fail("Слишком много попыток. Подождите несколько минут.");
-    if (/password/i.test(error.message)) fail("Пароль не подошёл: минимум 8 символов, без очевидных комбинаций.");
+    if (/already registered|already exists|duplicate/i.test(error.message)) {
+      fail("Аккаунт с этим email уже есть. Войдите или восстановите пароль.");
+    }
+    if (/password/i.test(error.message)) {
+      fail("Пароль не подошёл: минимум 8 символов, без очевидных комбинаций.");
+    }
     fail(error.message);
   }
 
-  const user = signUp.user;
+  const user = created.user;
   if (!user) fail("Supabase не вернул пользователя. Попробуйте ещё раз.");
 
-  // При включённом подтверждении почты Supabase на существующий адрес
-  // возвращает пользователя без identities и не отправляет письмо.
-  if (Array.isArray(user.identities) && user.identities.length === 0) {
-    return { needsConfirmation: false, existingAccount: true };
+  // Сессия: входим тем же паролем через SSR-клиент, чтобы поставить cookie.
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  if (signInError) {
+    console.error("[register] signIn after createUser failed:", signInError.message);
+    return { needsConfirmation: false, needsLogin: true };
   }
-
-  if (!signUp.session) return { needsConfirmation: true };
 
   await provisionSignedUpUser({
     userId: user.id,

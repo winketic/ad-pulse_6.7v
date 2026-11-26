@@ -31,6 +31,10 @@ export default function RegisterPage() {
         setError("Аккаунт с этим email уже есть. Войдите или восстановите пароль.");
         return;
       }
+      if (result.needsLogin) {
+        router.push("/login?registered=1");
+        return;
+      }
       if (result.needsConfirmation) {
         router.push("/verify-email");
         return;
