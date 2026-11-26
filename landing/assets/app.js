@@ -55,15 +55,9 @@
   var savedLang = null;
   try { savedLang = localStorage.getItem("adpulse-lang"); } catch (e) {}
   if (!savedLang) {
-    var detected = browserLang();
-    try { localStorage.setItem("adpulse-lang", detected); } catch (e) {}
-    if (detected !== "ru" && !sessionStorage.getItem("adpulse-lang-auto")) {
-      try { sessionStorage.setItem("adpulse-lang-auto", "1"); } catch (e) {}
-      setTranslateCookie(detected);
-      location.reload();
-      return;
-    }
-    savedLang = detected;
+    savedLang = browserLang();
+    try { localStorage.setItem("adpulse-lang", savedLang); } catch (e) {}
+    if (savedLang !== "ru") setTranslateCookie(savedLang);
   }
 
   var select = document.querySelector("[data-lang]");
