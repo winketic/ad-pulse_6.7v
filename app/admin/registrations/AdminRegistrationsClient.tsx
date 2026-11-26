@@ -20,6 +20,7 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> 
   processing: { bg: "bg-blue-100", text: "text-blue-700 dark:text-blue-300", label: "Обрабатывается" },
   approved: { bg: "bg-green-100",  text: "text-green-700 dark:text-green-300",  label: "Одобрено" },
   rejected: { bg: "bg-red-100",    text: "text-red-700 dark:text-red-300",    label: "Отклонено" },
+  auto:     { bg: "bg-violet-100", text: "text-violet-700 dark:text-violet-300", label: "Самостоятельно" },
 };
 
 export default function AdminRegistrationsClient({ registrations }: { registrations: Registration[] }) {

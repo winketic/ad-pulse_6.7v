@@ -11,6 +11,12 @@ const PUBLIC_PATHS = [
   "/verify-email",
   "/auth/confirm",
   "/invite",
+  "/support",
+  // Колбэк эквайринга приходит от Freedom Pay без cookie и сессии.
+  "/api/billing/fp-result",
+  // Без сессии маршрут отвечает 401 JSON, а не редиректом на /login:
+  // его вызывает фоновая проверка с любой страницы кабинета.
+  "/api/auth/session",
   "/api/telegram/webhook",
   "/api/telegram/setup",
   // Собственный шлюз WhatsApp: сюда шлюз шлёт входящие сообщения без сессии.
@@ -67,16 +73,10 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Unverified email
-    if (
-      !user.email_confirmed_at &&
-      !pathname.startsWith("/verify-email") &&
-      !pathname.startsWith("/reset-password") &&
-      !pathname.startsWith("/invite") &&
-      !pathname.startsWith("/onboarding")
-    ) {
-      return NextResponse.redirect(new URL("/verify-email", request.url));
-    }
+    // Подтверждение почты больше не блокирует вход: пользователь попадает
+    // в кабинет сразу, а входы с новых IP/устройств фиксируются в user_devices
+    // и сопровождаются письмом. Так решил владелец продукта: письма Supabase
+    // на free tier теряются, и регистрация вставала без человека.
 
     if (pathname === "/login" || pathname === "/") {
       return NextResponse.redirect(new URL("/dashboard", request.url));

@@ -1,11 +1,12 @@
 "use client";
 
-export type TabId = "profile" | "company" | "team";
+export type TabId = "profile" | "company" | "team" | "security";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "profile", label: "Профиль" },
   { id: "company", label: "Компания" },
-  { id: "team",    label: "Команда"  },
+  { id: "team",     label: "Команда"      },
+  { id: "security", label: "Безопасность" },
 ];
 
 export default function SettingsTabs({

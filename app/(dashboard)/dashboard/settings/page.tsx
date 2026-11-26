@@ -23,7 +23,7 @@ const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
   workshop:  { bg: "bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30",text: "text-emerald-700 dark:text-emerald-300" },
 };
 
-const VALID_TABS: TabId[] = ["profile", "company", "team"];
+const VALID_TABS: TabId[] = ["profile", "company", "team", "security"];
 
 type UserRows = Awaited<ReturnType<typeof listCompanyUsers>>;
 
@@ -160,6 +160,22 @@ export default async function SettingsPage({
     );
   }
 
+  // Устройства входа: RLS отдаёт только свои строки. Если миграция 059 ещё
+  // не применена, страница работает без этого блока.
+  const { data: devicesData } = await supabase
+    .from("user_devices")
+    .select("id, ip, user_agent, last_seen_at, trusted")
+    .eq("user_id", user.id)
+    .order("last_seen_at", { ascending: false })
+    .limit(20);
+  const devices = (devicesData ?? []) as {
+    id: string;
+    ip: string | null;
+    user_agent: string | null;
+    last_seen_at: string;
+    trusted: boolean;
+  }[];
+
   // ── Derived values ──────────────────────────────────────
   const companyName = companyResult.data?.name ?? "—";
   const telegramConnected = companyResult.data?.telegram_connected ?? false;
@@ -225,6 +241,7 @@ export default async function SettingsPage({
       isAdmin={isAdmin}
       canEditCompany={canEditCompany}
       initialTab={initialTab}
+      devices={devices}
       thresholdSection={thresholdSection}
     />
   );

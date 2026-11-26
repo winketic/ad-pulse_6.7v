@@ -5,6 +5,7 @@ import SettingsTabs, { type TabId } from "./SettingsTabs";
 import ProfileCard from "./ProfileCard";
 import CompanySettings from "./CompanySettings";
 import UserManagement from "./UserManagement";
+import DevicesCard from "./DevicesCard";
 import WhatsAppCard from "./WhatsAppCard";
 import TelegramCard from "./TelegramCard";
 import type { UserRow } from "@/app/(dashboard)/dashboard/settings/actions";
@@ -33,6 +34,14 @@ interface SettingsClientProps {
   isAdmin: boolean;
   canEditCompany: boolean;
   initialTab: TabId;
+  // Security
+  devices: {
+    id: string;
+    ip: string | null;
+    user_agent: string | null;
+    last_seen_at: string;
+    trusted: boolean;
+  }[];
   // Threshold alerts section (server-rendered slot)
   thresholdSection?: React.ReactNode;
 }
@@ -43,7 +52,7 @@ export default function SettingsClient({
   companyName, telegramConnected,
   isConnected, phoneNumber,
   users, isAdmin, canEditCompany,
-  initialTab, thresholdSection,
+  initialTab, thresholdSection, devices,
 }: SettingsClientProps) {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
 
@@ -113,6 +122,10 @@ export default function SettingsClient({
             <p className="text-sm text-[var(--muted)]">Компания не найдена</p>
           </div>
         )
+      )}
+      {/* ── Безопасность ──────────────────────────────── */}
+      {activeTab === "security" && (
+        <DevicesCard devices={devices} />
       )}
     </div>
   );

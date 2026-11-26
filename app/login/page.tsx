@@ -55,10 +55,11 @@ function LoginForm() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) { setError(mapError(authError.message)); setLoading(false); return; }
-    if (!data.user?.email_confirmed_at) { router.push("/verify-email"); }
-    else { router.push(searchParams.get("next") ?? "/dashboard"); }
+    // Подтверждение почты больше не блокирует вход: пользователь сразу идёт
+    // в кабинет, а /welcome создаст компанию, если её ещё нет.
+    router.push(searchParams.get("next") ?? "/dashboard");
     router.refresh();
   };
 

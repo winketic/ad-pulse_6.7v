@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { isPlatformOwnerEmail } from "@/lib/auth/platform-owner";
+import { billingReadOnly } from "@/lib/billing/plans";
 
 export default async function DashboardLayout({
   children,
@@ -27,6 +28,11 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .single();
 
+  // Профиля ещё нет: человек подтвердил почту, но компания не создана.
+  if (!profile) {
+    redirect("/welcome");
+  }
+
   // Redirect invited users who haven't completed onboarding yet
   // (their full_name defaults to their email address)
   if (!isPlatformOwner && profile && (!profile.full_name || profile.full_name === user.email)) {
@@ -42,6 +48,22 @@ export default async function DashboardLayout({
       .single();
     if (company && !company.setup_completed) {
       redirect("/onboarding/setup");
+    }
+  }
+
+  // Просрочка больше 7 дней: ввод блокируется на уровне БД, интерфейс
+  // показывает причину и ссылку на оплату.
+  let readOnly = false;
+  if (profile?.company_id) {
+    try {
+      const { data: subscription } = await supabase
+        .from("subscriptions")
+        .select("status, current_period_end, trial_ends_at")
+        .eq("company_id", profile.company_id)
+        .maybeSingle();
+      readOnly = billingReadOnly(subscription);
+    } catch {
+      readOnly = false;
     }
   }
 
@@ -70,6 +92,7 @@ export default async function DashboardLayout({
       avatarUrl={profile?.avatar_url ?? null}
       role={profile?.role ?? "warehouse"}
       isPlatformOwner={isPlatformOwner}
+      billingReadOnly={readOnly}
     >
       {children}
     </DashboardShell>

@@ -121,11 +121,31 @@ SUPABASE_ACCESS_TOKEN — только в окружении shell (для Supab
 - Собственный шлюз WhatsApp (Baileys) на VPS: QR-подключение, чаты, медиа
 - Парсер WhatsApp сообщений (текст + медиа)
 
-#### Регистрация и администрирование
-- /register — форма заявки для новых клиентов
-- /admin/registrations — список заявок (только altai.dx@gmail.com)
-- /admin/approve/[id] — одобрение заявки → создание компании → invite email
-- При новой заявке — уведомление в Telegram администратору
+#### Регистрация и биллинг
+- /register — self-serve: email + пароль + компания → компания, профиль админа
+  и пилот 30 дней создаются автоматически (`billing_provision_signup`, миграция 059).
+  Админ не одобряет, получает только уведомление
+- /welcome — активация, если в проекте включено подтверждение почты
+- /dashboard/billing — тарифы (Старт 14 900 / Завод 29 900 / Сеть 54 900,
+  WhatsApp +14 900, год −20%), счета, оплата. Цены — PLAN_PRODAZH_AD_PULSE.md §7.1
+- /admin/billing — отметить оплату, отменить счёт, выдать пилот
+- Просрочка: trialing/active → past_due после периода → blocked через 7 дней.
+  Запись в materials/material_transactions/production_plans отсекается
+  RESTRICTIVE-политиками (`private.company_can_write`). Компании без подписки
+  пишут всегда — fail-open
+- Эквайринг: Freedom Pay Gateway Sync API (`lib/billing/freedompay.ts`),
+  колбэк `/api/billing/fp-result`, подпись pg_sig. Пока нет мерчанта — счёт
+  на email, режим `manual`
+- Cron `/api/cron/billing` — статусы и напоминания (Resend), идемпотентно
+  через `billing_events.dedupe_key`
+- /admin/registrations остаётся журналом: self-serve заявки пишутся со
+  статусом `auto`
+- Поддержка: /dashboard/support и публичная /support → письмо на
+  altai.dx@gmail.com (Reply-To автора), запись в `support_requests`
+- Устройства входа: `user_devices`, письмо о новом IP/браузере, вкладка
+  «Безопасность» в настройках
+- Env: `FREEDOMPAY_MERCHANT_ID`, `FREEDOMPAY_SECRET_KEY`, `FREEDOMPAY_TEST_MODE`,
+  `CRON_SECRET`, `BILLING_*`. Подробно — docs/BILLING.md
 
 #### PWA и мобильное
 - manifest.json, иконки, theme-color #05050a
@@ -155,3 +175,21 @@ SUPABASE_ACCESS_TOKEN — только в окружении shell (для Supab
 - Supabase free tier пока для пилота, Pro когда появятся клиенты
 - PWA (адаптивный веб) вместо нативного мобильного приложения на первом этапе
 - Собственный WhatsApp-шлюз на Baileys — каждый клиент привязывает свой номер по QR
+
+## Карта проекта и граф знаний
+
+Перед поиском по коду откройте карту и граф, это дешевле чтения файлов:
+
+1. `docs/PROJECT_MAP.md` — что где лежит, поток «сообщение → транзакция», таблица подсистем.
+2. `graphify-out/wiki/index.md` — каталог графа: статья на подсистему с функциями и файлами.
+3. `graphify-out/GRAPH_REPORT.md` — хабы и неожиданные связи.
+
+Точечный вопрос дешевле чтения файлов:
+
+```bash
+.graphify-venv/bin/graphify query "вопрос" --budget 1500
+.graphify-venv/bin/graphify path "A" "B"
+.graphify-venv/bin/graphify explain "ИмяФункции"
+```
+
+После правок кода граф обновляет post-commit hook. Вручную: `.graphify-venv/bin/graphify update .` (AST, без LLM, секунды). Артефакты в `graphify-out/` локальные, в git не входят.

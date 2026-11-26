@@ -95,10 +95,15 @@ export default async function PlatformOverviewPage() {
               <h1 className="text-2xl font-bold tracking-tight text-[var(--text)] sm:text-3xl">Обзор компаний</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">Смотрите, какие компании пользуются платформой. Данные об их материалах, операциях и производстве здесь не показываются.</p>
             </div>
-            <Link href="/admin/registrations" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-text)] shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">
-              Заявки {pendingCount > 0 && <span className="rounded-full bg-black/10 px-2 py-0.5 tabular-nums">{pendingCount}</span>}
-              <ChevronRight size={16} />
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/admin/billing" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)]/40">
+                Оплаты
+              </Link>
+              <Link href="/admin/registrations" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-text)] shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">
+                Заявки {pendingCount > 0 && <span className="rounded-full bg-black/10 px-2 py-0.5 tabular-nums">{pendingCount}</span>}
+                <ChevronRight size={16} />
+              </Link>
+            </div>
           </div>
         </div>
 

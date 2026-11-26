@@ -16,11 +16,14 @@ import {
   MoreVertical,
   Factory,
   Building2,
+  CreditCard,
+  LifeBuoy,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Logo } from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import OnboardingTour from "@/components/OnboardingTour";
+import SessionBeacon from "@/components/SessionBeacon";
 import { canAccessCompanyPage } from "@/lib/auth/role-permissions";
 
 const NAV_ITEMS = [
@@ -33,6 +36,8 @@ const NAV_ITEMS = [
   { href: "/dashboard/whatsapp",     label: "WhatsApp",   Icon: MessageCircle,   tourId: "tour-nav-whatsapp"     },
   { href: "/dashboard/settings",     label: "Настройки",  Icon: Settings,        tourId: "tour-nav-settings"     },
   { href: "/dashboard/produce",      label: "Выпуск",     Icon: Factory,         tourId: undefined               },
+  { href: "/dashboard/billing",      label: "Оплата",     Icon: CreditCard,      tourId: undefined               },
+  { href: "/dashboard/support",      label: "Поддержка",  Icon: LifeBuoy,        tourId: undefined               },
 ];
 
 // Mobile bottom nav — 2 + FAB + 2. The center FAB is the primary
@@ -67,6 +72,8 @@ const USER_MENU_ITEMS = [
   NAV_ITEMS[1], // Материалы
   NAV_ITEMS[6], // WhatsApp
   NAV_ITEMS[7], // Настройки
+  NAV_ITEMS[9], // Оплата
+  NAV_ITEMS[10], // Поддержка
 ];
 
 // Bottom-bar tab with active pill
@@ -112,6 +119,8 @@ interface DashboardShellProps {
   avatarUrl?: string | null;
   role?: string;
   isPlatformOwner?: boolean;
+  /** Просрочка больше 7 дней: писать в учёт нельзя, читать можно. */
+  billingReadOnly?: boolean;
 }
 
 export default function DashboardShell({
@@ -121,6 +130,7 @@ export default function DashboardShell({
   avatarUrl,
   role = "warehouse",
   isPlatformOwner = false,
+  billingReadOnly = false,
 }: DashboardShellProps) {
   const pathname = usePathname();
   const router   = useRouter();
@@ -437,6 +447,20 @@ export default function DashboardShell({
               animation with fill "both" keeps a stacking context alive,
               trapping every z-indexed overlay inside — sheets would render
               UNDER the nav bar */}
+          {billingReadOnly && (
+            <div
+              className="mx-4 sm:mx-6 mt-4 rounded-xl px-4 py-3 text-sm flex flex-wrap items-center gap-x-2 gap-y-1"
+              style={{
+                background: "color-mix(in srgb, #f59e0b 12%, transparent)",
+                border: "1px solid color-mix(in srgb, #f59e0b 35%, transparent)",
+                color: "var(--text)",
+              }}
+              role="status"
+            >
+              <span>Тариф не оплачен больше 7 дней — данные доступны, ввод заблокирован.</span>
+              <Link href="/dashboard/billing" className="font-semibold underline">Выбрать тариф</Link>
+            </div>
+          )}
           <div key={pathname} className="page-enter" data-dir={navDirection}>
             {children}
           </div>
@@ -444,6 +468,7 @@ export default function DashboardShell({
       </div>
 
       <OnboardingTour />
+      <SessionBeacon />
 
       {/* ── Mobile bottom nav (icons only) ──────────────────── */}
       <nav

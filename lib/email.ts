@@ -2,10 +2,13 @@ export async function sendEmail({
   to,
   subject,
   html,
+  replyTo,
 }: {
   to: string;
   subject: string;
   html: string;
+  /** Куда отвечать получателю письма (поддержка, счета). */
+  replyTo?: string;
 }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
 
@@ -21,6 +24,7 @@ export async function sendEmail({
     to: [to],
     subject,
     html,
+    ...(replyTo ? { reply_to: replyTo } : {}),
   };
 
   const res = await fetch("https://api.resend.com/emails", {

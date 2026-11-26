@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { parseAndSave } from "@/lib/whatsapp/parseAndSave";
 import { sendTelegramAlert } from "@/lib/telegram/send";
 import { GATEWAY_PROVIDER } from "@/lib/whatsapp/gateway";
+import { billingReadOnly, type SubscriptionStatus } from "@/lib/billing/plans";
 
 // Разбор медиа (фото накладной, голосовое) может занять время
 export const maxDuration = 60;
@@ -166,6 +167,27 @@ async function processOne(service: ServiceClient, msg: InboundMessage): Promise<
       `[whatsapp/webhook] нет сессии для компании ${msg.company_id} — сообщение отброшено`
     );
     return "нет сессии WhatsApp для компании";
+  }
+
+  // ── Подписка: сервисный клиент обходит RLS, поэтому гейт «только чтение»
+  //    проверяется здесь явно. Иначе заблокированная компания продолжала бы
+  //    получать транзакции из WhatsApp.
+  const { data: subscription } = await service
+    .from("subscriptions")
+    .select("status, current_period_end, trial_ends_at")
+    .eq("company_id", msg.company_id)
+    .maybeSingle();
+
+  if (
+    subscription &&
+    billingReadOnly({
+      status: subscription.status as SubscriptionStatus,
+      current_period_end: subscription.current_period_end ?? null,
+      trial_ends_at: subscription.trial_ends_at ?? null,
+    })
+  ) {
+    console.warn(`[whatsapp/webhook] компания ${msg.company_id} на чтении — сообщение не учтено`);
+    return "тариф не оплачен: запись заблокирована";
   }
 
   // ── Чат: запомнить в любом случае, обрабатывать — только отмеченные ────

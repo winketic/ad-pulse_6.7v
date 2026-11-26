@@ -74,6 +74,23 @@ export async function approveRegistration(id: string) {
     });
     if (profileError) throw new Error(`Ошибка создания профиля: ${profileError.message}`);
 
+    // Пилот на 30 дней и для ручных заявок: иначе компания окажется без
+    // подписки, и биллинг-гейт будет для неё всегда открыт.
+    const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { error: subscriptionError } = await service.from("subscriptions").insert({
+      company_id: companyId,
+      plan_code: "trial",
+      status: "trialing",
+      billing_period: "monthly",
+      billing_email: reg.email,
+      trial_ends_at: trialEnd,
+      current_period_start: new Date().toISOString(),
+      current_period_end: trialEnd,
+      amount: 0,
+    });
+    // Не валим одобрение, если миграция 059 ещё не применена.
+    if (subscriptionError) console.error("[approveRegistration] subscription:", subscriptionError.message);
+
     const { data: completed, error: finishError } = await service
       .from("registrations")
       .update({ status: "approved" })
