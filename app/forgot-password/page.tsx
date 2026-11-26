@@ -23,7 +23,11 @@ export default function ForgotPasswordPage() {
     setInfo("");
     setLoading(true);
     try {
-      await requestPasswordResetCode(email);
+      const result = await requestPasswordResetCode(email);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
       setStep("reset");
       setInfo(`Если аккаунт с адресом ${email} есть, код уже в письме. Действует 15 минут.`);
     } catch (err) {
@@ -38,7 +42,12 @@ export default function ForgotPasswordPage() {
     setError("");
     setLoading(true);
     try {
-      await resetPasswordWithCode({ email, code, password });
+      const result = await resetPasswordWithCode({ email, code, password });
+      if (!result.ok) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
@@ -51,7 +60,11 @@ export default function ForgotPasswordPage() {
     setError("");
     setResending(true);
     try {
-      await requestPasswordResetCode(email);
+      const result = await requestPasswordResetCode(email);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
       setInfo("Код отправлен ещё раз. Проверьте почту и папку «Спам».");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось отправить код.");

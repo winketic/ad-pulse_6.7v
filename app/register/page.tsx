@@ -32,6 +32,10 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const result = await startRegistration(form);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
       setStep("code");
       setInfo(`Код отправлен на ${result.email}. Действует 15 минут.`);
     } catch (err) {
@@ -46,7 +50,12 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      await verifyRegistrationCode({ email: form.email, code, password: form.password });
+      const result = await verifyRegistrationCode({ email: form.email, code, password: form.password });
+      if (!result.ok) {
+        setError(result.error);
+        setLoading(false);
+        return;
+      }
       router.push("/onboarding/setup");
       router.refresh();
     } catch (err) {
@@ -60,7 +69,11 @@ export default function RegisterPage() {
     setInfo("");
     setResending(true);
     try {
-      await resendRegistrationCode(form.email);
+      const result = await resendRegistrationCode(form.email);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
       setInfo("Новый код отправлен. Проверьте почту и папку «Спам».");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось отправить код.");

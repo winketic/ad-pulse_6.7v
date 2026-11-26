@@ -17,8 +17,9 @@ import {
   isCodeExpired,
 } from "@/lib/auth/signupCode";
 
-export type StartRegistrationResult = { needsCode: true; email: string };
-export type VerifyRegistrationResult = { ok: true };
+export type ActionError = { ok: false; error: string };
+export type StartRegistrationResult = { ok: true; needsCode: true; email: string } | ActionError;
+export type VerifyRegistrationResult = { ok: true } | ActionError;
 
 type SignupMeta = {
   company_name?: string;
@@ -74,13 +75,13 @@ async function issueCode(
  * через Resend. Письма Supabase не используются: их SMTP падает.
  * Компания и пилот создаются только после ввода кода.
  */
-export async function startRegistration(data: {
+async function startRegistrationImpl(data: {
   company_name: string;
   contact_name: string;
   email: string;
   phone?: string;
   password: string;
-}): Promise<StartRegistrationResult> {
+}): Promise<{ needsCode: true; email: string }> {
   const companyName = typeof data?.company_name === "string" ? data.company_name.trim() : "";
   const contactName = typeof data?.contact_name === "string" ? data.contact_name.trim() : "";
   const phone = typeof data?.phone === "string" ? data.phone.trim() : "";
@@ -142,11 +143,11 @@ export async function startRegistration(data: {
 }
 
 /** Шаг 2: проверяет код, подтверждает почту, создаёт компанию и входит. */
-export async function verifyRegistrationCode(data: {
+async function verifyRegistrationCodeImpl(data: {
   email: string;
   code: string;
   password: string;
-}): Promise<VerifyRegistrationResult> {
+}): Promise<{ ok: true }> {
   const email = normalizeEmail(data?.email);
   const password = normalizePassword(data?.password);
   const code = typeof data?.code === "string" ? data.code.trim() : "";
@@ -212,7 +213,7 @@ export async function verifyRegistrationCode(data: {
 }
 
 /** Повторная отправка кода: не чаще раза в минуту. */
-export async function resendRegistrationCode(emailInput: string): Promise<{ ok: true }> {
+async function resendRegistrationCodeImpl(emailInput: string): Promise<{ ok: true }> {
   const email = normalizeEmail(emailInput);
   const service = createServiceClient();
   const user = await findAuthUserByEmail(service, email);
@@ -234,4 +235,38 @@ export async function resendRegistrationCode(emailInput: string): Promise<{ ok: 
     fail(`Не удалось отправить код: ${detail}`);
   }
   return { ok: true };
+}
+
+function errorMessage(error: unknown): string {
+  const detail = error instanceof Error ? error.message : String(error);
+  console.error("[register]", detail);
+  if (/Resend/i.test(detail)) {
+    return "Почта ещё не настроена: домен отправителя не подтверждён в Resend. Напишите в поддержку.";
+  }
+  return detail;
+}
+
+export async function startRegistration(data: Parameters<typeof startRegistrationImpl>[0]): Promise<StartRegistrationResult> {
+  try {
+    const result = await startRegistrationImpl(data);
+    return { ok: true, ...result };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
+export async function verifyRegistrationCode(data: Parameters<typeof verifyRegistrationCodeImpl>[0]): Promise<VerifyRegistrationResult> {
+  try {
+    return await verifyRegistrationCodeImpl(data);
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
+export async function resendRegistrationCode(email: string): Promise<{ ok: true } | ActionError> {
+  try {
+    return await resendRegistrationCodeImpl(email);
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
 }

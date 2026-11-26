@@ -38,7 +38,9 @@ function normalizeEmail(value: unknown): string {
  * Отправляет код сброса через Resend. Если аккаунта нет, отвечаем тем же
  * успехом: иначе форма превращается в проверялку существующих адресов.
  */
-export async function requestPasswordResetCode(emailInput: string): Promise<{ ok: true }> {
+export type ResetResult = { ok: true } | { ok: false; error: string };
+
+async function requestPasswordResetCodeImpl(emailInput: string): Promise<{ ok: true }> {
   const email = normalizeEmail(emailInput);
   const service = createServiceClient();
   const user = await findAuthUserByEmail(service, email);
@@ -74,7 +76,7 @@ export async function requestPasswordResetCode(emailInput: string): Promise<{ ok
 }
 
 /** Проверяет код, меняет пароль и сразу входит. */
-export async function resetPasswordWithCode(data: {
+async function resetPasswordWithCodeImpl(data: {
   email: string;
   code: string;
   password: string;
@@ -122,4 +124,29 @@ export async function resetPasswordWithCode(data: {
   if (signInError) fail("Пароль изменён, но вход не удался. Войдите вручную.");
 
   return { ok: true };
+}
+
+function resetError(error: unknown): string {
+  const detail = error instanceof Error ? error.message : String(error);
+  console.error("[reset]", detail);
+  if (/Resend/i.test(detail)) {
+    return "Почта ещё не настроена: домен отправителя не подтверждён в Resend. Напишите в поддержку.";
+  }
+  return detail;
+}
+
+export async function requestPasswordResetCode(email: string): Promise<ResetResult> {
+  try {
+    return await requestPasswordResetCodeImpl(email);
+  } catch (error) {
+    return { ok: false, error: resetError(error) };
+  }
+}
+
+export async function resetPasswordWithCode(data: { email: string; code: string; password: string }): Promise<ResetResult> {
+  try {
+    return await resetPasswordWithCodeImpl(data);
+  } catch (error) {
+    return { ok: false, error: resetError(error) };
+  }
 }

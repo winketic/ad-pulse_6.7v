@@ -72,7 +72,17 @@ export async function checkEmailStatus(): Promise<{ ok: boolean; message: string
       headers: { Authorization: `Bearer ${apiKey}` },
       cache: "no-store",
     });
-    if (res.ok) return { ok: true, message: "ключ принят", from };
+    if (res.ok) {
+      const payload = (await res.json().catch(() => ({}))) as { data?: { name?: string; status?: string }[] };
+      const domains = (payload.data ?? [])
+        .filter((domain) => domain.name)
+        .map((domain) => `${domain.name}: ${domain.status ?? "?"}`);
+      return {
+        ok: true,
+        message: domains.length > 0 ? `ключ принят, домены — ${domains.join(", ")}` : "ключ принят, домены не добавлены",
+        from,
+      };
+    }
     const body = await res.text().catch(() => "");
     return { ok: false, message: `Resend ${res.status}: ${body.slice(0, 200)}`, from };
   } catch (error) {
