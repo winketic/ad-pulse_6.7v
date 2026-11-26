@@ -292,3 +292,21 @@ h2 { font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -0.02em; margin: 0 0 1
     padding: 12px 16px;
   }
 }
+
+/* Google Translate: компактный селектор в шапке */
+.lang-box { min-width: 120px; }
+.lang-box .goog-te-gadget { font-size: 0; color: transparent; }
+.lang-box .goog-te-gadget > span { display: none; }
+.lang-box .goog-te-gadget .goog-te-combo {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  max-width: 150px;
+}
+.goog-te-banner-frame { display: none !important; }
+body { top: 0 !important; }
+@media (max-width: 900px) { .lang-box { display: none; } }

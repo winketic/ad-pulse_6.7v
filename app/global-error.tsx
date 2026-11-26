@@ -21,6 +21,14 @@ export default function GlobalError({
 
   return (
     <html lang="ru">
+      <head>
+        <style>{`
+          @media (prefers-color-scheme: dark) {
+            body { background: #0f1115 !important; color: #f3f4f6 !important; }
+            h1, p { color: #f3f4f6 !important; }
+          }
+        `}</style>
+      </head>
       <body
         style={{
           margin: 0,
