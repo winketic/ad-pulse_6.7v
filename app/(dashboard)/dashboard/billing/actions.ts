@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { getPlanOffers, getSubscription } from "@/lib/billing/data";
 import {
@@ -16,6 +17,7 @@ import {
   logBillingEvent,
 } from "@/lib/billing/invoices";
 import { sendInvoiceEmail } from "@/lib/billing/emails";
+import { createServiceClient } from "@/lib/supabase/service";
 
 async function requireCompanyAdmin() {
   const cookieStore = await cookies();
@@ -96,6 +98,31 @@ export async function createInvoiceAction(input: {
   });
 
   return { invoiceId: invoice.id, number: invoice.number, amount, paymentUrl, emailSent };
+}
+
+/** Пилот для компаний, созданных до биллинга: 30 дней, один раз. */
+export async function startTrialAction(): Promise<{ ok: true }> {
+  const { companyId } = await requireCompanyAdmin();
+  const existing = await getSubscription(companyId);
+  if (existing) throw new Error("Подписка уже есть — выберите тариф или продлите период");
+
+  const service = createServiceClient();
+  const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await service.from("subscriptions").insert({
+    company_id: companyId,
+    plan_code: "trial",
+    status: "trialing",
+    billing_period: "monthly",
+    trial_ends_at: trialEnd,
+    current_period_start: new Date().toISOString(),
+    current_period_end: trialEnd,
+    amount: 0,
+  });
+  if (error) throw new Error(`Не удалось активировать пилот: ${error.message}`);
+
+  await logBillingEvent({ companyId, type: "trial_started_by_company", payload: { trialEnd } });
+  revalidatePath("/dashboard/billing");
+  return { ok: true };
 }
 
 /** Повторно запрашивает ссылку на оплату для существующего счёта. */

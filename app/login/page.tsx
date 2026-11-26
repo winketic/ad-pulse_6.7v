@@ -8,7 +8,7 @@ import { Logo } from "@/components/Logo";
 
 function mapError(msg: string): string {
   if (msg.includes("Invalid login credentials")) return "Неверный email или пароль";
-  if (msg.includes("Email not confirmed")) return "Подтвердите email перед входом";
+  if (msg.includes("Email not confirmed")) return "Почта не подтверждена. Завершите регистрацию на странице «Создать аккаунт» — код из письма.";
   if (msg.includes("Too many requests")) return "Слишком много попыток. Подождите немного";
   return "Ошибка входа. Попробуйте снова";
 }

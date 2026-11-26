@@ -11,15 +11,7 @@ const STATUS_LABEL: Record<string, string> = {
   closed: "Закрыто",
 };
 
-export default function SupportClient({
-  email,
-  name,
-  tickets,
-}: {
-  email: string;
-  name: string;
-  tickets: TicketRow[];
-}) {
+export default function SupportClient({ tickets }: { tickets: TicketRow[] }) {
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,7 +40,7 @@ export default function SupportClient({
       <div>
         <h1 className="text-display text-[var(--text)]">Поддержка</h1>
         <p className="text-sm text-[var(--muted)] mt-1">
-          Напишите нам — ответ приходит на {email || "вашу почту"}. Обычно в течение рабочего дня.
+          Напишите нам — ответ приходит на вашу почту. Обычно в течение рабочего дня.
         </p>
       </div>
 
@@ -124,10 +116,6 @@ export default function SupportClient({
         </section>
       )}
 
-      <p className="text-xs text-[var(--muted)]">
-        Обращения уходят на altai.dx@gmail.com. Если почта недоступна, напишите напрямую на этот адрес.
-        {name ? ` Подпись: ${name}.` : ""}
-      </p>
     </div>
   );
 }

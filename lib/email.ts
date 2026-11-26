@@ -47,3 +47,22 @@ export async function sendEmail({
     throw new Error(`Resend [${res.status}]: ${detail}`);
   }
 }
+
+/** Диагностика для админки: принят ли ключ Resend и какой адрес отправителя. */
+export async function checkEmailStatus(): Promise<{ ok: boolean; message: string; from: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.EMAIL_FROM ?? "noreply@altaidynamics.kz";
+  if (!apiKey) return { ok: false, message: "RESEND_API_KEY не задан", from };
+
+  try {
+    const res = await fetch("https://api.resend.com/domains", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+    if (res.ok) return { ok: true, message: "ключ принят", from };
+    const body = await res.text().catch(() => "");
+    return { ok: false, message: `Resend ${res.status}: ${body.slice(0, 200)}`, from };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "нет связи с Resend", from };
+  }
+}

@@ -13,7 +13,7 @@ import {
   type SubscriptionRow,
 } from "@/lib/billing/plans";
 import type { InvoiceRow } from "@/lib/billing/invoices";
-import { createInvoiceAction, payInvoiceAction } from "./actions";
+import { createInvoiceAction, payInvoiceAction, startTrialAction } from "./actions";
 
 const STATUS_LABEL: Record<string, string> = {
   trialing: "Пилот",
@@ -80,6 +80,7 @@ export default function BillingClient({
   const [payingId, setPayingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [created, setCreated] = useState<{ number: string; amount: number; emailSent: boolean } | null>(null);
+  const [busyTrial, setBusyTrial] = useState(false);
 
   const offer = purchasable.find((item) => item.code === selected) ?? purchasable[0];
   const amount = useMemo(
@@ -110,6 +111,19 @@ export default function BillingClient({
       setError(err instanceof Error ? err.message : "Не удалось выставить счёт.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleStartTrial() {
+    setError("");
+    setBusyTrial(true);
+    try {
+      await startTrialAction();
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось активировать пилот.");
+    } finally {
+      setBusyTrial(false);
     }
   }
 
@@ -154,7 +168,7 @@ export default function BillingClient({
           <div>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Текущий тариф</p>
             <p className="text-xl font-bold text-[var(--text)] mt-1">
-              {subscription ? offers.find((item) => item.code === subscription.plan_code)?.name ?? subscription.plan_code : "Не настроен"}
+              {subscription ? offers.find((item) => item.code === subscription.plan_code)?.name ?? subscription.plan_code : "Тариф не выбран"}
             </p>
           </div>
           {subscription && <StatusBadge status={subscription.status} />}
@@ -182,7 +196,21 @@ export default function BillingClient({
             </div>
           </div>
         ) : (
-          <p className="text-sm text-[var(--muted)] mt-3">Подписка появится после миграции 059.</p>
+          <>
+            <p className="text-sm text-[var(--muted)] mt-3">
+              Пилот ещё не активирован. Данные доступны, ввод не ограничен.
+            </p>
+            {canManage && (
+              <button
+                onClick={handleStartTrial}
+                disabled={busyTrial}
+                className="mt-3 text-sm font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50"
+                style={{ background: "var(--accent)", color: "var(--accent-text)" }}
+              >
+                {busyTrial ? "Активируем…" : "Активировать пилот 30 дней"}
+              </button>
+            )}
+          </>
         )}
 
         {subscription?.status === "trialing" && daysLeft !== null && daysLeft <= 5 && daysLeft >= 0 && (
@@ -221,7 +249,7 @@ export default function BillingClient({
         <div className="space-y-2">
           {purchasable.length === 0 && (
             <p className="text-sm text-[var(--muted)]">
-              Тарифы появятся после применения миграции 059. Если вы уже применили её, обновите страницу.
+              Тарифы не загрузились. Обновите страницу.
             </p>
           )}
           {purchasable.map((item) => {
@@ -247,7 +275,7 @@ export default function BillingClient({
                 </div>
                 <p className="text-xs text-[var(--muted)] mt-1">{item.summary}</p>
                 <p className="text-xs text-[var(--muted)] mt-1">
-                  {item.wa_numbers > 0 ? `WhatsApp: ${item.wa_numbers} номер(а) включено` : "WhatsApp отдельной опцией"}
+                  {item.wa_numbers === 1 ? "WhatsApp: 1 номер включён" : item.wa_numbers > 1 ? `WhatsApp: ${item.wa_numbers} номера включены` : "WhatsApp отдельной опцией"}
                 </p>
               </button>
             );

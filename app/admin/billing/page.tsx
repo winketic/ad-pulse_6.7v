@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isPlatformOwnerEmail } from "@/lib/auth/platform-owner";
 import AdminBillingClient from "./AdminBillingClient";
+import { checkEmailStatus } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -26,6 +27,7 @@ export default async function AdminBillingPage() {
   if (subscriptionsResult.error) throw new Error(`Не удалось загрузить подписки: ${subscriptionsResult.error.message}`);
 
   const companyNames = new Map((companiesResult.data ?? []).map((row) => [row.id, row.name]));
+  const emailStatus = await checkEmailStatus();
 
   return (
     <div className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
@@ -34,6 +36,22 @@ export default async function AdminBillingPage() {
         <Link href="/admin/platform" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">
           ← Компании
         </Link>
+      </div>
+
+      <div
+        className="rounded-xl px-4 py-3 text-sm"
+        style={{
+          background: emailStatus.ok ? "color-mix(in srgb, #059669 10%, transparent)" : "color-mix(in srgb, #dc2626 10%, transparent)",
+          border: `1px solid ${emailStatus.ok ? "color-mix(in srgb, #059669 30%, transparent)" : "color-mix(in srgb, #dc2626 30%, transparent)"}`,
+        }}
+      >
+        <b>Почта:</b> {emailStatus.ok ? "Resend принимает ключ" : emailStatus.message}
+        <span className="text-[var(--muted)]"> · отправитель: {emailStatus.from}</span>
+        {!emailStatus.ok && (
+          <span className="block text-xs text-[var(--muted)] mt-1">
+            Пока ключ не работает, коды регистрации, счета и обращения не уходят. Обновите RESEND_API_KEY в Vercel.
+          </span>
+        )}
       </div>
 
       <AdminBillingClient

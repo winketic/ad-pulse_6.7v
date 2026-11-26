@@ -140,3 +140,21 @@ test("makeInvoiceNumber: префикс, дата и случайный хвос
 function future(now: Date, days = 10): string {
   return new Date(now.getTime() + days * 864e5).toISOString();
 }
+
+test("код подтверждения: 6 цифр, совпадение, истечение и попытки", () => {
+  const { generateSignupCode, generateSignupSalt, hashCode, codeMatches, codeExpiresAt, isCodeExpired, EMAIL_CODE_TTL_MIN } =
+    require("../../lib/auth/signupCode") as typeof import("../../lib/auth/signupCode");
+
+  const code = generateSignupCode();
+  expect(code).toMatch(/^\d{6}$/);
+  const salt = generateSignupSalt();
+  const hash = hashCode(code, salt);
+  expect(codeMatches(code, salt, hash)).toBe(true);
+  expect(codeMatches("000000" === code ? "111111" : "000000", salt, hash)).toBe(false);
+  expect(codeMatches("12", salt, hash)).toBe(false);
+
+  const now = Date.parse("2026-11-26T10:00:00Z");
+  expect(isCodeExpired(codeExpiresAt(now), now)).toBe(false);
+  expect(isCodeExpired(codeExpiresAt(now), now + (EMAIL_CODE_TTL_MIN + 1) * 60_000)).toBe(true);
+  expect(isCodeExpired(null, now)).toBe(true);
+});

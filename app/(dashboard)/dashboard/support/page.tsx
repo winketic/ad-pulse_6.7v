@@ -33,10 +33,6 @@ export default async function SupportPage() {
   }
 
   return (
-    <SupportClient
-      email={user.email ?? ""}
-      name={profile?.full_name ?? ""}
-      tickets={tickets}
-    />
+    <SupportClient tickets={tickets} />
   );
 }

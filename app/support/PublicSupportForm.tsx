@@ -79,7 +79,7 @@ export default function PublicSupportForm() {
         </button>
       </form>
       <p className="text-xs text-[var(--muted)] mt-4">
-        Обращение уходит на altai.dx@gmail.com. Отвечаем на указанный email.
+        Отвечаем на указанный email, обычно в течение рабочего дня.
       </p>
     </div>
   );

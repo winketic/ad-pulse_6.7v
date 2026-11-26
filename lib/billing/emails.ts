@@ -209,3 +209,22 @@ export async function sendSupportRequestEmail(params: {
     }),
   });
 }
+
+export async function sendSignupCodeEmail(params: { to: string; code: string }): Promise<void> {
+  const { to, code } = params;
+  await sendEmail({
+    to,
+    subject: `Код подтверждения AD Pulse: ${code}`,
+    html: layout({
+      title: "Подтвердите почту",
+      body: `<p style="margin:0 0 12px;font-size:14px;color:#374151;">
+        Код для завершения регистрации:
+      </p>
+      <p style="margin:0 0 16px;font-size:30px;letter-spacing:8px;font-weight:700;color:#111827;">${code}</p>
+      <p style="margin:0;font-size:13px;color:#6b7280;">
+        Код действует 15 минут. Если вы не регистрировались в AD Pulse, просто удалите письмо.
+      </p>`,
+      footer: "Письмо отправлено автоматически.",
+    }),
+  });
+}
