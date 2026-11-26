@@ -4,7 +4,7 @@
 
 import { sendEmail } from "@/lib/email";
 import { escapeHtml } from "@/lib/utils/escapeHtml";
-import { formatTenge, type PlanOffer } from "@/lib/billing/plans";
+import { formatTenge, planFeatures, type PlanOffer } from "@/lib/billing/plans";
 import type { InvoiceRow } from "@/lib/billing/invoices";
 
 function layout(params: { title: string; body: string; footer?: string }): string {
@@ -60,6 +60,10 @@ export async function sendInvoiceEmail(params: {
 }): Promise<void> {
   const { to, invoice, offer } = params;
   const period = invoice.billing_period === "yearly" ? "год" : "месяц";
+  const features = planFeatures(invoice.plan_code);
+  const featuresHtml = features.length
+    ? `<ul style="margin:14px 0 0;padding-left:18px;font-size:13px;color:#374151;line-height:1.7;">${features.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+    : "";
   const payLink = invoice.payment_url
     ? `<p style="margin:20px 0;"><a href="${invoice.payment_url}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Оплатить картой</a></p>`
     : "";
@@ -76,6 +80,7 @@ export async function sendInvoiceEmail(params: {
         Действует до ${invoice.due_at ? new Date(invoice.due_at).toLocaleDateString("ru-RU") : "—"}.
         После оплаты подписка активируется автоматически.
       </p>
+      ${featuresHtml}
       ${payLink}
       ${requisites()}
       <p style="margin:16px 0 0;font-size:13px;color:#6b7280;">

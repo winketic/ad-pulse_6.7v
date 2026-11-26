@@ -81,3 +81,42 @@ export function planName(offers: PlanOffer[], code: string): string {
 export function formatTenge(amount: number): string {
   return `${amount.toLocaleString("ru-RU")} ₸`;
 }
+
+/**
+ * Что входит в тариф. Показываем в карточках оплаты и в письме со счётом,
+ * чтобы было видно, за что платит клиент и чем отличается следующий тариф.
+ */
+export const PLAN_FEATURES: Record<string, string[]> = {
+  trial: [
+    "Все модули на 30 дней",
+    "1 склад",
+    "Приход, расход, брак, возврат",
+    "Планы, отчёты, Excel",
+    "4 роли и аудит изменений",
+  ],
+  start: [
+    "Справочник материалов и единиц",
+    "Приход, расход, остатки",
+    "Отчёты и выгрузка в Excel",
+    "4 роли и аудит изменений",
+    "Telegram-алерты по остаткам",
+  ],
+  plant: [
+    "Всё из «Старт»",
+    "Нормы ГОСТ на единицу продукции",
+    "Брак с причиной и возвраты",
+    "До 3 цехов",
+    "WhatsApp-канал, 1 номер",
+  ],
+  network: [
+    "Всё из «Завод»",
+    "Без лимита цехов",
+    "2 WhatsApp-номера",
+    "Приоритетная поддержка",
+    "Сезонное планирование",
+  ],
+};
+
+export function planFeatures(code: string): string[] {
+  return PLAN_FEATURES[code] ?? [];
+}

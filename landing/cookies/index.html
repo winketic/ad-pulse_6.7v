@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Политика cookies — AD Pulse</title>
+<meta name="description" content="Какие cookie использует AD Pulse.">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+<script>try{var t=localStorage.getItem('adpulse-theme');document.documentElement.dataset.theme=t==='dark'?'dark':'light';}catch(e){document.documentElement.dataset.theme='light';}</script>
+</head>
+<body>
+<header class="header">
+  <div class="container header-inner">
+    <a class="brand" href="/"><img src="/logo-altai.png" alt="Altai Dynamics"><span class="brand-name">Altai Dynamics</span></a>
+    <nav class="nav">
+      <a href="/#features">Возможности</a>
+      <a href="/#pricing">Тарифы</a>
+      <a href="/docs/">Документация</a>
+      <a href="/security/">Безопасность</a>
+      <a href="/support/">Поддержка</a>
+    </nav>
+    <div class="header-actions">
+      <select class="lang-select" data-lang aria-label="Язык сайта">
+        <option value="ru">RU</option><option value="en">EN</option><option value="kk">ҚАЗ</option><option value="zh-CN">中文</option><option value="tr">TR</option><option value="de">DE</option><option value="sv">SV</option><option value="ja">JA</option>
+      </select>
+      <button class="icon-btn" data-theme-toggle aria-label="Тёмная тема">◐</button>
+      <a class="btn btn-ghost btn-sm login-link" href="https://pulse.altaidynamics.kz/login">Войти</a>
+      <a class="btn btn-primary btn-sm" href="https://pulse.altaidynamics.kz/register">Попробовать</a>
+      <button class="icon-btn menu-btn" data-menu-toggle aria-label="Меню">☰</button>
+    </div>
+  </div>
+  <nav class="mobile-nav" data-mobile-nav>
+    <a href="/#features">Возможности</a><a href="/#pricing">Тарифы</a><a href="/docs/">Документация</a><a href="/security/">Безопасность</a><a href="/support/">Поддержка</a>
+  </nav>
+</header>
+<main class="container prose">
+<h1>Политика cookies</h1>
+<p class="meta">Версия 1.0 · 26 ноября 2026</p>
+<p>Cookie и localStorage нужны для входа, выбранной темы, языка и согласия. Рекламных и аналитических cookie мы не ставим.</p>
+
+<h2>Что используем</h2>
+<table>
+<tr><th>Название</th><th>Зачем</th><th>Срок</th></tr>
+<tr><td>sb-* (Supabase)</td><td>Сессия входа и обновление токена</td><td>до выхода из аккаунта</td></tr>
+<tr><td>adpulse-theme</td><td>Светлая или тёмная тема</td><td>до очистки браузера</td></tr>
+<tr><td>adpulse-lang</td><td>Выбранный язык сайта</td><td>до очистки браузера</td></tr>
+<tr><td>googtrans</td><td>Перевод страницы через Google Translate</td><td>1 год</td></tr>
+<tr><td>adpulse-cookie-consent</td><td>Согласие на cookie</td><td>до очистки браузера</td></tr>
+</table>
+
+<h2>Сторонние сервисы</h2>
+<p>При включённом переводе страницы Google Translate может ставить свои cookie. Обработка описана в политике Google. Ошибки приложения собирает Sentry; это трассировки и IP, без рекламных cookie.</p>
+
+<h2>Как управлять</h2>
+<p>Cookie можно удалить в настройках браузера. После удаления сессии придётся войти заново. Отказ от необязательных cookie не мешает работе учёта.</p>
+
+<h2>Согласие</h2>
+<p>При первом визите показываем баннер. Кнопка «Принять» сохраняет выбор. Продолжение работы без принятия не блокируется, но перевод и запоминание темы могут не работать.</p>
+</main>
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="brand" style="margin-bottom:10px"><img src="/logo-altai.png" alt="" style="height:26px"><span class="brand-name">Altai Dynamics</span></div>
+        <p style="margin:0 0 6px">ТОО «Altai Dynamics»</p>
+        <p style="margin:0 0 6px">БИН 260340030272</p>
+        <p style="margin:0">Astana, Kazakhstan</p>
+      </div>
+      <div><h4>Продукт</h4><a href="/docs/">Документация</a><a href="/security/">Безопасность</a><a href="/support/">Поддержка</a></div>
+      <div><h4>Правовое</h4><a href="/privacy/">Конфиденциальность</a><a href="/cookies/">Cookies</a><a href="/terms/">Соглашение</a><a href="/dpa/">DPA</a></div>
+      <div><h4>Контакты</h4><a href="mailto:ceo@altaidynamics.kz">ceo@altaidynamics.kz</a><a href="mailto:info@altaidynamics.kz">info@altaidynamics.kz</a></div>
+    </div>
+    <div class="footer-bottom"><span>© 2026 Altai Dynamics LLP</span><span>AD Pulse — продукт Altai Dynamics.</span></div>
+  </div>
+</footer>
+
+<div class="cookie-banner" data-cookie-banner hidden>
+  <span>Мы используем cookie для входа, темы и перевода. Подробнее — <a href="/cookies/">политика cookies</a>.</span>
+  <button class="btn btn-primary btn-sm" data-cookie-accept>Принять</button>
+</div>
+<script src="/assets/app.js"></script>
+</body>
+</html>

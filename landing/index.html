@@ -3,60 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AD Pulse — учёт материалов из WhatsApp</title>
-<meta name="description" content="AD Pulse ведёт учёт материалов производства из сообщений WhatsApp: остатки, приход, расход, планы и отчёты без Excel.">
-<link rel="icon" type="image/svg+xml" href="logo.svg">
-<link rel="stylesheet" href="assets/styles.css">
+<title>Altai Dynamics — AD Pulse: учёт материалов из WhatsApp</title>
+<meta name="description" content="AD Pulse ведёт учёт материалов производства из сообщений WhatsApp: остатки, приход, расход, планы и отчёты. Altai Dynamics, Казахстан.">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="stylesheet" href="/assets/styles.css">
 <script>try{var t=localStorage.getItem('adpulse-theme');document.documentElement.dataset.theme=t==='dark'?'dark':'light';}catch(e){document.documentElement.dataset.theme='light';}</script>
 </head>
 <body>
 <header class="header">
   <div class="container header-inner">
-    <a class="brand" href="index.html"><img src="logo.svg" alt="AD Pulse"><span>AD Pulse</span></a>
+    <a class="brand" href="/">
+      <img src="/logo-altai.png" alt="Altai Dynamics">
+      <span class="brand-name">Altai Dynamics</span>
+    </a>
     <nav class="nav">
-      <a href="#features">Возможности</a>
-      <a href="#how">Как работает</a>
-      <a href="#pricing">Тарифы</a>
-      <a href="docs.html">Документация</a>
-      <a href="support.html">Поддержка</a>
+      <a href="/#features">Возможности</a>
+      <a href="/#how">Как работает</a>
+      <a href="/#pricing">Тарифы</a>
+      <a href="/docs/">Документация</a>
+      <a href="/security/">Безопасность</a>
+      <a href="/support/">Поддержка</a>
     </nav>
     <div class="header-actions">
-      <div id="google_translate_element" class="lang-box" aria-label="Перевод страницы"></div>
+      <select class="lang-select" data-lang aria-label="Язык сайта">
+        <option value="ru">RU</option>
+        <option value="en">EN</option>
+        <option value="kk">ҚАЗ</option>
+        <option value="zh-CN">中文</option>
+        <option value="tr">TR</option>
+        <option value="de">DE</option>
+        <option value="sv">SV</option>
+        <option value="ja">JA</option>
+      </select>
       <button class="icon-btn" data-theme-toggle aria-label="Тёмная тема">◐</button>
-      <a class="btn btn-ghost btn-sm login-link" href="https://pulse.altaidynamics.kz/login">Войти в аккаунт</a>
+      <a class="btn btn-ghost btn-sm login-link" href="https://pulse.altaidynamics.kz/login">Войти</a>
       <a class="btn btn-primary btn-sm" href="https://pulse.altaidynamics.kz/register">Попробовать</a>
       <button class="icon-btn menu-btn" data-menu-toggle aria-label="Меню">☰</button>
     </div>
   </div>
+  <nav class="mobile-nav" data-mobile-nav>
+    <a href="/#features">Возможности</a>
+    <a href="/#how">Как работает</a>
+    <a href="/#pricing">Тарифы</a>
+    <a href="/docs/">Документация</a>
+    <a href="/security/">Безопасность</a>
+    <a href="/support/">Поддержка</a>
+    <a href="https://pulse.altaidynamics.kz/login">Войти в аккаунт</a>
+  </nav>
 </header>
 
 <main>
   <section class="container hero">
     <div class="hero-grid">
       <div>
-        <span class="eyebrow">Учёт материалов для производств Казахстана</span>
-        <h1>Кладовщик пишет в WhatsApp, учёт обновляется сам</h1>
+        <div class="product-label">AD Pulse</div>
+        <h1>Учёт материалов, который ведётся из WhatsApp</h1>
         <p class="lead">
-          «Привезли 5 тонн арматуры» — и остаток, движение и план уже в системе.
-          Без Excel, без переписывания вечером и без внедрения на полгода.
+          Кладовщик пишет «привезли 5 тонн арматуры», и остаток, движение и план обновляются сами.
+          Фото накладных и голосовые тоже разбираются. Без Excel и переписывания вечером.
         </p>
         <div class="hero-cta">
           <a class="btn btn-primary" href="https://pulse.altaidynamics.kz/register">Начать бесплатно</a>
-          <a class="btn btn-ghost" href="docs.html">Как это работает</a>
+          <a class="btn btn-ghost" href="/docs/">Документация</a>
         </div>
         <p class="hero-note">30 дней бесплатно, карта не нужна. Данные в Казахстане.</p>
       </div>
-      <div class="phone-card" aria-hidden="true">
-        <div class="chat-head">
-          <div class="chat-avatar">С</div>
+      <div class="mock" aria-hidden="true">
+        <div class="mock-head">
+          <div class="mock-avatar">С</div>
           <div>
-            <div class="chat-title">Склад · снабжение</div>
-            <div class="chat-sub">WhatsApp</div>
+            <div class="mock-title">Склад · снабжение</div>
+            <div class="mock-sub">WhatsApp</div>
           </div>
         </div>
         <div class="msg">Привезли 5 тонн арматуры 12, счёт от ТОО «Металл»</div>
         <div class="msg out">Записал: арматура 5 000 кг, приход</div>
-        <div class="parsed">
+        <div class="mock-parsed">
           <b>Разобрано автоматически</b>
           Арматура · приход · 5 000 кг · ТОО «Металл»
         </div>
@@ -66,77 +89,109 @@
 
   <section class="container section" id="features">
     <div class="section-head">
-      <h2>Что внутри</h2>
-      <p>Система закрывает склад, движение, планы и отчёты. Ввод идёт там, где людям удобно: в WhatsApp.</p>
+      <h2>Модули системы</h2>
+      <p>Склад, движение, планы и отчёты. Ввод там, где людям удобно: в WhatsApp.</p>
     </div>
     <div class="grid-3">
-      <article class="card"><h3>Приём из WhatsApp</h3><p>Клиент подключает свой номер, отмечает нужные чаты. Текст, фото накладной и голосовые разбираются автоматически.</p></article>
-      <article class="card"><h3>Остатки в реальном времени</h3><p>Приход, расход, брак и возврат меняют остаток сразу. Видно, где заканчивается материал.</p></article>
-      <article class="card"><h3>Производственные планы</h3><p>План и факт по каждому цеху, отклонения и перерасход против нормы ГОСТ.</p></article>
-      <article class="card"><h3>Отчёты и Excel</h3><p>Отчёт по движению и остаткам выгружается в Excel. Директор получает цифры, а не пересказ.</p></article>
-      <article class="card"><h3>Роли и доступ</h3><p>Админ, менеджер, кладовщик и мастер цеха видят только то, что им нужно.</p></article>
-      <article class="card"><h3>История и аудит</h3><p>Кто и когда изменил материал, движение или план. Изменения не теряются.</p></article>
+      <article class="card"><h3>Приём из WhatsApp</h3><p>Свой номер подключается по QR. Отмечаются нужные чаты, новый чат приходит выключенным. Текст, фото накладной и голосовые разбираются автоматически.</p></article>
+      <article class="card"><h3>Справочник материалов</h3><p>Названия, единицы, нормы ГОСТ на единицу продукции. Арматуру можно вводить в килограммах и хранить в метрах, если задан коэффициент.</p></article>
+      <article class="card"><h3>Движение и остатки</h3><p>Приход, расход, брак с причиной, возврат. Цена за единицу, контрагент, журнал с источником «вручную» или «WhatsApp».</p></article>
+      <article class="card"><h3>Производственные планы</h3><p>План и факт по материалам, отклонения и перерасход. У плана есть исполнитель и срок.</p></article>
+      <article class="card"><h3>Отчёты и Excel</h3><p>Отчёт за период по движению и остаткам, выгрузка в Excel для директора и бухгалтерии.</p></article>
+      <article class="card"><h3>Роли и аудит</h3><p>Администратор, менеджер, кладовщик, мастер цеха. Триггеры базы пишут, кто и что изменил, со старыми и новыми значениями.</p></article>
     </div>
   </section>
 
   <section class="container section" id="how">
     <div class="section-head">
       <h2>Три шага до первого учёта</h2>
-      <p>Без программиста и без переноса справочников вручную.</p>
+      <p>Без программиста и ручного переноса справочников.</p>
     </div>
     <div class="grid-3">
-      <article class="card"><div class="num">01</div><h3>Подключите номер</h3><p>Выделенный номер WhatsApp привязывается по QR. Чаты остаются вашими, доступ — только у компании.</p></article>
-      <article class="card"><div class="num">02</div><h3>Отметьте чаты</h3><p>В списке чатов включите те, откуда приходят сообщения о материалах. Остальные не трогаем.</p></article>
-      <article class="card"><div class="num">03</div><h3>Работайте как раньше</h3><p>Пишите в WhatsApp. Система разбирает сообщение, а спорные случаи показывает на подтверждение.</p></article>
+      <article class="card"><div class="num">01</div><h3>Подключите номер</h3><p>Выделенный номер WhatsApp привязывается по QR. Сессия одна на компанию, доступ только у вас.</p></article>
+      <article class="card"><div class="num">02</div><h3>Отметьте чаты</h3><p>В списке чатов включите те, откуда пишут о материалах. Остальные сообщения не обрабатываются.</p></article>
+      <article class="card"><div class="num">03</div><h3>Работайте как раньше</h3><p>Пишите в WhatsApp. Уверенный разбор сразу становится операцией, спорный ждёт подтверждения.</p></article>
     </div>
   </section>
 
   <section class="container section" id="pricing">
     <div class="section-head">
       <h2>Тарифы</h2>
-      <p>Пилот 30 дней бесплатно. Дальше — подписка, годовая оплата дешевле на 20%.</p>
+      <p>Цена в долларах США за компанию в месяц. Состав и сумма фиксируются в счёте до оплаты.</p>
     </div>
     <div class="pricing">
       <article class="card plan">
-        <h3>Пилот</h3>
-        <div class="price">0 ₸ <small>/ 30 дней</small></div>
-        <ul><li>1 склад</li><li>Все функции</li><li>Настройка и обучение</li></ul>
-        <a class="btn btn-ghost" href="https://pulse.altaidynamics.kz/register">Начать</a>
-      </article>
-      <article class="card plan">
-        <h3>Старт</h3>
-        <div class="price">14 900 ₸ <small>/ мес</small></div>
-        <ul><li>1 склад</li><li>Учёт, планы, отчёты</li><li>Работа с телефона</li><li>WhatsApp отдельно</li></ul>
+        <h3>Start</h3>
+        <div class="price">$30 <small>/ мес</small></div>
+        <div class="users">База</div>
+        <ul><li>Учёт материалов</li><li>Движение и остатки</li><li>Отчёты</li></ul>
         <a class="btn btn-ghost" href="https://pulse.altaidynamics.kz/register">Выбрать</a>
       </article>
       <article class="card plan featured">
-        <h3>Завод</h3>
-        <div class="price">29 900 ₸ <small>/ мес</small></div>
-        <ul><li>До 3 цехов</li><li>WhatsApp включён, 1 номер</li><li>Все отчёты</li></ul>
+        <h3>Start+</h3>
+        <div class="price">$64.9 <small>/ мес</small></div>
+        <div class="users">10–60 пользователей</div>
+        <ul><li>Всё из Start</li><li>Нормы ГОСТ</li><li>Брак с причиной</li><li>Возвраты</li></ul>
         <a class="btn btn-primary" href="https://pulse.altaidynamics.kz/register">Выбрать</a>
       </article>
       <article class="card plan">
-        <h3>Сеть</h3>
-        <div class="price">54 900 ₸ <small>/ мес</small></div>
-        <ul><li>Без лимита цехов</li><li>2 WhatsApp-номера</li><li>Приоритетная поддержка</li></ul>
+        <h3>Fabric</h3>
+        <div class="price">$69.5 <small>/ мес</small></div>
+        <div class="users">30–150 пользователей</div>
+        <ul><li>Всё из Start+</li><li>Несколько цехов</li></ul>
+        <a class="btn btn-ghost" href="https://pulse.altaidynamics.kz/register">Выбрать</a>
+      </article>
+      <article class="card plan">
+        <h3>Network</h3>
+        <div class="price">$125.1 <small>/ мес</small></div>
+        <div class="users">10–80 пользователей</div>
+        <ul><li>Всё из Fabric</li><li>Сезонное планирование</li></ul>
         <a class="btn btn-ghost" href="https://pulse.altaidynamics.kz/register">Выбрать</a>
       </article>
     </div>
-    <p class="hero-note" style="margin-top:14px">WhatsApp для тарифа «Старт» — +14 900 ₸ в месяц. Пользователи не ограничены.</p>
+    <p class="pricing-note">30 дней бесплатно на пилоте. Годовая оплата и внедрение обсуждаются отдельно.</p>
+  </section>
+
+
+  <section class="container section" id="compare">
+    <div class="section-head">
+      <h2>Что входит в каждый тариф</h2>
+      <p>Разница в цене — это модули и масштаб, а не «урезанная» база. Везде есть учёт, движение и отчёты.</p>
+    </div>
+    <div class="compare-wrap">
+      <table class="compare">
+        <thead><tr><th>Модуль</th><th>Start</th><th>Start+</th><th>Fabric</th><th>Network</th></tr></thead>
+        <tbody>
+          <tr><td>Учёт материалов и остатков</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Приход, расход, отчёты, Excel</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Нормы ГОСТ и перерасход</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Брак с причиной и возвраты</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Несколько цехов</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Сезонное планирование</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+          <tr><td>Пользователи</td><td>по составу</td><td>10–60</td><td>30–150</td><td>10–80</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="grid-3" style="margin-top:16px">
+      <article class="card"><h3>За что платите в Start+</h3><p>Нормы ГОСТ, брак с причиной и возвраты. Система считает перерасход, а не только остаток.</p></article>
+      <article class="card"><h3>За что платите в Fabric</h3><p>Несколько цехов: у каждого свой расход и план, сводка по заводу остаётся одной.</p></article>
+      <article class="card"><h3>За что платите в Network</h3><p>Сезонное планирование и два WhatsApp-номера: площадки и сезонные пики в одной системе.</p></article>
+    </div>
+    <p class="pricing-note">Дополнительно: подключение WhatsApp, перенос справочников и обучение — отдельной строкой в счёте. Цены и состав фиксируются письменно до оплаты.</p>
   </section>
 
   <section class="container section faq">
     <div class="section-head"><h2>Вопросы</h2></div>
-    <details><summary>Это официальный WhatsApp API?</summary><p>Нет. Мы подключаем номер через собственный шлюз. Это дешевле, но WhatsApp может ограничить неофициальные подключения, поэтому лучше выделенный номер, а не основной канал снабжения.</p></details>
+    <details><summary>Это официальный WhatsApp API?</summary><p>Нет. Номер подключается через собственный шлюз. Это дешевле, но WhatsApp может ограничить неофициальные подключения, поэтому нужен выделенный номер, а не основной канал снабжения.</p></details>
     <details><summary>Заменит ли AD Pulse 1С?</summary><p>Нет. 1С остаётся для бухгалтерии. AD Pulse закрывает цех, склад и ввод из WhatsApp, откуда документы часто не доходят до бухгалтера.</p></details>
-    <details><summary>Что с данными?</summary><p>Данные компании хранятся в Supabase и не видны другим клиентам: доступ ограничен на уровне базы по company_id. Выгрузка в Excel доступна в отчётах.</p></details>
-    <details><summary>Сколько людей можно подключить?</summary><p>Пользователи не ограничены на всех тарифах. Ограничение — по цехам и WhatsApp-номерам.</p></details>
+    <details><summary>Что с данными?</summary><p>База в Supabase, каждая компания видит только свои записи: доступ ограничен Row Level Security по company_id. Политика конфиденциальности и DPA опубликованы в подвале.</p></details>
+    <details><summary>Кто отвечает за обработку данных?</summary><p>По записям компании вы контроллер, мы обработчик. По своим коммерческим записям контроллер — Altai Dynamics. Подробности в DPA и политике.</p></details>
   </section>
 
   <section class="container section">
     <div class="cta-band">
       <div>
-        <h2 style="margin:0 0 6px">Попробуйте на своём складе</h2>
+        <h2 style="margin:0 0 4px">Попробуйте на своём складе</h2>
         <p style="margin:0;color:var(--muted)">30 дней, один цех, без карты. Настроим материалы и покажем, где теряются деньги.</p>
       </div>
       <a class="btn btn-primary" href="https://pulse.altaidynamics.kz/register">Создать аккаунт</a>
@@ -145,20 +200,50 @@
 </main>
 
 <footer class="footer">
-  <div class="container footer-grid">
-    <div>
-      <div class="brand" style="margin-bottom:8px"><img src="logo.svg" alt=""><span>AD Pulse</span></div>
-      <div>© 2026 Altai Dynamics</div>
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="brand" style="margin-bottom:10px">
+          <img src="/logo-altai.png" alt="" style="height:26px">
+          <span class="brand-name">Altai Dynamics</span>
+        </div>
+        <p style="margin:0 0 6px">ТОО «Altai Dynamics»</p>
+        <p style="margin:0 0 6px">БИН 260340030272</p>
+        <p style="margin:0">9 Kerey and Zhanibek Khans Street, apt. 221, Astana, Kazakhstan</p>
+      </div>
+      <div>
+        <h4>Продукт</h4>
+        <a href="/docs/">Документация</a>
+        <a href="/security/">Безопасность</a>
+        <a href="/support/">Поддержка</a>
+        <a href="https://pulse.altaidynamics.kz/login">Войти в аккаунт</a>
+      </div>
+      <div>
+        <h4>Правовое</h4>
+        <a href="/privacy/">Политика конфиденциальности</a>
+        <a href="/cookies/">Cookies</a>
+        <a href="/terms/">Пользовательское соглашение</a>
+        <a href="/dpa/">Обработка данных (DPA)</a>
+      </div>
+      <div>
+        <h4>Контакты</h4>
+        <a href="mailto:ceo@altaidynamics.kz">ceo@altaidynamics.kz</a>
+        <a href="mailto:info@altaidynamics.kz">info@altaidynamics.kz</a>
+        <a href="tel:+77077246790">+7 707 724 67 90</a>
+      </div>
     </div>
-    <div class="links">
-      <a href="docs.html">Документация</a>
-      <a href="security.html">Безопасность</a>
-      <a href="support.html">Поддержка</a>
-      <a href="mailto:info@altaidynamics.kz">info@altaidynamics.kz</a>
-      <a href="https://pulse.altaidynamics.kz/login">Войти</a>
+    <div class="footer-bottom">
+      <span>© 2026 Altai Dynamics LLP. Astana, Kazakhstan. Участник Astana Hub.</span>
+      <span>AD Pulse — продукт Altai Dynamics.</span>
     </div>
   </div>
 </footer>
-<script src="assets/app.js"></script>
+
+<div class="cookie-banner" data-cookie-banner hidden>
+  <span>Мы используем cookie для входа, темы и перевода. Подробнее — <a href="/cookies/">политика cookies</a>.</span>
+  <button class="btn btn-primary btn-sm" data-cookie-accept>Принять</button>
+</div>
+
+<script src="/assets/app.js"></script>
 </body>
 </html>

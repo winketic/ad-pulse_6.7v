@@ -7,6 +7,7 @@ import {
   daysUntil,
   formatTenge,
   isPurchasablePlan,
+  planFeatures,
   type BillingPeriod,
   type PlanCode,
   type PlanOffer,
@@ -274,9 +275,11 @@ export default function BillingClient({
                   <span className="text-sm font-semibold text-[var(--text)]">{formatTenge(monthly)}/мес</span>
                 </div>
                 <p className="text-xs text-[var(--muted)] mt-1">{item.summary}</p>
-                <p className="text-xs text-[var(--muted)] mt-1">
-                  {item.wa_numbers === 1 ? "WhatsApp: 1 номер включён" : item.wa_numbers > 1 ? `WhatsApp: ${item.wa_numbers} номера включены` : "WhatsApp отдельной опцией"}
-                </p>
+                <ul className="mt-2 space-y-0.5">
+                  {planFeatures(item.code).map((feature) => (
+                    <li key={feature} className="text-xs text-[var(--muted)]">· {feature}</li>
+                  ))}
+                </ul>
               </button>
             );
           })}

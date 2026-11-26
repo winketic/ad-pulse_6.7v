@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Политика конфиденциальности — AD Pulse</title>
+<meta name="description" content="Как AD Pulse обрабатывает и защищает данные.">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+<script>try{var t=localStorage.getItem('adpulse-theme');document.documentElement.dataset.theme=t==='dark'?'dark':'light';}catch(e){document.documentElement.dataset.theme='light';}</script>
+</head>
+<body>
+<header class="header">
+  <div class="container header-inner">
+    <a class="brand" href="/"><img src="/logo-altai.png" alt="Altai Dynamics"><span class="brand-name">Altai Dynamics</span></a>
+    <nav class="nav">
+      <a href="/#features">Возможности</a>
+      <a href="/#pricing">Тарифы</a>
+      <a href="/docs/">Документация</a>
+      <a href="/security/">Безопасность</a>
+      <a href="/support/">Поддержка</a>
+    </nav>
+    <div class="header-actions">
+      <select class="lang-select" data-lang aria-label="Язык сайта">
+        <option value="ru">RU</option><option value="en">EN</option><option value="kk">ҚАЗ</option><option value="zh-CN">中文</option><option value="tr">TR</option><option value="de">DE</option><option value="sv">SV</option><option value="ja">JA</option>
+      </select>
+      <button class="icon-btn" data-theme-toggle aria-label="Тёмная тема">◐</button>
+      <a class="btn btn-ghost btn-sm login-link" href="https://pulse.altaidynamics.kz/login">Войти</a>
+      <a class="btn btn-primary btn-sm" href="https://pulse.altaidynamics.kz/register">Попробовать</a>
+      <button class="icon-btn menu-btn" data-menu-toggle aria-label="Меню">☰</button>
+    </div>
+  </div>
+  <nav class="mobile-nav" data-mobile-nav>
+    <a href="/#features">Возможности</a><a href="/#pricing">Тарифы</a><a href="/docs/">Документация</a><a href="/security/">Безопасность</a><a href="/support/">Поддержка</a>
+  </nav>
+</header>
+<main class="container prose">
+<h1>Политика конфиденциальности</h1>
+<p class="meta">Версия 1.1 · 26 ноября 2026 · Altai Dynamics LLP</p>
+<p>Политика описывает, какие данные AD Pulse собирает, зачем и кому передаёт. Оператор платформы — ТОО «Altai Dynamics», БИН 260340030272, адрес: 9 Kerey and Zhanibek Khans Street, apt. 221, Astana, Kazakhstan.</p>
+
+<h2>1. Кто за что отвечает</h2>
+<p>По записям вашей компании вы контроллер, мы обработчик: храним и обрабатываем их по вашему поручению и только для работы сервиса. По нашим коммерческим записям, переписке и счетам контроллер — Altai Dynamics.</p>
+
+<h2>2. Какие данные обрабатываем</h2>
+<table>
+<tr><th>Категория</th><th>Состав</th><th>Откуда</th></tr>
+<tr><td>Аккаунт</td><td>Имя, email, роль, компания</td><td>Регистрация, приглашения</td></tr>
+<tr><td>Производственные записи</td><td>Материалы, количества, операции, планы, контрагенты</td><td>Ручной ввод в приложении</td></tr>
+<tr><td>WhatsApp</td><td>Текст сообщений, фото накладных, голосовые, названия чатов, телефоны отправителей</td><td>Номер, который подключает клиент</td></tr>
+<tr><td>Технические данные</td><td>IP-адрес, браузер, трассировки ошибок</td><td>Запросы к приложению</td></tr>
+</table>
+
+<h2>3. Зачем</h2>
+<ul>
+<li>работа учёта: остатки, движение, планы, отчёты;</li>
+<li>вход, приглашения, сброс пароля;</li>
+<li>разбор сообщений WhatsApp и фото накладных;</li>
+<li>поддержка и ответы на обращения;</li>
+<li>диагностика ошибок и защита от злоупотреблений.</li>
+</ul>
+
+<h2>4. Кому передаём</h2>
+<table>
+<tr><th>Поставщик</th><th>Что получает</th><th>Где</th></tr>
+<tr><td>Supabase</td><td>База, аутентификация, файлы</td><td>ЕС</td></tr>
+<tr><td>Vercel</td><td>Хостинг приложения, логи запросов</td><td>Глобальная сеть</td></tr>
+<tr><td>Interserver VPS</td><td>Шлюз WhatsApp: сессия, сообщения, медиа</td><td>США</td></tr>
+<tr><td>llm.alem.ai</td><td>Текст сообщений и фото накладных для разбора</td><td>Указано в DPA</td></tr>
+<tr><td>OpenAI</td><td>Голосовые и резервный разбор</td><td>США</td></tr>
+<tr><td>Telegram</td><td>Текст алертов</td><td>Инфраструктура Telegram</td></tr>
+<tr><td>Resend</td><td>Email для писем</td><td>США</td></tr>
+<tr><td>Sentry</td><td>Трассировки ошибок, IP</td><td>США</td></tr>
+</table>
+
+<h2>5. Как защищаем</h2>
+<ul>
+<li>HTTPS на всех адресах, включая шлюз и медиа;</li>
+<li>Row Level Security: каждый запрос фильтруется по company_id из сессии;</li>
+<li>service role key не попадает в браузер;</li>
+<li>четыре роли доступа;</li>
+<li>триггеры аудита на планы, материалы и операции;</li>
+<li>пароли хранит Supabase Auth, мы их не видим;</li>
+<li>секреты в переменных окружения, не в репозитории.</li>
+</ul>
+
+<h2>6. Сколько храним</h2>
+<ul>
+<li>аккаунт и производственные записи — пока аккаунт активен, удаление через 30 дней после закрытия;</li>
+<li>медиа WhatsApp на шлюзе — 30 дней, удаляется ежедневной задачей;</li>
+<li>текст сообщений — вместе с записями аккаунта;</li>
+<li>удаление по письменному запросу администратора компании, подтверждение выдаём по запросу.</li>
+</ul>
+
+<h2>7. Ваши права</h2>
+<p>Копия данных, исправление, удаление, возражение против обработки. Пишите на <a href="mailto:ceo@altaidynamics.kz">ceo@altaidynamics.kz</a>. Если нужен договор обработки, пришлите свой шаблон или запросите наш.</p>
+
+<h2>8. Передача за пределы ЕС</h2>
+<p>База работает в ЕС. Данные выходят за его пределы только к поставщикам из таблицы: шлюз и AI-провайдеры находятся вне ЕС. Каждый поставщик применяет собственный механизм передачи в стандартных условиях, мы указываем его в DPA.</p>
+
+<h2>9. Сертификаты</h2>
+<p>ISO 27001 и SOC 2 у нас нет, внешнего аудита безопасности не было. На письменные опросы безопасности отвечаем и можем провести звонок с технической командой.</p>
+
+<h2>10. Изменения</h2>
+<p>Актуальная версия всегда на этой странице. Дату и номер версии меняем при правках.</p>
+</main>
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="brand" style="margin-bottom:10px"><img src="/logo-altai.png" alt="" style="height:26px"><span class="brand-name">Altai Dynamics</span></div>
+        <p style="margin:0 0 6px">ТОО «Altai Dynamics»</p>
+        <p style="margin:0 0 6px">БИН 260340030272</p>
+        <p style="margin:0">Astana, Kazakhstan</p>
+      </div>
+      <div><h4>Продукт</h4><a href="/docs/">Документация</a><a href="/security/">Безопасность</a><a href="/support/">Поддержка</a></div>
+      <div><h4>Правовое</h4><a href="/privacy/">Конфиденциальность</a><a href="/cookies/">Cookies</a><a href="/terms/">Соглашение</a><a href="/dpa/">DPA</a></div>
+      <div><h4>Контакты</h4><a href="mailto:ceo@altaidynamics.kz">ceo@altaidynamics.kz</a><a href="mailto:info@altaidynamics.kz">info@altaidynamics.kz</a></div>
+    </div>
+    <div class="footer-bottom"><span>© 2026 Altai Dynamics LLP</span><span>AD Pulse — продукт Altai Dynamics.</span></div>
+  </div>
+</footer>
+
+<div class="cookie-banner" data-cookie-banner hidden>
+  <span>Мы используем cookie для входа, темы и перевода. Подробнее — <a href="/cookies/">политика cookies</a>.</span>
+  <button class="btn btn-primary btn-sm" data-cookie-accept>Принять</button>
+</div>
+<script src="/assets/app.js"></script>
+</body>
+</html>
