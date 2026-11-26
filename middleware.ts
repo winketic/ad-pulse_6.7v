@@ -14,6 +14,8 @@ const PUBLIC_PATHS = [
   "/support",
   // Колбэк эквайринга приходит от Freedom Pay без cookie и сессии.
   "/api/billing/fp-result",
+  // Форма поддержки с лендинга: запрос без cookie, защита — CORS и honeypot.
+  "/api/support/public",
   // Без сессии маршрут отвечает 401 JSON, а не редиректом на /login:
   // его вызывает фоновая проверка с любой страницы кабинета.
   "/api/auth/session",
