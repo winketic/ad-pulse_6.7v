@@ -13,8 +13,7 @@ export default function PublicThemeToggle() {
   const pathname = usePathname() ?? "";
   const insideApp =
     pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/onboarding");
+    pathname.startsWith("/admin");
 
   if (insideApp) return null;
 
