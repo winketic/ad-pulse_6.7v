@@ -28,6 +28,10 @@ export default async function AdminBillingPage() {
 
   const companyNames = new Map((companiesResult.data ?? []).map((row) => [row.id, row.name]));
   const emailStatus = await checkEmailStatus();
+  const freedomPay = {
+    configured: Boolean(process.env.FREEDOMPAY_MERCHANT_ID && process.env.FREEDOMPAY_SECRET_KEY),
+    test: process.env.FREEDOMPAY_TEST_MODE === "1",
+  };
 
   return (
     <div className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto space-y-5">
@@ -50,6 +54,24 @@ export default async function AdminBillingPage() {
         {!emailStatus.ok && (
           <span className="block text-xs text-[var(--muted)] mt-1">
             Пока ключ не работает, коды регистрации, счета и обращения не уходят. Обновите RESEND_API_KEY в Vercel.
+          </span>
+        )}
+      </div>
+
+      <div
+        className="rounded-xl px-4 py-3 text-sm"
+        style={{
+          background: freedomPay.configured ? "color-mix(in srgb, #059669 10%, transparent)" : "color-mix(in srgb, #dc2626 10%, transparent)",
+          border: `1px solid ${freedomPay.configured ? "color-mix(in srgb, #059669 30%, transparent)" : "color-mix(in srgb, #dc2626 30%, transparent)"}`,
+        }}
+      >
+        <b>Freedom Pay:</b>{" "}
+        {freedomPay.configured
+          ? `ключи заданы${freedomPay.test ? ", тестовый режим" : ", рабочий режим"}`
+          : "ключей нет, онлайн-оплата выключена"}
+        {!freedomPay.configured && (
+          <span className="block text-xs text-[var(--muted)] mt-1">
+            Нужны FREEDOMPAY_MERCHANT_ID и FREEDOMPAY_SECRET_KEY из кабинета мерчанта. До этого счета оплачиваются переводом.
           </span>
         )}
       </div>

@@ -228,3 +228,22 @@ export async function sendSignupCodeEmail(params: { to: string; code: string }):
     }),
   });
 }
+
+export async function sendPasswordResetCodeEmail(params: { to: string; code: string }): Promise<void> {
+  const { to, code } = params;
+  await sendEmail({
+    to,
+    subject: `Сброс пароля AD Pulse: ${code}`,
+    html: layout({
+      title: "Сброс пароля",
+      body: `<p style="margin:0 0 12px;font-size:14px;color:#374151;">
+        Код для нового пароля:
+      </p>
+      <p style="margin:0 0 16px;font-size:30px;letter-spacing:8px;font-weight:700;color:#111827;">${code}</p>
+      <p style="margin:0;font-size:13px;color:#6b7280;">
+        Код действует 15 минут. Если вы не просили сброс, пароль останется прежним.
+      </p>`,
+      footer: "Письмо отправлено автоматически.",
+    }),
+  });
+}

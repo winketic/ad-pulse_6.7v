@@ -2,28 +2,62 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
+import { requestPasswordResetCode, resetPasswordWithCode } from "./actions";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [step, setStep] = useState<"email" | "reset">("email");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
+  const [resending, setResending] = useState(false);
+  const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setInfo("");
+    setLoading(true);
+    try {
+      await requestPasswordResetCode(email);
+      setStep("reset");
+      setInfo(`Если аккаунт с адресом ${email} есть, код уже в письме. Действует 15 минут.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось отправить код.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://pulse.altaidynamics.kz")
-      .replace(/﻿/g, "").trim().replace(/\/$/, "");
-    const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${appUrl}/auth/confirm`,
-    });
-    setLoading(false);
-    if (authError) { setError("Не удалось отправить письмо. Проверьте email."); return; }
-    setSent(true);
+    try {
+      await resetPasswordWithCode({ email, code, password });
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось сменить пароль.");
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setError("");
+    setResending(true);
+    try {
+      await requestPasswordResetCode(email);
+      setInfo("Код отправлен ещё раз. Проверьте почту и папку «Спам».");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось отправить код.");
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -36,54 +70,103 @@ export default function ForgotPasswordPage() {
         </div>
 
         <div className="dp-auth-card">
-          {sent ? (
-            <div className="text-center py-4">
-              <div className="w-12 h-12 rounded-full bg-[#2563eb]/10 border border-[#2563eb]/30 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-[#2563eb]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h2 className="text-lg font-semibold text-[var(--text)] mb-2">Проверьте почту</h2>
-              <p className="text-sm text-[var(--muted)] mb-6">
-                Мы отправили ссылку на <span className="text-[var(--text)]">{email}</span>.
-                Проверьте папку «Спам».
-              </p>
-              <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[#2563eb] transition-colors flex items-center justify-center gap-1.5">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-                Вернуться ко входу
-              </Link>
-            </div>
-          ) : (
+          {step === "email" ? (
             <>
               <h2 className="text-lg font-semibold text-[var(--text)] mb-2">Сброс пароля</h2>
-              <p className="text-sm text-[var(--muted)] mb-6">Введите email — мы пришлём ссылку для создания нового пароля.</p>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <p className="text-sm text-[var(--muted)] mb-6">
+                Введите email — пришлём код из 6 цифр. Пароль меняется здесь же.
+              </p>
+              <form onSubmit={handleRequest} className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Email</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@company.com" required autoComplete="email" className="dp-input" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    required
+                    autoComplete="email"
+                    className="dp-input"
+                  />
                 </div>
                 {error && (
-                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                    <span className="text-sm text-red-400">{error}</span>
-                  </div>
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">{error}</div>
                 )}
                 <button type="submit" disabled={loading} className="dp-btn-primary w-full py-2.5">
-                  {loading ? "Отправка..." : "Отправить ссылку"}
+                  {loading ? "Отправляем…" : "Получить код"}
                 </button>
               </form>
-              <div className="mt-5 text-center">
-                <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[#2563eb] transition-colors inline-flex items-center gap-1.5">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Вернуться ко входу
-                </Link>
+            </>
+          ) : (
+            <>
+              <h2 className="text-lg font-semibold text-[var(--text)] mb-2">Новый пароль</h2>
+              <p className="text-sm text-[var(--muted)] mb-6">
+                Код ушёл на {email}. Введите его и новый пароль.
+              </p>
+              <form onSubmit={handleReset} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Код из письма</label>
+                  <input
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="123456"
+                    required
+                    className="dp-input text-center tracking-[0.5em] text-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Новый пароль</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Минимум 8 символов"
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    className="dp-input"
+                  />
+                </div>
+
+                {info && (
+                  <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-sm text-emerald-400">{info}</div>
+                )}
+                {error && (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">{error}</div>
+                )}
+
+                <button type="submit" disabled={loading || code.length !== 6} className="dp-btn-primary w-full py-2.5">
+                  {loading ? "Меняем пароль…" : "Сменить пароль и войти"}
+                </button>
+              </form>
+
+              <div className="flex items-center justify-between mt-4 text-sm">
+                <button
+                  type="button"
+                  onClick={() => { setStep("email"); setError(""); setInfo(""); }}
+                  className="text-[var(--muted)] hover:text-[var(--text)]"
+                >
+                  Изменить email
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-50"
+                >
+                  {resending ? "Отправляем…" : "Отправить код ещё раз"}
+                </button>
               </div>
             </>
           )}
+
+          <div className="mt-5 text-center">
+            <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[#2563eb] transition-colors">
+              Вернуться ко входу
+            </Link>
+          </div>
         </div>
       </div>
     </div>
