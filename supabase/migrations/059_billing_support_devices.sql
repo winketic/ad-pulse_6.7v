@@ -24,6 +24,15 @@
 
 BEGIN;
 
+-- Защита от запуска не в той базе: в чужом проекте нет public.companies,
+-- и скрипт молча создал бы пустые таблицы биллинга. Останавливаемся сразу.
+DO $$
+BEGIN
+  IF to_regclass('public.companies') IS NULL THEN
+    RAISE EXCEPTION 'Это не база AD Pulse: нет public.companies. Проверьте проект Supabase (ref wagtdvhrlisqwwvmridj).';
+  END IF;
+END $$;
+
 -- ─── 1. Каталог тарифов ──────────────────────────────────────────────────────
 
 create table if not exists public.plan_offers (
