@@ -1,3 +1,16 @@
+/**
+ * Resend отклоняет non-ASCII в поле from (422). В Vercel EMAIL_FROM пришёл
+ * с кириллицей, поэтому отправляем только адрес без display name, а если
+ * адрес сам не ASCII — безопасный onboarding@resend.dev.
+ */
+export function resolveEmailFrom(): string {
+  const raw = (process.env.EMAIL_FROM ?? "").trim();
+  const bracketed = raw.match(/<([^<>]+)>/);
+  const address = (bracketed ? bracketed[1] : raw).trim();
+  if (/^[^\s@<>]+@[^\s@<>]+$/.test(address) && /^[\x21-\x7E]+$/.test(address)) return address;
+  return "onboarding@resend.dev";
+}
+
 export async function sendEmail({
   to,
   subject,
@@ -20,7 +33,7 @@ export async function sendEmail({
   }
 
   const payload = {
-    from: process.env.EMAIL_FROM ?? "noreply@altaidynamics.kz",
+    from: resolveEmailFrom(),
     to: [to],
     subject,
     html,
@@ -51,7 +64,7 @@ export async function sendEmail({
 /** Диагностика для админки: принят ли ключ Resend и какой адрес отправителя. */
 export async function checkEmailStatus(): Promise<{ ok: boolean; message: string; from: string }> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM ?? "noreply@altaidynamics.kz";
+  const from = resolveEmailFrom();
   if (!apiKey) return { ok: false, message: "RESEND_API_KEY не задан", from };
 
   try {
