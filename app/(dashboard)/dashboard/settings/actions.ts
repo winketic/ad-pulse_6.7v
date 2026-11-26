@@ -195,6 +195,15 @@ export async function removeUserFromCompany(userId: string) {
     .single();
   if (!p) throw new Error("Пользователь не найден");
 
+  // audit_log.changed_by ссылается на profiles(id) без ON DELETE, поэтому
+  // удаление сотрудника с историей падало с 23503. Обнуляем ссылку: запись
+  // аудита остаётся, автор становится «системным».
+  const { error: auditError } = await service
+    .from("audit_log")
+    .update({ changed_by: null })
+    .eq("changed_by", userId);
+  if (auditError) throw new Error(`Не удалось отвязать историю аудита: ${auditError.message}`);
+
   // 1. Delete profile first (FK constraint requires this order)
   const { error: profileError } = await service
     .from("profiles")

@@ -130,7 +130,7 @@ function resetError(error: unknown): string {
   const detail = error instanceof Error ? error.message : String(error);
   console.error("[reset]", detail);
   if (/Resend/i.test(detail)) {
-    return "Почта ещё не настроена: домен отправителя не подтверждён в Resend. Напишите в поддержку.";
+    return "Почта ещё не настроена: домен отправителя не подтверждён в Resend. Напишите на altai.dx@gmail.com.";
   }
   return detail;
 }
