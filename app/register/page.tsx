@@ -202,7 +202,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-[var(--muted)] mt-6">
             Уже есть аккаунт?{" "}
-            <Link href="/login" className="font-medium text-[var(--text)] hover:text-[#2563eb] transition-colors">Войти</Link>
+            <Link href="/login" className="font-medium text-[var(--text)] hover:text-[var(--link)] transition-colors">Войти</Link>
           </p>
         </div>
       </div>

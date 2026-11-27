@@ -25,7 +25,7 @@ function passwordStrength(pwd: string): { score: number; label: string; color: s
   if (score <= 1) return { score, label: "Слабый", color: "bg-red-400" };
   if (score <= 2) return { score, label: "Средний", color: "bg-amber-400" };
   if (score <= 3) return { score, label: "Хороший", color: "bg-yellow-400" };
-  return { score, label: "Надёжный", color: "bg-[#2563eb]" };
+  return { score, label: "Надёжный", color: "bg-[var(--success)]" };
 }
 
 export default function InvitePage() {
@@ -154,7 +154,7 @@ export default function InvitePage() {
   const strengthWidth = strength.score > 0 ? `${(strength.score / 5) * 100}%` : "0%";
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -164,12 +164,12 @@ export default function InvitePage() {
           <h1 className="text-2xl font-bold text-[#f7f7f8] tracking-tight">
             Добро пожаловать в AD Pulse
           </h1>
-          <p className="text-sm text-gray-400 mt-1">Настройте аккаунт перед началом работы</p>
+          <p className="text-sm text-[var(--muted-2)] mt-1">Настройте аккаунт перед началом работы</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+        <div className="bg-[var(--surface-1)] rounded-2xl shadow-sm border border-[var(--border)] p-8">
           {!ready ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-3 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-10 gap-3 text-[var(--muted-2)]">
               <svg className="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -184,13 +184,13 @@ export default function InvitePage() {
                   <div key={s} className="flex-1 flex items-center gap-2">
                     <div
                       className={`h-1.5 flex-1 rounded-full transition-colors ${
-                        i <= stepIndex ? "bg-[#f7f7f8]" : "bg-gray-150 bg-gray-200"
+                        i <= stepIndex ? "bg-[var(--surface-2)]" : "bg-gray-150 bg-gray-200"
                       }`}
                     />
                   </div>
                 ))}
               </div>
-              <p className="text-xs font-medium text-gray-400 mb-5">
+              <p className="text-xs font-medium text-[var(--muted-2)] mb-5">
                 Шаг {stepIndex + 1} из {STEPS.length} — {STEP_LABELS[step]}
               </p>
 
@@ -201,7 +201,7 @@ export default function InvitePage() {
                   className="space-y-5"
                 >
                   <div>
-                    <label htmlFor="full-name" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label htmlFor="full-name" className="block text-sm font-medium text-[var(--text)] mb-1.5">
                       Как вас зовут?
                     </label>
                     <input
@@ -213,7 +213,7 @@ export default function InvitePage() {
                       required
                       autoFocus
                       maxLength={100}
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#f7f7f8]/20 focus:border-[#f7f7f8] transition-colors"
+                      className="w-full px-4 py-2.5 rounded-lg border border-[var(--border-strong)] text-sm text-[var(--text)] placeholder-[var(--muted-2)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-15)] focus:border-[var(--accent)] transition-colors"
                     />
                   </div>
 
@@ -226,7 +226,7 @@ export default function InvitePage() {
                   <button
                     type="submit"
                     disabled={!fullName.trim()}
-                    className="w-full py-2.5 px-4 bg-[#f7f7f8] hover:bg-[#ffffff] text-[#2563eb] text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                    className="w-full py-2.5 px-4 bg-[var(--surface-2)] hover:bg-[var(--surface-1)] text-[var(--link)] text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
                   >
                     Далее
                   </button>
@@ -240,9 +240,9 @@ export default function InvitePage() {
                   className="space-y-5"
                 >
                   <div>
-                    <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label htmlFor="position" className="block text-sm font-medium text-[var(--text)] mb-1.5">
                       Должность
-                      <span className="ml-1.5 text-xs font-normal text-gray-400">(необязательно)</span>
+                      <span className="ml-1.5 text-xs font-normal text-[var(--muted-2)]">(необязательно)</span>
                     </label>
                     <input
                       id="position"
@@ -252,7 +252,7 @@ export default function InvitePage() {
                       placeholder="Начальник склада"
                       autoFocus
                       maxLength={100}
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#f7f7f8]/20 focus:border-[#f7f7f8] transition-colors"
+                      className="w-full px-4 py-2.5 rounded-lg border border-[var(--border-strong)] text-sm text-[var(--text)] placeholder-[var(--muted-2)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-15)] focus:border-[var(--accent)] transition-colors"
                     />
                   </div>
 
@@ -260,13 +260,13 @@ export default function InvitePage() {
                     <button
                       type="button"
                       onClick={goBack}
-                      className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                      className="px-4 py-2.5 rounded-lg border border-[var(--border-strong)] text-sm font-medium text-[var(--muted)] hover:bg-[var(--surface-2)] transition-colors"
                     >
                       Назад
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 py-2.5 px-4 bg-[#f7f7f8] hover:bg-[#ffffff] text-[#2563eb] text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                      className="flex-1 py-2.5 px-4 bg-[var(--surface-2)] hover:bg-[var(--surface-1)] text-[var(--link)] text-sm font-semibold rounded-lg transition-colors shadow-sm"
                     >
                       Далее
                     </button>
@@ -278,7 +278,7 @@ export default function InvitePage() {
               {step === "password" && (
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label htmlFor="password" className="block text-sm font-medium text-[var(--text)] mb-1.5">
                       Новый пароль
                     </label>
                     <input
@@ -291,7 +291,7 @@ export default function InvitePage() {
                       minLength={8}
                       autoFocus
                       autoComplete="new-password"
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#f7f7f8]/20 focus:border-[#f7f7f8] transition-colors"
+                      className="w-full px-4 py-2.5 rounded-lg border border-[var(--border-strong)] text-sm text-[var(--text)] placeholder-[var(--muted-2)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-15)] focus:border-[var(--accent)] transition-colors"
                     />
                     {password.length > 0 && (
                       <div className="mt-2">
@@ -301,7 +301,7 @@ export default function InvitePage() {
                             style={{ width: strengthWidth }}
                           />
                         </div>
-                        <p className={`text-xs mt-1 ${strength.score >= 4 ? "text-[#1e40af]" : strength.score >= 3 ? "text-amber-500" : "text-red-500"}`}>
+                        <p className={`text-xs mt-1 ${strength.score >= 4 ? "text-[var(--success)]" : strength.score >= 3 ? "text-amber-500" : "text-red-500"}`}>
                           {strength.label}
                         </p>
                       </div>
@@ -309,7 +309,7 @@ export default function InvitePage() {
                   </div>
 
                   <div>
-                    <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label htmlFor="confirm" className="block text-sm font-medium text-[var(--text)] mb-1.5">
                       Подтвердите пароль
                     </label>
                     <input
@@ -320,13 +320,13 @@ export default function InvitePage() {
                       placeholder="Повторите пароль"
                       required
                       autoComplete="new-password"
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#f7f7f8]/20 focus:border-[#f7f7f8] transition-colors"
+                      className="w-full px-4 py-2.5 rounded-lg border border-[var(--border-strong)] text-sm text-[var(--text)] placeholder-[var(--muted-2)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-15)] focus:border-[var(--accent)] transition-colors"
                     />
                     {confirm.length > 0 && password !== confirm && (
                       <p className="text-xs text-red-500 mt-1">Пароли не совпадают</p>
                     )}
                     {confirm.length > 0 && password === confirm && password.length >= 8 && (
-                      <p className="text-xs text-[#1e40af] mt-1">✓ Пароли совпадают</p>
+                      <p className="text-xs text-[var(--success)] mt-1">✓ Пароли совпадают</p>
                     )}
                   </div>
 
@@ -344,14 +344,14 @@ export default function InvitePage() {
                       type="button"
                       onClick={goBack}
                       disabled={loading}
-                      className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      className="px-4 py-2.5 rounded-lg border border-[var(--border-strong)] text-sm font-medium text-[var(--muted)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50"
                     >
                       Назад
                     </button>
                     <button
                       type="submit"
                       disabled={loading || password.length < 8 || password !== confirm}
-                      className="flex-1 py-2.5 px-4 bg-[#f7f7f8] hover:bg-[#ffffff] text-[#2563eb] text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                      className="flex-1 py-2.5 px-4 bg-[var(--surface-2)] hover:bg-[var(--surface-1)] text-[var(--link)] text-sm font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
                     >
                       {loading ? (
                         <span className="flex items-center justify-center gap-2">

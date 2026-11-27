@@ -16,7 +16,7 @@ function layout(params: { title: string; body: string; footer?: string }): strin
 <tr><td align="center">
 <table width="100%" style="max-width:560px;">
   <tr><td style="padding-bottom:20px;">
-    <span style="color:#2563eb;font-size:18px;font-weight:700;">AD Pulse</span>
+    <span style="color:#292929;font-size:18px;font-weight:700;">AD Pulse</span>
   </td></tr>
   <tr><td style="background:#ffffff;border-radius:14px;padding:28px;">
     <h2 style="margin:0 0 16px;font-size:19px;color:#111827;">${params.title}</h2>
@@ -65,7 +65,7 @@ export async function sendInvoiceEmail(params: {
     ? `<ul style="margin:14px 0 0;padding-left:18px;font-size:13px;color:#374151;line-height:1.7;">${features.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
     : "";
   const payLink = invoice.payment_url
-    ? `<p style="margin:20px 0;"><a href="${invoice.payment_url}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Оплатить картой</a></p>`
+    ? `<p style="margin:20px 0;"><a href="${invoice.payment_url}" style="display:inline-block;background:#292929;color:#F2F0EB;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Оплатить картой</a></p>`
     : "";
 
   await sendEmail({
@@ -85,7 +85,7 @@ export async function sendInvoiceEmail(params: {
       ${payLink}
       ${requisites()}
       <p style="margin:16px 0 0;font-size:13px;color:#6b7280;">
-        Счёт и история платежей — в разделе «Оплата»: <a href="${appUrl()}/dashboard/billing" style="color:#2563eb;">${appUrl()}/dashboard/billing</a>
+        Счёт и история платежей — в разделе «Оплата»: <a href="${appUrl()}/dashboard/billing" style="color:#292929;">${appUrl()}/dashboard/billing</a>
       </p>`,
       footer: "Если оплата уже прошла, письмо можно игнорировать.",
     }),
@@ -131,7 +131,7 @@ export async function sendTrialEndingEmail(params: {
         Чтобы учёт материалов продолжился без остановки, выберите тариф.
       </p>
       <p style="margin:18px 0 0;">
-        <a href="${appUrl()}/dashboard/billing" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Выбрать тариф</a>
+        <a href="${appUrl()}/dashboard/billing" style="display:inline-block;background:#292929;color:#F2F0EB;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Выбрать тариф</a>
       </p>
       <p style="margin:16px 0 0;font-size:13px;color:#6b7280;">
         После окончания периода данные остаются доступны для чтения, ввод блокируется через 7 дней.
@@ -157,7 +157,7 @@ export async function sendPaymentOverdueEmail(params: {
         Доступ к вводу данных сохраняется ещё 7 дней после окончания периода.
       </p>
       <p style="margin:18px 0 0;">
-        <a href="${appUrl()}/dashboard/billing" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Перейти к оплате</a>
+        <a href="${appUrl()}/dashboard/billing" style="display:inline-block;background:#292929;color:#F2F0EB;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;">Перейти к оплате</a>
       </p>`,
     }),
   });
@@ -184,7 +184,7 @@ export async function sendNewDeviceEmail(params: {
         Устройство: ${escapeHtml((userAgent ?? "не определено").slice(0, 180))}
       </p>
       <p style="margin:18px 0 0;">
-        <a href="${landingUrl}/security" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:600;">
+        <a href="${landingUrl}/security" style="display:inline-block;background:#292929;color:#F2F0EB;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:600;">
           Проверить безопасность аккаунта
         </a>
       </p>

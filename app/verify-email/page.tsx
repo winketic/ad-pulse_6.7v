@@ -48,7 +48,7 @@ export default function VerifyEmailPage() {
         </div>
         <div className="dp-auth-card text-center">
           <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <svg className="w-6 h-6 text-[var(--info)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
@@ -60,11 +60,11 @@ export default function VerifyEmailPage() {
             <span className="block text-xs mt-1">Проверьте папку «Спам».</span>
           </p>
           {resent && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-[#2563eb]/10 border border-[#2563eb]/30 mb-4 text-left">
-              <svg className="w-4 h-4 text-[#2563eb] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--accent-15)] border border-[var(--accent-15)] mb-4 text-left">
+              <svg className="w-4 h-4 text-[var(--link)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
-              <span className="text-sm text-[#2563eb]">Письмо отправлено повторно</span>
+              <span className="text-sm text-[var(--link)]">Письмо отправлено повторно</span>
             </div>
           )}
           {error && (

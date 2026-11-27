@@ -73,7 +73,7 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
     return (
       <button
         onClick={() => setStep("input")}
-        className="text-xs text-[#2563eb] hover:underline font-medium mt-0.5 block"
+        className="text-xs text-[var(--link)] hover:underline font-medium mt-0.5 block"
       >
         Изменить email
       </button>
@@ -86,7 +86,7 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
         <p className="text-xs text-green-800">
           Письмо с подтверждением отправлено на <strong>{confirmedEmail}</strong>. Перейдите по ссылке в письме, чтобы завершить смену.
         </p>
-        <button onClick={reset} className="text-xs text-[#2563eb] hover:underline mt-1 block">
+        <button onClick={reset} className="text-xs text-[var(--link)] hover:underline mt-1 block">
           Закрыть
         </button>
       </div>
@@ -103,14 +103,14 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
             onChange={(e) => setNewEmail(e.target.value)}
             placeholder="новый@email.com"
             autoFocus
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 focus:border-[#2563eb]"
+            className="w-full px-3 py-2 rounded-lg border border-[var(--border-strong)] text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-15)] focus:border-[var(--accent)]"
           />
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button
               onClick={reset}
               disabled={loading}
-              className="px-3 py-1.5 rounded-lg border border-gray-300 text-xs text-[var(--muted)] hover:bg-[var(--bg3)]"
+              className="px-3 py-1.5 rounded-lg border border-[var(--border-strong)] text-xs text-[var(--muted)] hover:bg-[var(--bg3)]"
             >
               Отмена
             </button>
@@ -141,14 +141,14 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
             onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
             placeholder="000000"
             autoFocus
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 focus:border-[#2563eb]"
+            className="w-full px-3 py-2 rounded-lg border border-[var(--border-strong)] text-sm text-[var(--text)] bg-[var(--card)] font-mono tracking-widest text-center focus:outline-none focus:ring-2 focus:ring-[var(--accent-15)] focus:border-[var(--accent)]"
           />
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button
               onClick={() => { setStep("input"); setCode(""); setError(""); }}
               disabled={loading}
-              className="px-3 py-1.5 rounded-lg border border-gray-300 text-xs text-[var(--muted)] hover:bg-[var(--bg3)]"
+              className="px-3 py-1.5 rounded-lg border border-[var(--border-strong)] text-xs text-[var(--muted)] hover:bg-[var(--bg3)]"
             >
               Назад
             </button>
@@ -162,7 +162,7 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
             <button
               onClick={() => { setStep("input"); setCode(""); setError(""); }}
               disabled={loading}
-              className="text-xs text-[var(--muted)] hover:text-[#2563eb] ml-auto"
+              className="text-xs text-[var(--muted)] hover:text-[var(--link)] ml-auto"
             >
               Другой email
             </button>
@@ -174,22 +174,22 @@ function EmailChangeSection({ currentEmail }: { currentEmail: string }) {
 }
 
 const BANNER_COLORS = [
-  "#2563eb",
+  "#292929",
   "#7b5ea7",
-  "#2563eb",
+  "#292929",
   "#0891b2",
   "#dc2626",
   "#f59e0b",
   "#374151",
   "#0a0a0a",
-  "linear-gradient(135deg, #2563eb, #7b5ea7)",
-  "linear-gradient(135deg, #2563eb, #7b5ea7)",
+  "linear-gradient(135deg, #292929, #858585)",
+  "linear-gradient(135deg, #292929, #858585)",
   "linear-gradient(135deg, #f59e0b, #dc2626)",
-  "linear-gradient(135deg, #0891b2, #2563eb)",
+  "linear-gradient(135deg, #3D3D3D, #292929)",
 ];
 
 const inputCls =
-  "w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 focus:border-[#2563eb] transition-colors";
+  "w-full px-3 py-2.5 rounded-lg border border-[var(--border-strong)] text-sm text-[var(--text)] bg-[var(--card)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-15)] focus:border-[var(--accent)] transition-colors";
 
 interface ProfileCardProps {
   fullName: string | null;
@@ -226,7 +226,7 @@ export default function ProfileCard({
   const [displayName, setDisplayName] = useState(fullName);
   const [displayPos, setDisplayPos] = useState(position);
   const [displayAvatar, setDisplayAvatar] = useState(avatarUrl);
-  const [displayBanner, setDisplayBanner] = useState(bannerColor ?? "#2563eb");
+  const [displayBanner, setDisplayBanner] = useState(bannerColor ?? "#292929");
   const [avatarKey, setAvatarKey] = useState(0); // cache-bust
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -369,7 +369,7 @@ export default function ProfileCard({
                 className="w-5 h-5 rounded-full transition-transform hover:scale-110"
                 style={{
                   background: color,
-                  outline: displayBanner === color ? "2px solid #2563eb" : "2px solid transparent",
+                  outline: displayBanner === color ? "2px solid var(--focus)" : "2px solid transparent",
                   outlineOffset: "2px",
                 }}
                 title={color}
@@ -385,7 +385,7 @@ export default function ProfileCard({
         {!editing && (
           <button
             onClick={() => setEditing(true)}
-            className="text-xs text-[#2563eb] hover:underline font-medium"
+            className="text-xs text-[var(--link)] hover:underline font-medium"
           >
             Изменить
           </button>
@@ -433,7 +433,7 @@ export default function ProfileCard({
               <button
                 onClick={handleCancel}
                 disabled={isPending}
-                className="flex-1 py-2 rounded-lg border border-gray-300 text-sm text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50"
+                className="flex-1 py-2 rounded-lg border border-[var(--border-strong)] text-sm text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50"
               >
                 Отмена
               </button>

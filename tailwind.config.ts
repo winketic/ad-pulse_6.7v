@@ -12,23 +12,46 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      borderRadius: {
+        // Продукт: 4 px, модальные окна 6 px (MASTER_DESIGN_SPEC §09.1).
+        // Централизованное приведение существующих rounded-* классов к
+        // утверждённой геометрии без правки каждого компонента.
+        none: "0px",
+        sm: "4px",
+        DEFAULT: "4px",
+        md: "4px",
+        lg: "4px",
+        xl: "6px",
+        "2xl": "6px",
+        "3xl": "6px",
+        full: "9999px",
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        // Light theme palette — Stripe-like, calm and readable
+        // Altai Dynamics «Architectural Mono» (MASTER_DESIGN_SPEC §07).
+        // Единственная тёмная тема. Нейтрали — производные брендовых
+        // цветов (DESIGN.md), не самостоятельная палитра.
+        brand: {
+          carbon: "#111111",
+          graphite: "#292929",
+          white: "#F2F0EB",
+          lime: "#B2F230",
+          concrete: "#858585",
+        },
         dp: {
-          bg:     "#f7f7f8",
-          card:   "#ffffff",
-          hover:  "#f4f4f5",
-          border: "#e4e4e7",
-          text:   "#18181b",
-          muted:  "#71717a",
-          faint:  "#a1a1aa",
+          bg:     "#111111",
+          card:   "#1D1D1D",
+          hover:  "#292929",
+          border: "#2C2C2C",
+          text:   "#F2F0EB",
+          muted:  "#A3A3A3",
+          faint:  "#7F7F7F",
         },
         accent: {
-          DEFAULT: "#2563eb",
-          hover:   "#1d4ed8",
-          dim:     "rgba(37, 99, 235, 0.12)",
+          DEFAULT: "#B2F230",
+          hover:   "#A0DA2B",
+          dim:     "rgba(178, 242, 48, 0.15)",
         },
       },
     },

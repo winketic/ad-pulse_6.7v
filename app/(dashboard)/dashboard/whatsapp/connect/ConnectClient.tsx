@@ -294,7 +294,7 @@ export default function ConnectClient({
                 onClick={connect}
                 disabled={busy}
                 className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-                style={{ background: "var(--accent)", color: "#ffffff" }}
+                style={{ background: "var(--accent)", color: "var(--accent-text)" }}
               >
                 {busy ? "…" : status === "qr" ? "Обновить QR" : "Подключить WhatsApp"}
               </button>
@@ -335,7 +335,7 @@ export default function ConnectClient({
               alt="QR-код для подключения WhatsApp"
               width={280}
               height={280}
-              className="rounded-xl bg-white p-3"
+              className="rounded-xl bg-[var(--surface-1)] p-3"
             />
             <ol
               className="max-w-sm space-y-1 text-sm"
@@ -393,7 +393,7 @@ export default function ConnectClient({
                   type="checkbox"
                   checked={onlyGroups}
                   onChange={(e) => setOnlyGroups(e.target.checked)}
-                  className="h-4 w-4 accent-[#2563eb]"
+                  className="h-4 w-4 accent-[var(--focus)]"
                 />
                 только группы
               </label>
@@ -405,7 +405,7 @@ export default function ConnectClient({
                   type="checkbox"
                   checked={hideEmpty}
                   onChange={(e) => setHideEmpty(e.target.checked)}
-                  className="h-4 w-4 accent-[#2563eb]"
+                  className="h-4 w-4 accent-[var(--focus)]"
                 />
                 с сообщениями
               </label>
@@ -455,7 +455,7 @@ export default function ConnectClient({
                   type="checkbox"
                   checked={chat.isWatched}
                   onChange={() => void toggleChat(chat)}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-[#2563eb]"
+                  className="h-4 w-4 shrink-0 cursor-pointer accent-[var(--focus)]"
                 />
                 <label
                   htmlFor={`chat-${chat.jid}`}

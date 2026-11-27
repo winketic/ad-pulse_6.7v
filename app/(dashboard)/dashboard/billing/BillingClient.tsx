@@ -28,7 +28,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  trialing: "#2563eb",
+  trialing: "#292929",
   active: "#059669",
   past_due: "#d97706",
   blocked: "#dc2626",

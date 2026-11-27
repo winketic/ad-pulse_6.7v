@@ -35,7 +35,7 @@ export default async function PlanDetailPage({
   const company_id = profile?.company_id as string | undefined;
   if (!company_id) {
     return (
-      <div className="p-6 text-center text-sm text-gray-400">
+      <div className="p-6 text-center text-sm text-[var(--muted-2)]">
         Компания не найдена. Обратитесь к администратору.
       </div>
     );

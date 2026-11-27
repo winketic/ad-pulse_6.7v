@@ -1,3 +1,5 @@
+@import "./fonts.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,56 +11,73 @@
 }
 
 /* ════════════════════════════════════════════════════
-   DESIGN TOKENS — «Индустриальный терминал»
-   Single dark theme. Depth via surface levels, not borders.
+   DESIGN TOKENS — Altai Dynamics «Architectural Mono»
+   Единственная тёмная тема (решение владельца 2026-11-27:
+   светлая тема убрана). Радиусы продукта: 4 px, модальные 6 px.
    ════════════════════════════════════════════════════ */
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
-  /* Surfaces — светлые, глубина через границы, а не свечение */
-  --bg: #f7f7f8;          /* page */
-  --surface-1: #ffffff;   /* cards */
-  --surface-2: #f4f4f5;   /* nested / hover */
-  --surface-3: #ececee;   /* highest (menus, chips on cards) */
+  /* Бренд (§07.1) */
+  --carbon: #111111;
+  --graphite: #292929;
+  --arch-white: #F2F0EB;
+  --lime: #B2F230;
+  --concrete: #858585;
 
-  /* Accent — один спокойный синий, никакого неона */
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-active: #1e40af;
-  --accent-15: rgba(37, 99, 235, 0.12);
-  --accent-text: #ffffff;
+  /* Шрифты: файлы в public/fonts, @font-face в fonts.css */
+  --font-geist-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-geist-mono: "JetBrains Mono", "Inter", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Surfaces */
+  --bg: var(--carbon);
+  --surface-1: #1D1D1D;   /* carbon 50% + graphite 50% */
+  --surface-2: var(--graphite);
+  --surface-3: #333333;
+
+  /* Акцент: Signal Lime — основные CTA, активные состояния (§07.2) */
+  --accent: var(--lime);
+  --accent-hover: #A0DA2B;
+  --accent-active: #92C627;
+  --accent-15: rgba(178, 242, 48, 0.15);
+  --accent-text: #111111;
+
+  --nav-active: var(--lime);
 
   /* Text */
-  --text: #18181b;
-  --muted: #71717a;
-  --muted-2: #6b6b74;   /* AA: контраст ≥4.5 на #f7f7f8 */
+  --text: var(--arch-white);
+  --muted: #A3A3A3;
+  --muted-2: #858585;
 
   /* Границы */
-  --border: #e4e4e7;
-  --border-strong: #d4d4d8;
+  --border: #2C2C2C;
+  --border-strong: #474747;
 
-  /* Status */
-  --success: #15803d;
-  --success-bg: rgba(21, 128, 61, 0.1);
-  --danger: #dc2626;
-  --danger-bg: rgba(220, 38, 38, 0.08);
-  --warning: #b45309;
-  --warning-bg: rgba(180, 83, 9, 0.1);
-  --info: #2563eb;
-  --info-bg: rgba(37, 99, 235, 0.1);
+  /* Status (§07.4, функциональные цвета) */
+  --success: #4ADE80;
+  --success-bg: rgba(74, 222, 128, 0.12);
+  --danger: #F87171;
+  --danger-bg: rgba(248, 113, 113, 0.12);
+  --warning: #FBBF24;
+  --warning-bg: rgba(251, 191, 36, 0.12);
+  --info: #60A5FA;
+  --info-bg: rgba(96, 165, 250, 0.12);
 
-  /* Тени — лёгкие, серые */
-  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow-raised: 0 4px 12px rgba(16, 24, 40, 0.08);
-  --shadow-modal: 0 20px 50px rgba(16, 24, 40, 0.16);
+  /* Тени — только для глубины (меню, модальные окна), §09.2 */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
   --glow-accent: none;
 
-  /* Geometry */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
+  --focus: var(--lime);
+  --link: var(--lime);
+
+  /* Geometry — продукт: 4 px, модальные окна 6 px */
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
 
   /* Z-layers */
   --z-nav: 50;
@@ -66,11 +85,11 @@
   --z-modal: 60;
   --z-toast: 100;
 
-  /* Motion */
-  --dur-fast: 120ms;
-  --dur-base: 160ms;
-  --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Motion (§13.2) */
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
 
   /* backward-compat aliases */
   --bg2: var(--surface-1);
@@ -79,45 +98,6 @@
   --card-hover: var(--surface-2);
   --background: var(--bg);
   --foreground: var(--text);
-}
-
-/* ── Тёмная тема ─────────────────────────────────────
-   Включается атрибутом data-theme="dark" на <html>.
-   Тот же синий акцент, но чуть светлее — на тёмном фоне
-   он должен читаться. Никакого неона: спокойный графит. */
-[data-theme="dark"] {
-  color-scheme: dark;
-
-  --bg: #0f1115;
-  --surface-1: #161922;
-  --surface-2: #1c2029;
-  --surface-3: #242934;
-
-  --accent: #3b82f6;
-  --accent-hover: #2f6fe0;
-  --accent-active: #245cc4;
-  --accent-15: rgba(59, 130, 246, 0.16);
-  --accent-text: #ffffff;
-
-  --text: #e6e8ec;
-  --muted: #9aa0aa;
-  --muted-2: #8b909b;   /* AA на тёмном фоне */
-
-  --border: #262b35;
-  --border-strong: #333a47;
-
-  --success: #34d399;
-  --success-bg: rgba(52, 211, 153, 0.12);
-  --danger: #f87171;
-  --danger-bg: rgba(248, 113, 113, 0.12);
-  --warning: #fbbf24;
-  --warning-bg: rgba(251, 191, 36, 0.12);
-  --info: #60a5fa;
-  --info-bg: rgba(96, 165, 250, 0.12);
-
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.45);
-  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.6);
 }
 
 html, body {
@@ -266,7 +246,7 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   width: 280px;
   height: 280px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.14), transparent 62%);
+  background: radial-gradient(circle, rgba(178, 242, 48, 0.12), transparent 62%);
   animation: splashHalo 1200ms ease-out both;
 }
 @keyframes splashHalo {
@@ -342,14 +322,16 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
 
   /* Cards */
   .dp-card {
-    @apply rounded-xl;
+    @apply rounded-none;
+    border-radius: var(--radius-md);
     background: var(--card);
     border: 1px solid var(--border);
   }
 
   /* Inputs */
   .dp-input {
-    @apply w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-colors;
+    @apply w-full px-3 py-2.5 rounded-none text-sm focus:outline-none transition-colors;
+    border-radius: var(--radius-md);
     background: var(--bg3);
     border: 1px solid var(--border);
     color: var(--text);
@@ -357,7 +339,7 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   .dp-input::placeholder { color: var(--muted); }
   .dp-input:focus {
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 25%, transparent);
   }
 
   /* Unified field style for modal forms (materials/transactions/plans) —
@@ -374,7 +356,7 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
     height: 52px;
     padding: 0 16px;
     font-size: 16px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--border);
     background: var(--card);
     color: var(--text);
@@ -387,7 +369,7 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   .field-input:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 25%, transparent);
   }
   .field-input:disabled { opacity: 0.6; cursor: not-allowed; }
 
@@ -421,7 +403,7 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
     min-height: 80px;
     padding: 12px 16px;
     font-size: 16px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--border);
     background: var(--card);
     color: var(--text);
@@ -433,7 +415,7 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
   .field-textarea:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 25%, transparent);
   }
   .field-textarea:disabled { opacity: 0.6; cursor: not-allowed; }
 
@@ -442,9 +424,10 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
      compresses slightly (haptic-like feedback). */
   .dp-btn-primary {
     @apply inline-flex items-center justify-center gap-2
-           px-4 py-2.5 rounded-lg text-sm font-semibold
+           px-4 py-2.5 rounded-none text-sm font-semibold
            disabled:opacity-50 disabled:cursor-not-allowed;
     min-height: 48px;
+    border-radius: var(--radius-md);
     background: var(--accent);
     color: var(--accent-text);
     box-shadow: var(--glow-accent);
@@ -461,8 +444,9 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
 
   .dp-btn-secondary {
     @apply inline-flex items-center justify-center gap-2
-           px-4 py-2.5 rounded-lg text-sm font-medium
+           px-4 py-2.5 rounded-none text-sm font-medium
            disabled:opacity-50 disabled:cursor-not-allowed;
+    border-radius: var(--radius-md);
     border: 1px solid var(--border);
     color: var(--text);
     min-height: 48px;
@@ -475,9 +459,10 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
 
   .dp-btn-danger {
     @apply inline-flex items-center justify-center gap-2
-           px-4 py-2.5 rounded-lg text-sm font-medium
+           px-4 py-2.5 rounded-none text-sm font-medium
            disabled:opacity-50 disabled:cursor-not-allowed;
     min-height: 48px;
+    border-radius: var(--radius-md);
     background: var(--danger-bg);
     border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
     color: var(--danger);
@@ -497,9 +482,10 @@ td, .tabular-nums { font-variant-numeric: tabular-nums; }
     background: var(--bg);
   }
   .dp-auth-card {
-    @apply rounded-2xl p-6 sm:p-8;
+    @apply rounded-none p-6 sm:p-8;
     position: relative;
     z-index: 1;
+    border-radius: var(--radius-md);
     background: var(--surface-1);
     border: 1px solid var(--border);
     box-shadow: var(--shadow-raised);
@@ -569,10 +555,10 @@ select:-webkit-autofill:active {
 
 .driver-popover.adpulse-tour .driver-popover-next-btn,
 .driver-popover.adpulse-tour .driver-popover-done-btn {
-  background: #2563eb !important;
-  color: #ffffff !important;
+  background: #292929 !important;
+  color: #F2F0EB !important;
   border: none !important;
-  border-radius: 8px !important;
+  border-radius: 4px !important;
   font-size: 13px !important;
   font-weight: 600 !important;
   padding: 6px 14px !important;
@@ -650,7 +636,7 @@ select:-webkit-autofill:active {
 
   /* Keyboard focus ring (mouse clicks don't trigger it) */
   .focus-ring:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 

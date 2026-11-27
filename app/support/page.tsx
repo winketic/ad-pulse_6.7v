@@ -21,7 +21,7 @@ export default function PublicSupportPage() {
 
         <p className="text-center text-sm text-[var(--muted)] mt-6">
           Уже работаете в системе?{" "}
-          <Link href="/login" className="font-medium text-[var(--text)] hover:text-[#2563eb] transition-colors">
+          <Link href="/login" className="font-medium text-[var(--text)] hover:text-[var(--link)] transition-colors">
             Войти
           </Link>
         </p>

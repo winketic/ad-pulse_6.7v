@@ -443,7 +443,7 @@ function SummaryTable({
                 {row.material_name}
               </td>
               <td className="px-4 py-3">
-                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[#2563eb]/10 text-[#2563eb]">
+                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--accent-15)] text-[var(--link)]">
                   {row.unit}
                 </span>
               </td>
@@ -463,7 +463,7 @@ function SummaryTable({
                 <span
                   className={`tabular-nums font-mono font-bold ${
                     row.balance > 0
-                      ? "text-[#2563eb]"
+                      ? "text-[var(--link)]"
                       : row.balance < 0
                       ? "text-[var(--danger)]"
                       : "text-[var(--muted)]"
@@ -502,7 +502,7 @@ function SummaryTable({
                 <span
                   className={`tabular-nums font-mono font-bold ${
                     totalBalance > 0
-                      ? "text-[#2563eb]"
+                      ? "text-[var(--link)]"
                       : totalBalance < 0
                       ? "text-[var(--danger)]"
                       : "text-[var(--muted)]"
@@ -604,7 +604,7 @@ function DefectTable({ rows }: { rows: DefectRow[] }) {
                 {row.material_name}
               </td>
               <td className="px-4 py-3">
-                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[#2563eb]/10 text-[#2563eb]">
+                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--accent-15)] text-[var(--link)]">
                   {row.material_unit}
                 </span>
               </td>
@@ -1237,7 +1237,7 @@ export default function ReportsClient({
           <span className="w-2.5 h-2.5 rounded-sm bg-green-500/15 border border-green-500/20 border border-green-200 dark:border-green-500/30" /> Приход
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-blue-100 border border-blue-200 dark:border-blue-500/30" /> Возврат
+          <span className="w-2.5 h-2.5 rounded-sm bg-blue-100 border border-blue-200 dark:border-[var(--info-bg)]" /> Возврат
         </span>
         <span className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-sm bg-red-100 border border-red-500/30" /> Расход

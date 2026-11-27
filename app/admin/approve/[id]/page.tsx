@@ -30,7 +30,7 @@ export default async function AdminApprovePage({ params }: { params: Promise<{ i
   const isPending = reg.status === "pending";
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
@@ -39,7 +39,7 @@ export default async function AdminApprovePage({ params }: { params: Promise<{ i
           <h1 className="text-xl font-bold text-[#f7f7f8]">Одобрение заявки</h1>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+        <div className="bg-[var(--surface-1)] rounded-2xl shadow-sm border border-[var(--border)] p-8">
           {!isPending && (
             <div className="mb-5 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-sm text-amber-700 dark:text-amber-300">
               Эта заявка уже {reg.status === "approved" ? "одобрена" : "отклонена"}.
@@ -62,7 +62,7 @@ export default async function AdminApprovePage({ params }: { params: Promise<{ i
               },
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between items-start gap-4 py-2.5 border-b border-gray-50 last:border-0">
-                <span className="text-xs text-gray-400 shrink-0">{label}</span>
+                <span className="text-xs text-[var(--muted-2)] shrink-0">{label}</span>
                 <span className="text-sm text-gray-800 text-right break-all">{value}</span>
               </div>
             ))}
@@ -71,7 +71,7 @@ export default async function AdminApprovePage({ params }: { params: Promise<{ i
           {isPending && <ApproveButton registrationId={id} />}
 
           <div className="mt-5 text-center">
-            <Link href="/admin/registrations" className="text-sm text-gray-400 hover:text-[#f7f7f8] transition-colors">
+            <Link href="/admin/registrations" className="text-sm text-[var(--muted-2)] hover:text-[#f7f7f8] transition-colors">
               ← Все заявки
             </Link>
           </div>

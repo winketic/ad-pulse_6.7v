@@ -1,82 +1,67 @@
 (function () {
-  var root = document.documentElement;
-
-  /* ── Тема ─────────────────────────────────────────────── */
-  function currentTheme() { return root.dataset.theme === "dark" ? "dark" : "light"; }
-  document.querySelectorAll("[data-theme-toggle]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var next = currentTheme() === "dark" ? "light" : "dark";
-      root.dataset.theme = next;
-      try { localStorage.setItem("adpulse-theme", next); } catch (e) {}
-      btn.setAttribute("aria-label", next === "dark" ? "Светлая тема" : "Тёмная тема");
-    });
-  });
-
   /* ── Мобильное меню ───────────────────────────────────── */
   var menuBtn = document.querySelector("[data-menu-toggle]");
   if (menuBtn) {
+    function closeMenu() {
+      document.body.classList.remove("mobile-open");
+      menuBtn.setAttribute("aria-expanded", "false");
+    }
     menuBtn.addEventListener("click", function () {
-      document.body.classList.toggle("mobile-open");
+      var open = document.body.classList.toggle("mobile-open");
+      menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
     });
-    document.querySelectorAll(".mobile-nav a, .nav a").forEach(function (link) {
-      link.addEventListener("click", function () { document.body.classList.remove("mobile-open"); });
+    document.querySelectorAll(".mobile-nav a").forEach(function (link) {
+      link.addEventListener("click", closeMenu);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeMenu();
     });
   }
 
-  /* ── Язык: Google Translate + язык браузера ───────────── */
-  var LANG_MAP = {
-    ru: "ru", en: "en", kk: "kk", kz: "kk", zh: "zh-CN", cn: "zh-CN",
-    tr: "tr", de: "de", sv: "sv", ja: "ja"
-  };
-  function setTranslateCookie(lang) {
-    document.cookie = "googtrans=/ru/" + lang + ";path=/;max-age=31536000;SameSite=Lax";
-  }
-  function browserLang() {
-    var raw = (navigator.language || navigator.userLanguage || "ru").toLowerCase();
-    return LANG_MAP[raw.split("-")[0]] || "ru";
-  }
-  function ensureTranslateScript() {
-    if (document.getElementById("google-translate-script")) return;
-    var holder = document.createElement("div");
-    holder.id = "google_translate_element";
-    holder.style.cssText = "position:absolute;left:-9999px;height:1px;width:1px;overflow:hidden";
-    document.body.appendChild(holder);
-    window.googleTranslateElementInit = function () {
-      if (!window.google || !window.google.translate) return;
-      new window.google.translate.TranslateElement({ pageLanguage: "ru", autoDisplay: false }, "google_translate_element");
-    };
-    var script = document.createElement("script");
-    script.id = "google-translate-script";
-    script.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-    script.async = true;
-    document.body.appendChild(script);
-  }
+  /* ── Локализация: словари вместо Google Translate ─────── */
+  if (window.ADPULSE_I18N) window.ADPULSE_I18N.init();
 
-  var savedLang = null;
-  try { savedLang = localStorage.getItem("adpulse-lang"); } catch (e) {}
-  if (!savedLang) {
-    savedLang = browserLang();
-    try { localStorage.setItem("adpulse-lang", savedLang); } catch (e) {}
-    if (savedLang !== "ru") setTranslateCookie(savedLang);
-  }
-
-  var select = document.querySelector("[data-lang]");
-  if (select) {
-    select.value = savedLang;
-    select.addEventListener("change", function () {
-      var lang = select.value;
-      try { localStorage.setItem("adpulse-lang", lang); } catch (e) {}
-      if (lang === "ru") {
-        document.cookie = "googtrans=;path=/;max-age=0";
+  /* ── Кастомный языковой переключатель ─────────────────── */
+  var langWrap = document.querySelector("[data-lang]");
+  if (langWrap) {
+    var langBtn = langWrap.querySelector("[data-lang-toggle]");
+    var langMenu = langWrap.querySelector(".lang-menu");
+    var langItems = Array.prototype.slice.call(langWrap.querySelectorAll("[data-lang-choice]"));
+    function closeLang() {
+      langMenu.hidden = true;
+      langWrap.removeAttribute("data-open");
+      langBtn.setAttribute("aria-expanded", "false");
+    }
+    if (langBtn) langBtn.addEventListener("click", function () {
+      var open = langMenu.hidden;
+      langMenu.hidden = !open;
+      langBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      if (open) {
+        langWrap.setAttribute("data-open", "true");
+        var selected = langItems.filter(function (i) { return i.getAttribute("aria-selected") === "true"; })[0] || langItems[0];
+        selected.focus();
       } else {
-        setTranslateCookie(lang);
+        langWrap.removeAttribute("data-open");
       }
-      location.reload();
     });
-  }
-  var hasTranslation = document.cookie.indexOf("googtrans=") !== -1;
-  if (hasTranslation || (savedLang && savedLang !== "ru")) {
-    if (hasTranslation) ensureTranslateScript();
+    langItems.forEach(function (item) {
+      item.addEventListener("click", function () {
+        var code = item.getAttribute("data-lang-choice");
+        if (window.ADPULSE_I18N) window.ADPULSE_I18N.setLang(code);
+        closeLang();
+      });
+      item.addEventListener("keydown", function (e) {
+        var i = langItems.indexOf(item);
+        if (e.key === "ArrowDown") { e.preventDefault(); langItems[(i + 1) % langItems.length].focus(); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); langItems[(i - 1 + langItems.length) % langItems.length].focus(); }
+        else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); item.click(); }
+        else if (e.key === "Home") { e.preventDefault(); langItems[0].focus(); }
+        else if (e.key === "End") { e.preventDefault(); langItems[langItems.length - 1].focus(); }
+        else if (e.key === "Escape") { closeLang(); langBtn.focus(); }
+      });
+    });
+    document.addEventListener("click", function (e) { if (!langWrap.contains(e.target)) closeLang(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !langMenu.hidden) closeLang(); });
   }
 
   /* ── Cookie-баннер ────────────────────────────────────── */
@@ -96,9 +81,15 @@
   var form = document.querySelector("[data-support-form]");
   if (form) {
     var status = form.querySelector("[data-status]");
+    var submitBtn = form.querySelector("button[type=submit]");
+    function statusText(key, fallback) {
+      return window.ADPULSE_I18N ? window.ADPULSE_I18N.t(key, fallback) : fallback;
+    }
     form.addEventListener("submit", async function (event) {
       event.preventDefault();
-      if (status) { status.className = "form-status"; status.textContent = "Отправляем…"; }
+      if (submitBtn && submitBtn.disabled) return;
+      if (submitBtn) submitBtn.disabled = true;
+      if (status) { status.className = "form-status"; status.textContent = statusText("form.sending", "Отправляем…"); }
       var data = Object.fromEntries(new FormData(form).entries());
       try {
         var res = await fetch("https://pulse.altaidynamics.kz/api/support/public", {
@@ -107,19 +98,21 @@
           body: JSON.stringify(data),
         });
         var payload = await res.json().catch(function () { return {}; });
-        if (!res.ok) throw new Error(payload.error || "Не удалось отправить обращение");
+        if (!res.ok) throw new Error(payload.error || statusText("form.err", "Не удалось отправить обращение"));
         form.reset();
         if (status) {
           status.className = "form-status ok";
           status.textContent = payload.emailSent === false
-            ? "Обращение сохранено. Письмо не ушло, но мы увидим его в системе."
-            : "Обращение отправлено. Ответ придёт на указанный email.";
+            ? statusText("form.okNoEmail", "Обращение сохранено. Письмо не ушло, но мы увидим его в системе.")
+            : statusText("form.ok", "Обращение отправлено. Ответ придёт на указанный email.");
         }
       } catch (error) {
         if (status) {
           status.className = "form-status err";
-          status.textContent = error.message || "Не удалось отправить обращение";
+          status.textContent = error.message || statusText("form.err", "Не удалось отправить обращение");
         }
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
       }
     });
   }

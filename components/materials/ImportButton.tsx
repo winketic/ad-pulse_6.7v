@@ -49,8 +49,8 @@ export function ImportButton() {
       <button
         onClick={() => inputRef.current?.click()}
         disabled={loading}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
-        style={{ background: "#ffffff", color: "#71717a", border: "1px solid #e4e4e7" }}
+        className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all disabled:opacity-50"
+        style={{ background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)" }}
       >
         {loading ? (
           <>
@@ -70,14 +70,14 @@ export function ImportButton() {
         )}
       </button>
       {result && (
-        <p className="text-xs" style={{ color: "#2563eb" }}>
+        <p className="text-xs" style={{ color: "var(--link)" }}>
           Импортировано: {result.imported}{result.skipped > 0 ? `, пропущено: ${result.skipped}` : ""}
         </p>
       )}
       {error && (
         <p className="text-xs" style={{ color: "#f87171" }}>{error}</p>
       )}
-      <p className="text-xs" style={{ color: "#71717a" }}>
+      <p className="text-xs" style={{ color: "var(--muted-2)" }}>
         Формат: колонки «Название» и «Единица». Дубликаты пропускаются.
       </p>
     </div>

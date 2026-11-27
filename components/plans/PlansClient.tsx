@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   useState,
@@ -261,7 +261,7 @@ function CreatePlanForm({
         <p className="text-sm font-medium text-[var(--text)]">Нет материалов в справочнике</p>
         <p className="text-sm text-[var(--muted)] mt-1">
           Сначала добавьте материалы в{" "}
-          <a href="/dashboard/materials" className="text-[#2563eb] underline">
+          <a href="/dashboard/materials" className="text-[var(--link)] underline">
             справочник
           </a>
         </p>
@@ -415,7 +415,7 @@ function CreatePlanForm({
           type="button"
           onClick={addRow}
           disabled={rows.length >= materials.length}
-          className="mt-2.5 flex items-center gap-1.5 text-sm text-[#2563eb] hover:text-[#1e40af] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="mt-2.5 flex items-center gap-1.5 text-sm text-[var(--link)] hover:text-[var(--success)] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -441,7 +441,7 @@ function CreatePlanForm({
             type="button"
             onClick={onCancel}
             disabled={isPending}
-            className="flex-1 py-2.5 px-4 rounded-lg border border-gray-300 text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50 min-h-[48px]"
+            className="flex-1 py-2.5 px-4 rounded-lg border border-[var(--border-strong)] text-sm font-medium text-[var(--muted)] hover:bg-[var(--bg3)] transition-colors disabled:opacity-50 min-h-[48px]"
           >
             Отмена
           </button>
@@ -484,8 +484,8 @@ function EmptyState({
 
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-[#2563eb]/8 flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-[#2563eb]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
+      <div className="w-16 h-16 rounded-2xl bg-[var(--accent-15)] flex items-center justify-center mb-4">
+        <svg className="w-8 h-8 text-[var(--link)]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
         </svg>
       </div>

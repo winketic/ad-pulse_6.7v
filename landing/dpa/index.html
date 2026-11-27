@@ -3,38 +3,64 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="canonical" href="https://altaidynamics.kz/dpa/">
 <title>DPA — обработка данных — AD Pulse</title>
 <meta name="description" content="Договор обработки персональных данных AD Pulse.">
+<meta property="og:site_name" content="Altai Dynamics">
+<meta property="og:type" content="website">
+<meta property="og:title" content="DPA — обработка данных — AD Pulse">
+<meta property="og:description" content="Договор обработки персональных данных AD Pulse.">
+<meta property="og:url" content="https://altaidynamics.kz/dpa/">
+<meta property="og:locale" content="ru_RU">
 <link rel="icon" type="image/png" href="/favicon.png">
-<link rel="stylesheet" href="/assets/styles.css">
-<script>try{var t=localStorage.getItem('adpulse-theme');document.documentElement.dataset.theme=t==='dark'?'dark':'light';}catch(e){document.documentElement.dataset.theme='light';}</script>
+<link rel="stylesheet" href="/assets/fonts.css?v=20261127">
+<link rel="stylesheet" href="/assets/tokens.css?v=20261127">
+<link rel="stylesheet" href="/assets/styles.css?v=20261127">
+<link rel="stylesheet" href="/assets/site.css?v=20261127">
 </head>
 <body>
-<header class="header">
-  <div class="container header-inner">
-    <a class="brand" href="/"><img src="/logo-altai.png" alt="Altai Dynamics"><span class="brand-name">Altai Dynamics</span></a>
-    <nav class="nav">
-      <a href="/#features">Возможности</a>
-      <a href="/#pricing">Тарифы</a>
-      <a href="/docs/">Документация</a>
-      <a href="/security/">Безопасность</a>
-      <a href="/support/">Поддержка</a>
+<a class="skip-link" href="#main" data-i18n="skip">К содержанию</a>
+<header class="site-header">
+  <div class="container site-header-inner">
+    <a class="site-wordmark" href="/" aria-label="Altai Dynamics">ALTAI DYNAMICS<span class="dot">.</span></a>
+    <nav class="site-nav" aria-label="Основная навигация">
+      <a href="/#products" data-i18n="nav.products">Продукты</a>
+      <a href="/docs/" data-i18n="nav.docs">Документация</a>
+      <a href="/security/" data-i18n="nav.security">Безопасность</a>
+      <a href="/support/" data-i18n="nav.support">Поддержка</a>
+      <a href="/#contact" data-i18n="nav.contact">Контакты</a>
     </nav>
-    <div class="header-actions">
-      <select class="lang-select" data-lang aria-label="Язык сайта">
-        <option value="ru">RU</option><option value="en">EN</option><option value="kk">ҚАЗ</option><option value="zh-CN">中文</option><option value="tr">TR</option><option value="de">DE</option><option value="sv">SV</option><option value="ja">JA</option>
-      </select>
-      <button class="icon-btn" data-theme-toggle aria-label="Тёмная тема">◐</button>
-      <a class="btn btn-ghost btn-sm login-link" href="https://pulse.altaidynamics.kz/login">Войти</a>
-      <a class="btn btn-primary btn-sm" href="https://pulse.altaidynamics.kz/register">Попробовать</a>
-      <button class="icon-btn menu-btn" data-menu-toggle aria-label="Меню">☰</button>
+    <div class="site-header-actions">
+      <div class="lang" data-lang>
+  <button type="button" class="lang-btn" data-lang-toggle aria-haspopup="listbox" aria-expanded="false" aria-label="Язык сайта">
+    <span data-lang-current>RU</span><span class="lang-caret" aria-hidden="true">▾</span>
+  </button>
+  <ul class="lang-menu" role="listbox" hidden>
+    <li role="option" data-lang-choice="ru" aria-selected="true" tabindex="-1"><span class="lang-code">RU</span><span class="lang-name">Русский</span></li>
+    <li role="option" data-lang-choice="en" aria-selected="false" tabindex="-1"><span class="lang-code">EN</span><span class="lang-name">English</span></li>
+    <li role="option" data-lang-choice="kk" aria-selected="false" tabindex="-1"><span class="lang-code">ҚАЗ</span><span class="lang-name">Қазақша</span></li>
+    <li role="option" data-lang-choice="zh" aria-selected="false" tabindex="-1"><span class="lang-code">中文</span><span class="lang-name">中文</span></li>
+    <li role="option" data-lang-choice="de" aria-selected="false" tabindex="-1"><span class="lang-code">DE</span><span class="lang-name">Deutsch</span></li>
+    <li role="option" data-lang-choice="tr" aria-selected="false" tabindex="-1"><span class="lang-code">TR</span><span class="lang-name">Türkçe</span></li>
+    <li role="option" data-lang-choice="sv" aria-selected="false" tabindex="-1"><span class="lang-code">SV</span><span class="lang-name">Svenska</span></li>
+    <li role="option" data-lang-choice="ja" aria-selected="false" tabindex="-1"><span class="lang-code">JA</span><span class="lang-name">日本語</span></li>
+  </ul>
+    </div>
+      <a class="site-btn site-btn-ghost site-btn-sm" href="https://pulse.altaidynamics.kz/login" data-i18n="nav.login">Войти</a>
+      <a class="site-btn site-btn-primary site-btn-sm" href="https://pulse.altaidynamics.kz/register" data-i18n="nav.start">Начать</a>
+      <button class="icon-btn site-menu-btn" data-menu-toggle aria-expanded="false" aria-controls="mobile-nav" aria-label="Меню">☰</button>
     </div>
   </div>
-  <nav class="mobile-nav" data-mobile-nav>
-    <a href="/#features">Возможности</a><a href="/#pricing">Тарифы</a><a href="/docs/">Документация</a><a href="/security/">Безопасность</a><a href="/support/">Поддержка</a>
+  <nav class="mobile-nav" id="mobile-nav" aria-label="Мобильная навигация">
+    <a href="/#products" data-i18n="nav.products">Продукты</a>
+    <a href="/docs/" data-i18n="nav.docs">Документация</a>
+    <a href="/security/" data-i18n="nav.security">Безопасность</a>
+    <a href="/support/" data-i18n="nav.support">Поддержка</a>
+    <a href="/#contact" data-i18n="nav.contact">Контакты</a>
+    <a href="https://pulse.altaidynamics.kz/login" data-i18n="nav.login">Войти в аккаунт</a>
   </nav>
 </header>
-<main class="container prose">
+<main id="main" class="container prose">
 <h1>Договор обработки данных (DPA)</h1>
 <p class="meta">Версия 1.0 · 26 ноября 2026</p>
 <p>Документ определяет, как Altai Dynamics обрабатывает данные клиента в AD Pulse. Он действует вместе с политикой конфиденциальности.</p>
@@ -87,27 +113,67 @@
 <p><a href="mailto:ceo@altaidynamics.kz">ceo@altaidynamics.kz</a>, +7 707 724 67 90. Готовы подписать ваш шаблон DPA или предоставить свой.</p>
 <div class="note">Шаблон основан на данных компании из AD Pulse Company Pack. Перед подписанием с клиентом проверьте у юриста.</div>
 </main>
-<footer class="footer">
+<footer class="site-footer">
   <div class="container">
     <div class="footer-grid">
-      <div>
-        <div class="brand" style="margin-bottom:10px"><img src="/logo-altai.png" alt="" style="height:26px"><span class="brand-name">Altai Dynamics</span></div>
-        <p style="margin:0 0 6px">ТОО «Altai Dynamics»</p>
-        <p style="margin:0 0 6px">БИН 260340030272</p>
-        <p style="margin:0">Astana, Kazakhstan</p>
+      <div class="footer-col footer-brand">
+        <span class="site-wordmark">ALTAI DYNAMICS<span class="dot">.</span></span>
+        <p style="margin:12px 0 0" data-i18n="footer.company">ТОО «Altai Dynamics», БИН 260340030272, Астана, Казахстан</p>
+<div class="footer-badge">
+        <svg class="ah-mark" viewBox="0 0 100 100" aria-hidden="true">
+          <g fill="var(--arch-white)">
+            <path d="M6 46 A44 44 0 0 1 94 46 Z" fill-opacity="0.9"/>
+            <path d="M14 46 A36 36 0 0 1 86 46 Z" fill-opacity="0.6"/>
+            <path d="M22 46 A28 28 0 0 1 78 46 Z" fill-opacity="0.35"/>
+            <path d="M30 46 A20 20 0 0 1 70 46 Z" fill-opacity="0.18"/>
+            <path d="M6 54 A44 44 0 0 0 94 54 Z" fill-opacity="0.9"/>
+            <path d="M14 54 A36 36 0 0 0 86 54 Z" fill-opacity="0.6"/>
+            <path d="M22 54 A28 28 0 0 0 78 54 Z" fill-opacity="0.35"/>
+            <path d="M30 54 A20 20 0 0 0 70 54 Z" fill-opacity="0.18"/>
+          </g>
+          <g fill="var(--lime)">
+            <path d="M38 46 A12 12 0 0 1 62 46 Z"/>
+            <path d="M38 54 A12 12 0 0 0 62 54 Z"/>
+          </g>
+        </svg>
+        <span class="ah-label" data-i18n="footer.hub">Резидент Astana Hub</span>
       </div>
-      <div><h4>Продукт</h4><a href="/docs/">Документация</a><a href="/security/">Безопасность</a><a href="/support/">Поддержка</a></div>
-      <div><h4>Правовое</h4><a href="/privacy/">Конфиденциальность</a><a href="/cookies/">Cookies</a><a href="/terms/">Соглашение</a><a href="/dpa/">DPA</a></div>
-      <div><h4>Контакты</h4><a href="mailto:ceo@altaidynamics.kz">ceo@altaidynamics.kz</a><a href="mailto:info@altaidynamics.kz">info@altaidynamics.kz</a></div>
+      </div>
+      <div class="footer-col">
+        <h4 data-i18n="footer.product">Продукт</h4>
+        <a href="/docs/" data-i18n="footer.docs">Документация</a>
+        <a href="/security/" data-i18n="footer.security">Безопасность</a>
+        <a href="/support/" data-i18n="footer.support">Поддержка</a>
+        <a href="https://pulse.altaidynamics.kz/login" data-i18n="nav.login">Войти в аккаунт</a>
+      </div>
+      <div class="footer-col">
+        <h4 data-i18n="footer.legal">Правовое</h4>
+        <a href="/privacy/" data-i18n="footer.privacy">Политика конфиденциальности</a>
+        <a href="/cookies/" data-i18n="footer.cookies">Cookies</a>
+        <a href="/terms/" data-i18n="footer.terms">Пользовательское соглашение</a>
+        <a href="/dpa/" data-i18n="footer.dpa">Обработка данных (DPA)</a>
+      </div>
+      <div class="footer-col">
+        <h4 data-i18n="footer.contacts">Контакты</h4>
+        <a href="mailto:ceo@altaidynamics.kz">ceo@altaidynamics.kz</a>
+        <a href="mailto:info@altaidynamics.kz">info@altaidynamics.kz</a>
+        <a href="tel:+77077246790">+7 707 724 67 90</a>
+      </div>
     </div>
-    <div class="footer-bottom"><span>© 2026 Altai Dynamics LLP</span><span>AD Pulse — продукт Altai Dynamics.</span></div>
+    <p class="footer-attribution">Рельеф: SRTM terrain data courtesy of the U.S. Geological Survey; Terrain Tiles © Mapzen, Linux Foundation (registry.opendata.aws/terrain-tiles).</p>
+    <div class="footer-bottom">
+      <span>© 2026 Altai Dynamics LLP. Astana, Kazakhstan.</span>
+      <span data-i18n="footer.made">AD Pulse — продукт Altai Dynamics.</span>
+    </div>
   </div>
 </footer>
 
+
+<script src="/assets/i18n.js?v=20261127"></script>
+<script src="/assets/app.js?v=20261127" defer></script>
 <div class="cookie-banner" data-cookie-banner hidden>
-  <span>Мы используем cookie для входа, темы и перевода. Подробнее — <a href="/cookies/">политика cookies</a>.</span>
-  <button class="btn btn-primary btn-sm" data-cookie-accept>Принять</button>
+  <span><span data-i18n="cookie.text">Мы используем cookie для входа, темы и языка.</span> <a href="/cookies/" data-i18n="cookie.more">Подробнее — политика cookies</a></span>
+  <button class="site-btn site-btn-primary site-btn-sm" data-cookie-accept data-i18n="cookie.accept">Принять</button>
 </div>
-<script src="/assets/app.js"></script>
 </body>
 </html>

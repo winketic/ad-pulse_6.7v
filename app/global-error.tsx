@@ -21,20 +21,12 @@ export default function GlobalError({
 
   return (
     <html lang="ru">
-      <head>
-        <style>{`
-          @media (prefers-color-scheme: dark) {
-            body { background: #0f1115 !important; color: #f3f4f6 !important; }
-            h1, p { color: #f3f4f6 !important; }
-          }
-        `}</style>
-      </head>
       <body
         style={{
           margin: 0,
           minHeight: "100vh",
-          background: "#f7f7f8",
-          color: "#18181b",
+          background: "#111111",
+          color: "#F2F0EB",
           fontFamily:
             "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
           display: "flex",
@@ -67,10 +59,10 @@ export default function GlobalError({
             style={{
               marginTop: 22,
               padding: "10px 20px",
-              borderRadius: 10,
-              border: "1px solid #2563eb",
-              background: "#2563eb",
-              color: "#f7f7f8",
+              borderRadius: 4,
+              border: "1px solid #B2F230",
+              background: "#B2F230",
+              color: "#111111",
               fontSize: 14,
               fontWeight: 600,
               cursor: "pointer",

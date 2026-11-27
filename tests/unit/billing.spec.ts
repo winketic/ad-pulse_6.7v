@@ -142,8 +142,9 @@ function future(now: Date, days = 10): string {
 }
 
 test("код подтверждения: 6 цифр, совпадение, истечение и попытки", () => {
-  const { generateSignupCode, generateSignupSalt, hashCode, codeMatches, codeExpiresAt, isCodeExpired, EMAIL_CODE_TTL_MIN } =
-    require("../../lib/auth/signupCode") as typeof import("../../lib/auth/signupCode");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- динамический import() не работает в transform-раннере Playwright для .ts
+  const signupCodeMod = require("../../lib/auth/signupCode") as typeof import("../../lib/auth/signupCode");
+  const { generateSignupCode, generateSignupSalt, hashCode, codeMatches, codeExpiresAt, isCodeExpired, EMAIL_CODE_TTL_MIN } = signupCodeMod;
 
   const code = generateSignupCode();
   expect(code).toMatch(/^\d{6}$/);

@@ -176,7 +176,7 @@ export default function ForgotPasswordPage() {
           )}
 
           <div className="mt-5 text-center">
-            <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[#2563eb] transition-colors">
+            <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[var(--link)] transition-colors">
               Вернуться ко входу
             </Link>
           </div>

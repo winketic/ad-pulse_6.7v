@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Logo } from "@/components/Logo";
-import ThemeToggle from "@/components/ThemeToggle";
 import OnboardingTour from "@/components/OnboardingTour";
 import SessionBeacon from "@/components/SessionBeacon";
 import { canAccessCompanyPage } from "@/lib/auth/role-permissions";
@@ -95,7 +94,7 @@ function NavTab({
       {/* No pill — the icon and label themselves light up */}
       <span
         className="flex items-center justify-center h-8 transition-colors duration-200"
-        style={{ color: active ? "var(--accent)" : "var(--muted)" }}
+        style={{ color: active ? "var(--nav-active)" : "var(--muted)" }}
       >
         <Icon className="w-6 h-6" strokeWidth={active ? 2.2 : 1.6} />
       </span>
@@ -262,7 +261,6 @@ export default function DashboardShell({
           {isCompanyAdmin ? "Выпуск" : "Движение"}
         </Link>
 
-        <ThemeToggle className="mr-1" />
 
         {/* User menu */}
         <div className="relative" ref={menuRef}>
@@ -361,7 +359,6 @@ export default function DashboardShell({
           <Logo size={28} />
           <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>AD Pulse</span>
           <div className="flex-1" />
-          <ThemeToggle />
           <button
             onClick={() => setMoreOpen(true)}
             className="p-2 rounded-lg transition-colors"
@@ -420,7 +417,7 @@ export default function DashboardShell({
                       <Icon
                         size={20}
                         strokeWidth={active ? 2 : 1.6}
-                        style={{ color: active ? "var(--accent)" : "var(--muted)" }}
+                        style={{ color: active ? "var(--nav-active)" : "var(--muted)" }}
                       />
                       {label}
                     </Link>

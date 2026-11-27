@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
           ) : !ready ? (
             <div className="text-center py-6">
               <p className="text-[var(--muted)] text-sm mb-4">Ссылка недействительна или истекла.</p>
-              <a href="/forgot-password" className="text-sm text-[#2563eb] hover:underline">Запросить новую ссылку</a>
+              <a href="/forgot-password" className="text-sm text-[var(--link)] hover:underline">Запросить новую ссылку</a>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">

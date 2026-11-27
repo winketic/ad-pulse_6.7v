@@ -31,10 +31,10 @@ export function ApproveButton({ registrationId }: { registrationId: string }) {
       onClick={handleApprove}
       disabled={loading}
       style={{
-        background: "#f7f7f8",
-        color: "#2563eb",
+        background: "var(--accent)",
+        color: "var(--accent-text)",
         padding: "14px 36px",
-        borderRadius: "10px",
+        borderRadius: "4px",
         fontWeight: 600,
         fontSize: "15px",
         border: "none",

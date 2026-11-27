@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://altaidynamics.kz/</loc>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://altaidynamics.kz/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://altaidynamics.kz/en/"/>
+    <xhtml:link rel="alternate" hreflang="kk" href="https://altaidynamics.kz/kk/"/>
+    <xhtml:link rel="alternate" hreflang="zh" href="https://altaidynamics.kz/zh/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://altaidynamics.kz/ja/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://altaidynamics.kz/de/"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://altaidynamics.kz/tr/"/>
+    <xhtml:link rel="alternate" hreflang="sv" href="https://altaidynamics.kz/sv/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://altaidynamics.kz/"/>
+  </url>
+  <url><loc>https://altaidynamics.kz/en/</loc></url>
+  <url><loc>https://altaidynamics.kz/kk/</loc></url>
+  <url><loc>https://altaidynamics.kz/zh/</loc></url>
+  <url><loc>https://altaidynamics.kz/ja/</loc></url>
+  <url><loc>https://altaidynamics.kz/de/</loc></url>
+  <url><loc>https://altaidynamics.kz/tr/</loc></url>
+  <url><loc>https://altaidynamics.kz/sv/</loc></url>
+  <url><loc>https://altaidynamics.kz/docs/</loc></url>
+  <url><loc>https://altaidynamics.kz/security/</loc></url>
+  <url><loc>https://altaidynamics.kz/support/</loc></url>
+  <url><loc>https://altaidynamics.kz/privacy/</loc></url>
+  <url><loc>https://altaidynamics.kz/cookies/</loc></url>
+  <url><loc>https://altaidynamics.kz/terms/</loc></url>
+  <url><loc>https://altaidynamics.kz/dpa/</loc></url>
+</urlset>

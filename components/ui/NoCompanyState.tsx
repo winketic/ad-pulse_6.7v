@@ -3,9 +3,9 @@ import Link from "next/link";
 export default function NoCompanyState() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-[#2563eb]/10 flex items-center justify-center mb-5">
+      <div className="w-16 h-16 rounded-2xl bg-[var(--accent-15)] flex items-center justify-center mb-5">
         <svg
-          className="w-8 h-8 text-[#2563eb]"
+          className="w-8 h-8 text-[var(--link)]"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -29,7 +29,7 @@ export default function NoCompanyState() {
 
       <Link
         href="/dashboard/settings"
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#2563eb] text-white text-sm font-semibold hover:bg-[#1d4ed8] transition-colors"
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--accent)] text-[var(--accent-text)] text-sm font-semibold hover:bg-[var(--accent-hover)] transition-colors"
       >
         Перейти в настройки
       </Link>

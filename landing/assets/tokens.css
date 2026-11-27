@@ -1,0 +1,121 @@
+/* ════════════════════════════════════════════════════════════
+   Altai Dynamics — дизайн-токены «Architectural Mono»
+   MASTER_DESIGN_SPEC v1.0, раздел 07.
+   Один источник истины для landing/ и продуктовых тем.
+   ════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Бренд (неизменяемый фундамент, §07.1) */
+  --carbon: #111111;
+  --graphite: #292929;
+  --arch-white: #F2F0EB;
+  --lime: #B2F230;
+  --concrete: #858585;
+
+  /* Корпоративный сайт: преимущественно тёмная среда (§07.3).
+     Производные нейтрали — задокументированные смеси брендовых
+     цветов (DESIGN.md), не самостоятельные цвета. */
+  color-scheme: dark;
+
+  --bg: var(--carbon);
+  --surface-1: #1D1D1D;   /* carbon 50% + graphite 50% */
+  --surface-2: #242424;   /* carbon 25% + graphite 75% */
+  --surface-3: #333333;   /* graphite 85% + arch-white 15% */
+
+  --text: var(--arch-white);
+  --muted: var(--concrete);        /* ≥4.5:1 на carbon */
+  --muted-2: #7F7F7F;              /* вспомогательный текст, ≥4.5:1 на carbon */
+  --border: #2C2C2C;               /* carbon 88% + arch-white 12% */
+  --border-strong: #474747;
+
+  /* Действия */
+  --accent: var(--lime);
+  --accent-hover: #BCF24D;         /* lime 85% + arch-white 15% */
+  --accent-active: #9AD02B;        /* lime 85% + carbon 15% */
+  --accent-ink: var(--carbon);     /* текст на lime */
+  --accent-weak: rgba(178, 242, 48, 0.12);
+  --lime-hover: #BCF24D;
+
+  /* Семантические состояния (§07.4) — отдельные токены */
+  --success: #4ADE80;
+  --success-ink: #0B1E12;
+  --warning: #FBBF24;
+  --warning-ink: #241A03;
+  --danger: #F87171;
+  --danger-ink: #2B0B0B;
+  --info: #93C5FD;
+  --info-ink: #0B1A2E;
+  --disabled: #6E6E6E;
+
+  /* Фокус: lime в тёмных контекстах, carbon в светлых */
+  --focus: var(--lime);
+
+  /* Геометрия: корпоративный сайт — 0 px (§09.1) */
+  --radius: 0px;
+
+  /* Отступы, шаг 4 px (§09.3) */
+  --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;  --sp-4: 16px;
+  --sp-5: 20px;  --sp-6: 24px;  --sp-8: 32px;  --sp-10: 40px;
+  --sp-12: 48px; --sp-16: 64px; --sp-20: 80px; --sp-24: 96px;
+  --sp-32: 128px; --sp-40: 160px; --sp-48: 192px;
+
+  /* Движение (§13.2) */
+  --dur-instant: 100ms;
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-page: 300ms;
+  --dur-reveal: 600ms;
+  --dur-field: 1600ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Типографика (§08.2), desktop-значения через clamp */
+  --fs-display-xl: clamp(3.25rem, 6vw, 7rem);    /* 88–112 px */
+  --fs-display: clamp(3rem, 5vw, 5.5rem);        /* 72–88 px */
+  --fs-h1: clamp(2.5rem, 4.2vw, 5rem);           /* 56–80 px */
+  --fs-h2: clamp(2rem, 3vw, 4rem);               /* 40–64 px */
+  --fs-h3: clamp(1.5rem, 2.2vw, 2.5rem);         /* 28–40 px */
+  --fs-h4: clamp(1.25rem, 1.6vw, 1.75rem);       /* 20–28 px */
+  --fs-body-lg: clamp(1.125rem, 1.2vw, 1.25rem); /* 18–20 px */
+  --fs-body: 1rem;                                /* 16 px */
+  --fs-caption: clamp(0.75rem, 0.9vw, 0.875rem); /* 12–14 px */
+  --fs-label: clamp(0.6875rem, 0.8vw, 0.8125rem);/* 11–13 px */
+
+  /* Семейства (§08.1).
+     Покрытие казахского алфавита проверено fontTools (QA_REPORT):
+     Inter и Noto Serif — полное; Playfair Display и JetBrains Mono
+     не содержат части букв (Ә Ғ Қ Ң Ө Һ …) — для них документированный
+     fallback ниже. */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Bodoni Moda", "Playfair Display", "Noto Serif", Georgia, serif;
+  --font-mono: "JetBrains Mono", "Inter", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* Заголовки на казахском: Noto Serif первым — единственное из
+   редакционных семейств с полным покрытием букв Ә Ғ Қ Ң Ө Ұ Ү Һ І. */
+[lang="kk"] {
+  --font-serif: "Noto Serif", "Bodoni Moda", Georgia, serif;
+}
+
+/* CJK: у выбранных латинских семейств нет иероглифов — документированный
+   fallback на системные шрифты (в рамках §08.1 «документированный
+   совместимый fallback»). */
+[lang="zh"] {
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Inter", sans-serif;
+  --font-serif: "Songti SC", "SimSun", serif;
+}
+[lang="ja"] {
+  --font-sans: "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", "Inter", sans-serif;
+  --font-serif: "Hiragino Mincho ProN", "Yu Mincho", serif;
+}
+
+/* Светлая тема убрана решением владельца (2026-11-27):
+   сайт работает в единственной тёмной среде. */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 1ms; --dur-fast: 1ms; --dur-base: 1ms;
+    --dur-page: 1ms; --dur-reveal: 1ms; --dur-field: 1ms;
+  }
+}

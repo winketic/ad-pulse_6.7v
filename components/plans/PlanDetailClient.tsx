@@ -51,7 +51,7 @@ const STATUS_CFG: Record<
   completed: {
     label: "Завершён",
     bg: "bg-blue-500/15 border border-blue-500/20",
-    text: "text-blue-400",
+    text: "text-[var(--info)]",
     dot: "bg-blue-500",
   },
   cancelled: {
@@ -99,7 +99,7 @@ function StatCard({
 }) {
   const valueColor =
     accent === "green"
-      ? "text-[#2563eb]"
+      ? "text-[var(--link)]"
       : accent === "red"
       ? "text-red-600"
       : "text-[var(--text)]";
@@ -128,7 +128,7 @@ function MaterialTableRow({ row }: { row: PlanMaterialRow }) {
         {row.material_name}
       </td>
       <td className="px-5 py-3.5">
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#2563eb]/10 text-[#2563eb]">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--accent-15)] text-[var(--link)]">
           {row.material_unit}
         </span>
       </td>
@@ -162,7 +162,7 @@ function MaterialTableRow({ row }: { row: PlanMaterialRow }) {
                 row.pct > 100
                   ? "bg-red-500"
                   : row.pct >= 75
-                  ? "bg-[#2563eb]"
+                  ? "bg-[var(--graphite)]"
                   : row.pct > 0
                   ? "bg-[#22c55e]"
                   : "bg-gray-200"
@@ -194,7 +194,7 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
         <p className="font-semibold text-[var(--text)] text-sm leading-tight">
           {row.material_name}
         </p>
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#2563eb]/10 text-[#2563eb] shrink-0">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--accent-15)] text-[var(--link)] shrink-0">
           {row.material_unit}
         </span>
       </div>
@@ -237,7 +237,7 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
         </div>
         <span
           className={`text-sm font-bold tabular-nums ${
-            row.pct > 100 ? "text-red-600" : "text-[#2563eb]"
+            row.pct > 100 ? "text-red-600" : "text-[var(--link)]"
           }`}
         >
           {row.pct.toFixed(0)}%
@@ -251,7 +251,7 @@ function MaterialMobileCard({ row }: { row: PlanMaterialRow }) {
             row.pct > 100
               ? "bg-red-500"
               : row.pct >= 75
-              ? "bg-[#2563eb]"
+              ? "bg-[var(--graphite)]"
               : "bg-[#22c55e]"
           }`}
           style={{ width: `${Math.min(row.pct, 100)}%` }}
@@ -289,12 +289,12 @@ function StatusChangePanel({ plan }: { plan: PlanDetail }) {
 
   if (confirm === "complete") {
     return (
-      <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-[var(--info-bg)] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1">
           <p className="text-sm font-medium text-blue-900">
             Завершить план «{plan.name}»?
           </p>
-          <p className="text-xs text-blue-400 mt-0.5">
+          <p className="text-xs text-[var(--info)] mt-0.5">
             Статус изменится на «Завершён» и дальнейшие изменения будут ограничены.
           </p>
         </div>
@@ -302,7 +302,7 @@ function StatusChangePanel({ plan }: { plan: PlanDetail }) {
           <button
             onClick={() => setConfirm(null)}
             disabled={isPending}
-            className="px-4 py-2 rounded-lg text-sm border border-blue-500/30 text-blue-400 hover:bg-blue-500/15 border border-blue-500/20 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm border border-[var(--info-bg)] text-[var(--info)] hover:bg-blue-500/15 border border-blue-500/20 transition-colors"
           >
             Отмена
           </button>
@@ -354,7 +354,7 @@ function StatusChangePanel({ plan }: { plan: PlanDetail }) {
       <span className="text-sm text-[var(--muted)] mr-1">Изменить статус:</span>
       <button
         onClick={() => setConfirm("complete")}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-500/30 text-sm font-medium text-blue-400 hover:bg-blue-50 dark:bg-blue-500/10 transition-colors"
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-200 dark:border-[var(--info-bg)] text-sm font-medium text-[var(--info)] hover:bg-blue-50 dark:bg-blue-500/10 transition-colors"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -406,7 +406,7 @@ export default function PlanDetailClient({
       {/* ── Back ────────────────────────────────────────── */}
       <Link
         href="/dashboard/plans"
-        className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[#2563eb] transition-colors mb-5"
+        className="inline-flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[var(--link)] transition-colors mb-5"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -573,7 +573,7 @@ export default function PlanDetailClient({
                       <td className="px-5 py-3">
                         <span
                           className={`text-sm font-bold tabular-nums ${
-                            overallPct > 100 ? "text-red-600" : "text-[#2563eb]"
+                            overallPct > 100 ? "text-red-600" : "text-[var(--link)]"
                           }`}
                         >
                           {overallPct.toFixed(0)}%

@@ -64,9 +64,9 @@ export default function AdminRegistrationsClient({ registrations }: { registrati
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Заявки на подключение</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{registrations.length} заявок</p>
+          <p className="text-sm text-[var(--muted)] mt-0.5">{registrations.length} заявок</p>
         </div>
-        <Link href="/admin/platform" className="inline-flex min-h-11 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        <Link href="/admin/platform" className="inline-flex min-h-11 items-center rounded-lg border border-[var(--border-strong)] px-3 text-sm font-medium text-[var(--text)] hover:bg-[var(--surface-2)]">
           Обзор компаний
         </Link>
       </div>
@@ -78,12 +78,12 @@ export default function AdminRegistrationsClient({ registrations }: { registrati
       )}
 
       {registrations.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 py-16 text-center text-sm text-gray-400">
+        <div className="bg-[var(--surface-1)] rounded-xl border border-[var(--border)] py-16 text-center text-sm text-[var(--muted-2)]">
           Заявок пока нет
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_auto_auto] gap-4 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs font-medium text-gray-400 uppercase tracking-wide">
+        <div className="bg-[var(--surface-1)] rounded-xl border border-[var(--border)] overflow-hidden">
+          <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_auto_auto] gap-4 px-5 py-3 bg-[var(--surface-2)] border-b border-[var(--border)] text-xs font-medium text-[var(--muted-2)] uppercase tracking-wide">
             <span>Компания / Контакт</span>
             <span>Email</span>
             <span>Дата</span>
@@ -99,10 +99,10 @@ export default function AdminRegistrationsClient({ registrations }: { registrati
                 <div key={reg.id} className="px-5 py-4 sm:grid sm:grid-cols-[1fr_1fr_1fr_auto_auto] sm:gap-4 sm:items-center space-y-2 sm:space-y-0">
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{reg.company_name}</p>
-                    <p className="text-xs text-gray-400">{reg.contact_name}{reg.phone ? ` · ${reg.phone}` : ""}</p>
+                    <p className="text-xs text-[var(--muted-2)]">{reg.contact_name}{reg.phone ? ` · ${reg.phone}` : ""}</p>
                   </div>
-                  <p className="text-sm text-gray-600 truncate">{reg.email}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-sm text-[var(--muted)] truncate">{reg.email}</p>
+                  <p className="text-xs text-[var(--muted-2)]">
                     {new Date(reg.created_at).toLocaleDateString("ru-RU", { day: "2-digit", month: "short", year: "numeric" })}
                   </p>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${s.bg} ${s.text}`}>
@@ -113,14 +113,14 @@ export default function AdminRegistrationsClient({ registrations }: { registrati
                       <button
                         onClick={() => handleApprove(reg.id)}
                         disabled={isLoading}
-                        className="min-h-11 px-3 rounded-lg bg-[#f7f7f8] text-[#2563eb] text-xs font-semibold hover:bg-[#ffffff] disabled:opacity-50 transition-colors"
+                        className="min-h-11 px-3 rounded-lg bg-[var(--surface-2)] text-[var(--link)] text-xs font-semibold hover:bg-[#ffffff] disabled:opacity-50 transition-colors"
                       >
                         {isLoading ? "…" : "Одобрить"}
                       </button>
                       <button
                         onClick={() => handleReject(reg.id)}
                         disabled={isLoading}
-                        className="min-h-11 px-3 rounded-lg border border-gray-300 text-xs text-gray-700 hover:bg-red-50 dark:bg-red-500/10 hover:text-red-700 dark:text-red-300 hover:border-red-300 dark:border-red-500/30 disabled:opacity-50 transition-colors"
+                        className="min-h-11 px-3 rounded-lg border border-[var(--border-strong)] text-xs text-[var(--text)] hover:bg-red-50 dark:bg-red-500/10 hover:text-red-700 dark:text-red-300 hover:border-red-300 dark:border-red-500/30 disabled:opacity-50 transition-colors"
                       >
                         Отклонить
                       </button>
